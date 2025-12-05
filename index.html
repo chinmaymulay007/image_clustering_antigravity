@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Clustering Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>ClusterAI</h2>
+            </div>
+
+            <div class="folder-selection">
+                <button id="btn-select-folder" class="primary-btn">
+                    <span class="icon">📂</span> Select Image Folder
+                </button>
+                <div id="selected-folder-name" class="folder-name">No folder selected</div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="settings">
+                    <span class="icon">⚙️</span> Settings
+                </button>
+                <button class="nav-item" data-tab="generation" id="nav-generation" disabled>
+                    <span class="icon">🧠</span> Generation (Step 1)
+                </button>
+                <button class="nav-item" data-tab="clustering" id="nav-clustering" disabled>
+                    <span class="icon">🧩</span> Clustering (Step 2)
+                </button>
+                <button class="nav-item" data-tab="organization" id="nav-organization" disabled>
+                    <span class="icon">📁</span> Organization (Step 3)
+                </button>
+                <button class="nav-item" data-tab="logs">
+                    <span class="icon">📜</span> Logs
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot" id="global-status-dot"></span>
+                    <span id="global-status-text">Idle</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <!-- Settings Tab -->
+            <section id="tab-settings" class="tab-content active">
+                <header class="tab-header">
+                    <h1>Configuration</h1>
+                    <p>Configure your AI models and clustering parameters.</p>
+                </header>
+
+                <div class="card guide-card">
+                    <h3>📖 Quick Start Guide</h3>
+                    <ol class="guide-list">
+                        <li><strong>Select Folder:</strong> Click "Select Image Folder" in the sidebar to choose your
+                            image collection.</li>
+                        <li><strong>Step 1 - Generation:</strong> AI analyzes each image. You can configure the Model,
+                            System Prompt, and Creativity (Temperature). Results saved to
+                            <code>metadata/gen_[timestamp]</code>.</li>
+                        <li><strong>Step 2 - Clustering:</strong> Groups similar images. Adjust Epsilon/MinPts
+                            parameters. <strong>Review results, filter, and select clusters</strong> you want to keep,
+                            then click "Save Selected Clusters". Results saved to
+                            <code>metadata/cluster_[timestamp]</code>.
+                        </li>
+                        <li><strong>Step 3 - Organization:</strong> Creates physical folders for your saved clusters.
+                            Choose between Copy or Move operations.</li>
+                    </ol>
+                </div>
+
+                <div class="card-grid">
+                    <!-- LLM Settings -->
+                    <div class="card card-llm">
+                        <h3>🧠 LLM Settings (Step 1)</h3>
+                        <div class="form-group">
+                            <label for="llm-model">Model Filename</label>
+                            <input type="text" id="llm-model" value="gemma-3n-E2B-it-int4-Web.litertlm">
+                            <small>Must be present in the root directory.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="llm-prompt">System Prompt</label>
+                            <textarea id="llm-prompt"
+                                rows="3">Describe this image in a short sentence of 8-10 words</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="llm-temperature">Temperature: <span id="llm-temperature-value">0</span></label>
+                            <input type="range" id="llm-temperature" min="0" max="1" step="0.1" value="0"
+                                class="range-slider">
+                            <small>0 = deterministic, 1 = creative</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="llm-max-tokens">Max Output Tokens</label>
+                            <input type="number" id="llm-max-tokens" min="32" max="2048" step="32" value="512">
+                        </div>
+                    </div>
+
+                    <!-- Text Embedding Settings -->
+                    <div class="card card-embed">
+                        <h3>📊 Text Embedding Settings (Step 1)</h3>
+                        <div class="form-group">
+                            <label for="embedding-model">Embedding Model Filename</label>
+                            <input type="text" id="embedding-model" value="universal_sentence_encoder.tflite">
+                            <small>TFLite model for text embeddings.</small>
+                        </div>
+                    </div>
+
+                    <!-- Clustering Settings -->
+                    <div class="card card-cluster">
+                        <h3>🧩 Clustering Settings (Step 2)</h3>
+                        <div class="form-group">
+                            <label for="cluster-epsilon">Epsilon (Distance Threshold)</label>
+                            <input type="number" id="cluster-epsilon" min="0" max="2" step="0.01" value="0.25">
+                            <small>Lower = stricter similarity, Higher = looser groups</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="cluster-minpts">Minimum Cluster Size</label>
+                            <input type="number" id="cluster-minpts" min="1" max="100" step="1" value="4">
+                            <small>Min images needed to form a cluster</small>
+                        </div>
+                    </div>
+
+                    <!-- Organization Settings -->
+                    <div class="card card-org">
+                        <h3>📁 Organization Settings (Step 3)</h3>
+                        <div class="form-group">
+                            <label>File Operation</label>
+                            <div class="radio-group">
+                                <label><input type="radio" name="org-mode" value="copy" checked> Copy Files
+                                    (Safe)</label>
+                                <label><input type="radio" name="org-mode" value="move"> Move Files</label>
+                            </div>
+                            <small>Copy keeps originals, Move deletes originals after copying</small>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Generation Tab -->
+            <section id="tab-generation" class="tab-content">
+                <header class="tab-header">
+                    <h1>Image Analysis (Step 1)</h1>
+                    <p>Generate captions and embeddings for your images.</p>
+                </header>
+
+                <div class="action-bar">
+                    <button id="btn-start-generation" class="primary-btn">Start Analysis</button>
+                    <button id="btn-abort-generation" class="danger-btn" hidden>Abort</button>
+
+                    <div class="progress-bar-container" hidden>
+                        <div class="progress-bar" id="gen-progress-bar" style="width: 0%"></div>
+                        <span id="gen-progress-text">0%</span>
+                    </div>
+                </div>
+
+                <div class="progress-stats" id="gen-progress-stats" hidden>
+                    <span id="gen-stat-elapsed">⏱️ 0:00 | 0/0 images</span>
+                    <span id="gen-stat-speed">⚡ -</span>
+                    <span id="gen-stat-eta">🏁 -</span>
+                </div>
+
+                <div class="preview-area" id="gen-preview-area" hidden>
+                    <div class="preview-image-container">
+                        <img id="gen-preview-img" alt="Last processed image">
+                    </div>
+                    <div class="preview-caption">
+                        <strong>Last Processed</strong>
+                        <p id="gen-preview-caption">-</p>
+                    </div>
+                </div>
+
+                <div class="log-window" id="gen-log-window">
+                    <div class="log-entry">Waiting to start...</div>
+                </div>
+            </section>
+
+            <!-- Clustering Tab -->
+            <section id="tab-clustering" class="tab-content">
+                <header class="tab-header">
+                    <h1>Clustering (Step 2)</h1>
+                    <p>Group images based on semantic similarity.</p>
+                </header>
+
+                <div class="controls-bar">
+                    <div class="form-group inline">
+                        <label>Source Data:</label>
+                        <select id="clustering-source-select">
+                            <option value="">Select a Generation Run...</option>
+                        </select>
+                    </div>
+                    <button id="btn-run-clustering" class="primary-btn" disabled>Run Clustering</button>
+                </div>
+
+                <!-- Summary & Filter (outside scrollable area) -->
+                <div id="clustering-summary-area" hidden>
+                    <div class="cluster-summary">
+                        <div class="summary-stats" id="cluster-summary-stats"></div>
+                        <div class="filter-controls">
+                            <label>
+                                Filter by min images:
+                                <input type="number" id="cluster-min-filter" min="1" value="1"
+                                    style="width: 60px; margin-left: 8px;">
+                            </label>
+                            <button id="btn-apply-filter" class="secondary-btn">Apply Filter</button>
+                            <button id="btn-select-all-clusters" class="secondary-btn">Select All</button>
+                            <button id="btn-deselect-all-clusters" class="secondary-btn">Deselect All</button>
+                            <button id="btn-save-clusters" class="primary-btn">💾 Save Selected Clusters</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scrollable clusters list -->
+                <div id="clustering-results-area" class="results-area">
+                    <div class="placeholder-text">Run clustering to see results here.</div>
+                </div>
+            </section>
+
+            <!-- Organization Tab -->
+            <section id="tab-organization" class="tab-content">
+                <header class="tab-header">
+                    <h1>Organization (Step 3)</h1>
+                    <p>Organize your files into folders based on clusters.</p>
+                </header>
+
+                <div class="controls-bar">
+                    <div class="form-group inline">
+                        <label>Source Clusters:</label>
+                        <select id="org-source-select">
+                            <option value="">Select a Clustering Run...</option>
+                        </select>
+                    </div>
+                    <button id="btn-run-organization" class="primary-btn" disabled>Organize Files</button>
+                </div>
+
+                <div class="log-window" id="org-log-window">
+                    <div class="log-entry">Waiting to start...</div>
+                </div>
+            </section>
+
+            <!-- Logs Tab -->
+            <section id="tab-logs" class="tab-content">
+                <header class="tab-header">
+                    <h1>System Logs</h1>
+                </header>
+                <div class="log-window full-height" id="system-log-window"></div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/app.js"></script>
+</body>
+
+</html>
