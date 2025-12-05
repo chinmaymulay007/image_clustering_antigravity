@@ -19,7 +19,8 @@ This project is a browser-based application for clustering images using local AI
 2.  **Download Model Files**:
     This project requires a large LLM file that is not included in the repository due to size limits.
     - **Download**: `gemma-3n-E2B-it-int4-Web.litertlm`
-        - *[Insert Link if available, or instruct user to place their copy here]*
+        - https://huggingface.co/google/gemma-3n-E2B-it
+        - https://www.kaggle.com/models/google/gemma-3n
     - **Place the file** in the root directory of the project.
     - Ensure `universal_sentence_encoder.tflite` is also present (included in repo).
 
