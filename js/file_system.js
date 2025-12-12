@@ -145,10 +145,11 @@ export class FileSystemManager {
     /**
      * Create a new timestamped folder for a run.
      * @param {string} prefix - 'gen' or 'cluster'.
-     * @param {string} suffix - Optional suffix (e.g., source run ID).
+     * @param {string} suffix - Optional suffix (e.g., source run ID or mode).
+     * @param {boolean} isRawSuffix - If true, appends suffix directly (e.g., '_random'). If false, uses '_from_' (e.g., '_from_run1').
      * @returns {Promise<string>} The name of the created folder.
      */
-    async createRunFolder(prefix, suffix = '') {
+    async createRunFolder(prefix, suffix = '', isRawSuffix = false) {
         const now = new Date();
         // Use local timezone instead of GMT
         const year = now.getFullYear();
@@ -159,7 +160,13 @@ export class FileSystemManager {
         const seconds = String(now.getSeconds()).padStart(2, '0');
 
         const timestamp = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-        const folderName = `${prefix}_${timestamp}${suffix ? '_from_' + suffix : ''}`;
+
+        let suffixPart = '';
+        if (suffix) {
+            suffixPart = isRawSuffix ? `_${suffix}` : `_from_${suffix}`;
+        }
+
+        const folderName = `${prefix}_${timestamp}${suffixPart}`;
         await this.getDirectoryHandle(`metadata/${folderName}`, true);
         return folderName;
     }

@@ -48,7 +48,7 @@ class App {
             document.getElementById('llm-temperature-value').textContent = e.target.value;
         });
 
-        // Generation
+        // Generation Sequential
         document.getElementById('btn-start-generation').addEventListener('click', async () => {
             const initialConfig = {
                 modelFileName: document.getElementById('llm-model').value,
@@ -58,7 +58,7 @@ class App {
                 embeddingModel: document.getElementById('embedding-model').value
             };
 
-            const confirmedConfig = await this.showConfigConfirmation('Generation Settings', [
+            const confirmedConfig = await this.showConfigConfirmation('Generation Settings (Sequential)', [
                 { key: 'modelFileName', label: 'LLM Model', value: initialConfig.modelFileName, type: 'text', readonly: true },
                 { key: 'systemPrompt', label: 'System Prompt', value: initialConfig.systemPrompt, type: 'textarea' },
                 { key: 'temperature', label: 'Temperature', value: initialConfig.temperature, type: 'number', step: 0.1, min: 0, max: 1 },
@@ -68,7 +68,32 @@ class App {
 
             if (confirmedConfig) {
                 this.switchTab('generation');
-                await this.generation.run(confirmedConfig);
+                await this.generation.run(confirmedConfig, 'sequential');
+                this.updateRunLists();
+            }
+        });
+
+        // Generation Random
+        document.getElementById('btn-start-generation-random').addEventListener('click', async () => {
+            const initialConfig = {
+                modelFileName: document.getElementById('llm-model').value,
+                systemPrompt: document.getElementById('llm-prompt').value,
+                temperature: parseFloat(document.getElementById('llm-temperature').value),
+                maxTokens: parseInt(document.getElementById('llm-max-tokens').value),
+                embeddingModel: document.getElementById('embedding-model').value
+            };
+
+            const confirmedConfig = await this.showConfigConfirmation('Generation Settings (Random)', [
+                { key: 'modelFileName', label: 'LLM Model', value: initialConfig.modelFileName, type: 'text', readonly: true },
+                { key: 'systemPrompt', label: 'System Prompt', value: initialConfig.systemPrompt, type: 'textarea' },
+                { key: 'temperature', label: 'Temperature', value: initialConfig.temperature, type: 'number', step: 0.1, min: 0, max: 1 },
+                { key: 'maxTokens', label: 'Max Tokens', value: initialConfig.maxTokens, type: 'number', step: 32, min: 32, max: 2048 },
+                { key: 'embeddingModel', label: 'Embedding Model', value: initialConfig.embeddingModel, type: 'text', readonly: true }
+            ]);
+
+            if (confirmedConfig) {
+                this.switchTab('generation');
+                await this.generation.run(confirmedConfig, 'random');
                 this.updateRunLists();
             }
         });

@@ -70,7 +70,8 @@
                             image collection.</li>
                         <li><strong>Step 1 - Generation:</strong> AI analyzes each image. You can configure the Model,
                             System Prompt, and Creativity (Temperature). Results saved to
-                            <code>metadata/gen_[timestamp]</code>.</li>
+                            <code>metadata/gen_[timestamp]</code>.
+                        </li>
                         <li><strong>Step 2 - Clustering:</strong> Groups similar images. Adjust Epsilon/MinPts
                             parameters. <strong>Review results, filter, and select clusters</strong> you want to keep,
                             then click "Save Selected Clusters". Results saved to
@@ -156,7 +157,9 @@
                 </header>
 
                 <div class="action-bar">
-                    <button id="btn-start-generation" class="primary-btn">Start Analysis</button>
+                    <button id="btn-start-generation" class="primary-btn">Start Sequential Analysis</button>
+                    <button id="btn-start-generation-random" class="secondary-btn" style="margin-left: 10px;">Start
+                        Random Analysis</button>
                     <button id="btn-abort-generation" class="danger-btn" hidden>Abort</button>
 
                     <div class="progress-bar-container" hidden>
