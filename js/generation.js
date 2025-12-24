@@ -1,5 +1,7 @@
-import { FilesetResolver, LlmInference } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-genai';
-import { TextEmbedder } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-text';
+import { FilesetResolver, LlmInference } from './vendor/tasks-genai.js';
+import { TextEmbedder } from './vendor/tasks-text.js';
+// Transformers.js local import
+import { env, AutoProcessor, CLIPVisionModelWithProjection, RawImage } from './vendor/transformers.js';
 
 export class GenerationStep {
     constructor(fileSystem, logger) {
@@ -7,8 +9,10 @@ export class GenerationStep {
         this.log = logger;
         this.llmInference = null;
         this.textEmbedder = null;
+        this.clipPipeline = null; // Store the CLIP pipeline
         this.isModelLoaded = false;
         this.isAborted = false;
+        this.mode = 'sequential'; // default
     }
 
     async loadModels(config) {
@@ -17,27 +21,110 @@ export class GenerationStep {
         this.log("Loading AI models... This may take a moment.");
 
         try {
-            // Load Text Embedder
-            const textFiles = await FilesetResolver.forTextTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-text@latest/wasm");
-            this.textEmbedder = await TextEmbedder.createFromOptions(textFiles, {
-                baseOptions: { modelAssetPath: config.embeddingModel || 'universal_sentence_encoder.tflite' }
-            });
+            if (config.mode === 'direct_clip') {
+                // --- CLIP MODE ---
+                this.log(`Initializing Transformers.js for local model in 'models/${config.modelFolderName}'...`);
 
-            // Load LLM
-            const genaiFileset = await FilesetResolver.forGenAiTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-genai/wasm');
-            this.llmInference = await LlmInference.createFromOptions(genaiFileset, {
-                baseOptions: { modelAssetPath: config.modelFileName },
-                temperature: config.temperature !== undefined ? config.temperature : 0,
-                maxTokens: config.maxTokens || 512,
-                maxNumImages: 1
-            });
+                // Configure strictly for local loading
+                env.allowLocalModels = true;
+                env.localModelPath = 'models/'; // Base path for models
+                env.allowRemoteModels = false; // Disable remote fetching
+
+                // Determine quantization setting
+                // config.quantized can be: 'true' (force q), 'false' (force full), or undefined (auto)
+                // However, transformers.js 'quantized' option expects boolean.
+                // We will default to true if not specified, OR respect user choice.
+
+                let quantizedOption = true; // Default
+                if (config.quantized === 'false' || config.quantized === false) quantizedOption = false;
+
+                this.log(`Loading CLIP model (Quantized: ${quantizedOption})...`);
+
+                try {
+                    // Initialize Processor and Model explicitly
+                    this.clipProcessor = await AutoProcessor.from_pretrained(config.modelFolderName);
+
+                    // Use CLIPVisionModelWithProjection to get the projected image embeddings
+                    this.clipModel = await CLIPVisionModelWithProjection.from_pretrained(config.modelFolderName, {
+                        quantized: quantizedOption,
+                        device: config.device || 'webgpu' // Attempt WebGPU if possible
+                    });
+                    this.log("✅ Local CLIP model loaded successfully.");
+                } catch (err) {
+                    this.log(`❌ Failed to load local model: ${err.message}. Ensure 'models/${config.modelFolderName}' exists and contains .onnx files.`, 'error');
+                    throw err;
+                }
+
+            } else {
+                // --- GEMMA / LEGACY MODE ---
+                // Load Text Embedder
+                const textFiles = await FilesetResolver.forTextTasks("js/vendor/wasm");
+                this.textEmbedder = await TextEmbedder.createFromOptions(textFiles, {
+                    baseOptions: {
+                        modelAssetPath: config.embeddingModel || 'universal_sentence_encoder.tflite',
+                        delegate: "GPU" // Experimental GPU delegate for USE
+                    }
+                });
+
+                // Load LLM
+                const genaiFileset = await FilesetResolver.forGenAiTasks('js/vendor/wasm');
+                this.llmInference = await LlmInference.createFromOptions(genaiFileset, {
+                    baseOptions: { modelAssetPath: config.modelFileName },
+                    temperature: config.temperature !== undefined ? config.temperature : 0,
+                    maxTokens: config.maxTokens || 512,
+                    maxNumImages: 1
+                });
+                this.log("✅ Gemma & USE models loaded successfully.");
+            }
 
             this.isModelLoaded = true;
-            this.log("Models loaded successfully.");
         } catch (error) {
             this.log(`Error loading models: ${error.message}`, 'error');
             throw error;
         }
+    }
+
+    /**
+     * Scans the specific model folder to check for quantization versions.
+     * @param {string} folderName 
+     * @returns {Promise<Object>} { hasQuantized: boolean, hasFull: boolean }
+     */
+    async scanModelVersions(folderName) {
+        // Use fetch to check existence, mirroring how Transformers.js loads files
+        // This avoids issues where the 'Selected Folder' in FS API is different from the Server Root
+        let hasQuantized = false;
+        let hasFull = false;
+        const pathsToCheck = [
+            `models/${folderName}/onnx/vision_model_quantized.onnx`,
+            `models/${folderName}/vision_model_quantized.onnx`, // fallback to root
+            `models/${folderName}/onnx/model_quantized.onnx`, // legacy
+            `models/${folderName}/model_quantized.onnx` // legacy
+        ];
+
+        const pathsToCheckFull = [
+            `models/${folderName}/onnx/vision_model.onnx`,
+            `models/${folderName}/vision_model.onnx`,
+            `models/${folderName}/onnx/model.onnx`,
+            `models/${folderName}/model.onnx`
+        ];
+
+        // Check Quantized
+        for (const path of pathsToCheck) {
+            try {
+                const res = await fetch(path, { method: 'HEAD' });
+                if (res.ok) { hasQuantized = true; break; }
+            } catch (e) { console.warn("Fetch check failed", path); }
+        }
+
+        // Check Full
+        for (const path of pathsToCheckFull) {
+            try {
+                const res = await fetch(path, { method: 'HEAD' });
+                if (res.ok) { hasFull = true; break; }
+            } catch (e) { console.warn("Fetch check failed", path); }
+        }
+
+        return { hasQuantized, hasFull };
     }
 
     abort() {
@@ -116,7 +203,7 @@ export class GenerationStep {
             embeddings = embeddings.slice(0, minLength);
 
             // Save the synchronized data back
-            await this.saveData(runFolder, filenames, captions, embeddings);
+            await this.saveData(runFolder, filenames, captions, embeddings, null); // Pass null for config if we don't have it here
             this.log(`✅ Metadata synchronized. Safe to resume from image ${minLength + 1}.`);
         } else {
             this.log(`✅ Metadata integrity verified: all files have ${minLength} entries.`);
@@ -135,11 +222,6 @@ export class GenerationStep {
         // Buttons handled by caller or we can improve this later to handle both buttons
         const btnAbort = document.getElementById('btn-abort-generation');
 
-        // Hide start buttons
-        document.getElementById('btn-start-generation').hidden = true;
-        const btnStartRandom = document.getElementById('btn-start-generation-random');
-        if (btnStartRandom) btnStartRandom.hidden = true;
-
         btnAbort.hidden = false;
         btnAbort.disabled = false;
         btnAbort.textContent = 'Abort';
@@ -155,18 +237,24 @@ export class GenerationStep {
 
             // Check for existing runs to resume
             const existingRuns = await this.fs.listDirectories('metadata');
-            // Filter runs based on mode
+            // Filter runs based on mode AND generation type
+            // Note: mixing gemma/clip runs might confuse clustering if not separated.
+            // But we generally separate by timestamp folder.
             const genRuns = existingRuns.filter(d => {
                 const isGen = d.startsWith('gen_');
                 if (!isGen) return false;
 
-                // Check suffix
-                const isRandom = d.endsWith('_random');
-                if (mode === 'random') return isRandom;
-                // For sequential, legacy runs (no suffix) or explicit sequential suffix
-                const isSequential = d.endsWith('_sequential');
-                const hasNoSuffix = !d.includes('_from_') && !d.includes('_random') && !d.includes('_sequential'); // Rough legacy check
-                return isSequential || (!isRandom && hasNoSuffix);
+                // Detect mode from folder name
+                const isClipRun = d.includes('_clip');
+                const isCurrentClip = config.mode === 'direct_clip';
+
+                // Prevent mixing Embedding models (they have different dimensions)
+                if (isClipRun !== isCurrentClip) return false;
+
+                // Detect selection mode (random vs sequential)
+                const isRandomRun = d.includes('_random');
+                if (mode === 'random') return isRandomRun;
+                return !isRandomRun;
             }).sort().reverse();
 
             let runFolder;
@@ -191,6 +279,13 @@ export class GenerationStep {
                         filenames = syncedData.filenames;
                         captions = syncedData.captions;
                         embeddings = syncedData.embeddings;
+
+                        // Load previous config to ensure continuity
+                        const prevConfig = await this.fs.readFile(`metadata/${runFolder}/config.json`, 'json');
+                        if (prevConfig) {
+                            config = { ...config, ...prevConfig };
+                        }
+
                         this.log(`Resuming ${mode} run from ${filenames.length} processed images...`);
                     }
                 }
@@ -198,7 +293,9 @@ export class GenerationStep {
 
             if (!runFolder) {
                 // Pass true for isRawSuffix to get _random instead of _from_random
-                runFolder = await this.fs.createRunFolder('gen', mode, true);
+                // Add CLIP tag to foldername if CLIP mode
+                const runType = config.mode === 'direct_clip' ? '_clip' : '';
+                runFolder = await this.fs.createRunFolder('gen', mode + runType, true);
                 this.log(`Starting new ${mode} generation run: ${runFolder}`);
             }
 
@@ -220,7 +317,9 @@ export class GenerationStep {
 
             const startTime = Date.now();
             let processedCount = filenames.length;
+            const initialProcessedCount = filenames.length; // Count before session start
             const totalCount = allImages.length;
+            const totalSessionItems = totalCount - initialProcessedCount; // Items to do in this session
 
             // Main Processing Loop
             while (unprocessedImages.length > 0) {
@@ -235,7 +334,7 @@ export class GenerationStep {
                     // Random pick
                     const randomVal = Math.random();
                     selectedIndex = Math.floor(randomVal * unprocessedImages.length);
-                    console.log(`Random selection: value=${randomVal.toFixed(4)}, index=${selectedIndex}, poolSize=${unprocessedImages.length}`);
+                    // console.log(`Random selection: value=${randomVal.toFixed(4)}, index=${selectedIndex}, poolSize=${unprocessedImages.length}`);
                 } else {
                     // Sequential pick (always first in the queue of unprocessed)
                     selectedIndex = 0;
@@ -253,51 +352,90 @@ export class GenerationStep {
                 const file = await fileHandle.getFile();
                 const imageUrl = URL.createObjectURL(file);
 
-                // Generate Caption
-                const response = await this.llmInference.generateResponse([config.systemPrompt, { imageSource: imageUrl }]);
+                let captionResult = '';
+                let embeddingArray = [];
 
-                // Generate Embedding
-                const embeddingResult = this.textEmbedder.embed(response);
+                if (config.mode === 'direct_clip') {
+                    // --- CLIP INFERENCE ---
+                    captionResult = "[CLIP Embedded Image]"; // Placeholder
+                    try {
+                        // 1. Read image using Transformers.js RawImage
+                        const rawImage = await RawImage.read(imageUrl);
+
+                        // 2. Preprocess
+                        const imageInputs = await this.clipProcessor(rawImage);
+
+                        // 3. Inference
+                        // Note: CLIPVisionModelWithProjection outputs { image_embeds: Tensor, ... }
+                        // We want 'image_embeds' which are the projected features ready for dot-product with text.
+                        const { image_embeds } = await this.clipModel(imageInputs);
+
+                        // 4. Extract data
+                        if (image_embeds) {
+                            // data is Float32Array
+                            embeddingArray = Array.from(image_embeds.data);
+                        } else {
+                            throw new Error("Model output missing 'image_embeds'.");
+                        }
+
+                    } catch (e) {
+                        this.log(`Error running CLIP on image: ${e.message}`, 'error');
+                        throw e; // Stop if serious error
+                    }
+
+                } else {
+                    // --- MEDIA PIPE GEMMA + USE ---
+                    // Generate Caption
+                    captionResult = await this.llmInference.generateResponse([config.systemPrompt, { imageSource: imageUrl }]);
+
+                    // Generate Embedding
+                    const embeddingResult = this.textEmbedder.embed(captionResult);
+                    embeddingArray = embeddingResult.embeddings[0].floatEmbedding;
+                }
 
                 filenames.push(filename);
-                captions.push(response);
-                embeddings.push(embeddingResult.embeddings[0].floatEmbedding);
+                captions.push(captionResult);
+                embeddings.push(embeddingArray);
 
                 // Update Preview
                 previewImg.src = imageUrl;
-                previewCaption.textContent = response;
-
-                // Update Progress Bar & Percentage
-                const percent = Math.round((processedCount / totalCount) * 100);
-                progressBar.style.width = `${percent}%`;
-                progressText.textContent = `${percent}%`;
+                previewCaption.textContent = captionResult;
 
                 // Calculate and Update Stats
                 const elapsed = Date.now() - startTime;
-                const sessionsProcessed = processedCount - (filenames.length - 1); // Current session count roughly
-                // Use total run time for speed estimation if resuming? Better to use current session speed
-                const currentSessionProcessed = processedCount - (totalCount - unprocessedImages.length - 1); // Logic tricky here, stick to session speed
-                // Let's use simple session speed:
-                // We don't have exactly "session start index" easy here without extra var...
-                // Actually start time is from NOW.
-                // processed in this session = processedCount - (initial filenames length)
-                const processedInSession = processedCount - (filenames.length - 1);
+                const processedInSession = processedCount - initialProcessedCount; // Count in this run only
 
-                const speed = processedInSession > 0 ? elapsed / processedInSession : 0;
+                // Update Progress Bar & Percentage (Session Relative)
+                let percent = 0;
+                if (totalSessionItems > 0) {
+                    percent = Math.round((processedInSession / totalSessionItems) * 100);
+                }
+                progressBar.style.width = `${percent}%`;
+                progressText.textContent = `${percent}% (Session)`;
+
+                // Speed: Time per Image (Average over session)
+                let speedPerImage = 0; // ms per image
+                if (processedInSession > 0) {
+                    speedPerImage = elapsed / processedInSession;
+                }
+
+                // Remaining Time
                 const remaining = unprocessedImages.length;
-                const eta = remaining * speed;
+                const eta = remaining * speedPerImage;
 
-                const elapsedStr = this.formatTime(elapsed);
-                const speedStr = speed > 0 ? `${(speed / 1000).toFixed(1)}s/img` : '-';
-                const etaStr = remaining > 0 ? this.formatTime(eta) : 'Complete!';
-                const progressStr = `${processedCount}/${totalCount} images`;
+                const elapsedStr = this.formatTime(elapsed / 1000);
+                const speedStr = speedPerImage > 0 ? `${this.formatTime(speedPerImage / 1000)}/img` : '-';
+                const etaStr = speedPerImage > 0 ? this.formatTime(eta / 1000) : (remaining === 0 ? 'Complete!' : 'Calculating...');
+
+                // Bifurcated Progress String
+                const progressStr = `Prev: ${initialProcessedCount} | Sess: ${processedInSession} | Total: ${processedCount}/${totalCount}`;
 
                 document.getElementById('gen-stat-elapsed').textContent = `⏱️ ${elapsedStr} | ${progressStr}`;
                 document.getElementById('gen-stat-speed').textContent = `⚡ ${speedStr}`;
                 document.getElementById('gen-stat-eta').textContent = `🏁 ${etaStr}`;
 
                 // Save every image
-                await this.saveData(runFolder, filenames, captions, embeddings);
+                await this.saveData(runFolder, filenames, captions, embeddings, config);
             }
 
             if (!this.isAborted) {
@@ -308,10 +446,6 @@ export class GenerationStep {
             this.log(`Generation failed: ${error.message}`, 'error');
             console.error(error);
         } finally {
-            document.getElementById('btn-start-generation').hidden = false;
-            const btnStartRandom = document.getElementById('btn-start-generation-random');
-            if (btnStartRandom) btnStartRandom.hidden = false;
-
             btnAbort.hidden = true;
             btnAbort.disabled = false;
             btnAbort.textContent = 'Abort';
@@ -319,16 +453,28 @@ export class GenerationStep {
         }
     }
 
-    formatTime(ms) {
-        const totalSeconds = Math.floor(ms / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
+    formatTime(secondsInput) {
+        // Handle input in seconds (float)
+        const totalSeconds = Math.floor(secondsInput);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        const p = (n) => n.toString().padStart(2, '0');
+
+        if (hours > 0) {
+            return `${hours}:${p(minutes)}:${p(seconds)}`;
+        } else {
+            return `${minutes}:${p(seconds)}`;
+        }
     }
 
-    async saveData(folder, filenames, captions, embeddings) {
+    async saveData(folder, filenames, captions, embeddings, config) {
         await this.fs.writeFile(`metadata/${folder}/filenamesArray.json`, JSON.stringify(filenames));
         await this.fs.writeFile(`metadata/${folder}/captionsArray.json`, JSON.stringify(captions));
         await this.fs.writeFile(`metadata/${folder}/embeddingsArray.json`, JSON.stringify(embeddings));
+        if (config) {
+            await this.fs.writeFile(`metadata/${folder}/config.json`, JSON.stringify(config));
+        }
     }
 }

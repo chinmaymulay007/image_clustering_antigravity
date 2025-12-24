@@ -6,10 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Clustering Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Image Clustering Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Using System Fonts for Offline reliability -->
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+    </style>
 </head>
 
 <body>
@@ -65,71 +69,130 @@
 
                 <div class="card guide-card">
                     <h3>📖 Quick Start Guide</h3>
-                    <ol class="guide-list">
-                        <li><strong>Select Folder:</strong> Click "Select Image Folder" in the sidebar to choose your
-                            image collection.</li>
-                        <li><strong>Step 1 - Generation:</strong> AI analyzes each image. You can configure the Model,
-                            System Prompt, and Creativity (Temperature). Results saved to
-                            <code>metadata/gen_[timestamp]</code>.
-                        </li>
-                        <li><strong>Step 2 - Clustering:</strong> Groups similar images. Adjust Epsilon/MinPts
-                            parameters. <strong>Review results, filter, and select clusters</strong> you want to keep,
-                            then click "Save Selected Clusters". Results saved to
-                            <code>metadata/cluster_[timestamp]</code>.
-                        </li>
-                        <li><strong>Step 3 - Organization:</strong> Creates physical folders for your saved clusters.
-                            Choose between Copy or Move operations.</li>
-                    </ol>
+                    <div class="guide-content" style="display: flex; flex-direction: column; gap: 15px;">
+                        <div
+                            style="background: rgba(var(--primary-rgb), 0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--primary-color);">
+                            <h4
+                                style="margin: 0 0 8px 0; color: var(--primary-color); display: flex; align-items: center; gap: 8px;">
+                                🚀 Getting Started
+                            </h4>
+                            <ol style="margin: 0; padding-left: 20px; line-height: 1.6;">
+                                <li><strong>Select Folder:</strong> Click "Select Image Folder" in the sidebar.</li>
+                                <li><strong>Run Analysis:</strong> Go to <strong>Generation (Step 1)</strong> tab and
+                                    click "Start Sequential" or "Start Random".</li>
+                                <li><strong>Choose Pipeline:</strong> Select CLIP (visual) or Gemma (caption) in the
+                                    modal.</li>
+                                <li><strong>Cluster & Organize:</strong> Run clustering (Step 2), then organize (Step
+                                    3).</li>
+                            </ol>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9em;">
+                            <div class="guide-tip">
+                                <strong>💡 CLIP Tip:</strong> Fastest & best for visual sorting. Use the
+                                <strong>Scan</strong> button below to verify your local files.
+                            </div>
+                            <div class="guide-tip">
+                                <strong>💡 Gemma Tip:</strong> Best if you want text captions for your images. Requires
+                                more RAM/GPU.
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card-grid">
-                    <!-- LLM Settings -->
-                    <div class="card card-llm">
-                        <h3>🧠 LLM Settings (Step 1)</h3>
-                        <div class="form-group">
-                            <label for="llm-model">Model Filename</label>
-                            <input type="text" id="llm-model" value="gemma-3n-E2B-it-int4-Web.litertlm">
-                            <small>Must be present in the root directory.</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="llm-prompt">System Prompt</label>
-                            <textarea id="llm-prompt"
-                                rows="3">Describe this image in a short sentence of 8-10 words</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="llm-temperature">Temperature: <span id="llm-temperature-value">0</span></label>
-                            <input type="range" id="llm-temperature" min="0" max="1" step="0.1" value="0"
-                                class="range-slider">
-                            <small>0 = deterministic, 1 = creative</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="llm-max-tokens">Max Output Tokens</label>
-                            <input type="number" id="llm-max-tokens" min="32" max="2048" step="32" value="512">
-                        </div>
-                    </div>
+                    <!-- Generation Settings -->
+                    <div class="card card-gen">
+                        <h3>🤖 Generation Settings (Step 1)</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Model
+                            configurations for image analysis pipelines.</p>
 
-                    <!-- Text Embedding Settings -->
-                    <div class="card card-embed">
-                        <h3>📊 Text Embedding Settings (Step 1)</h3>
                         <div class="form-group">
-                            <label for="embedding-model">Embedding Model Filename</label>
-                            <input type="text" id="embedding-model" value="universal_sentence_encoder.tflite">
-                            <small>TFLite model for text embeddings.</small>
+                            <label style="font-weight: 600; color: var(--text-color);">CLIP (Visual) Pipeline</label>
+                            <div
+                                style="background: #f9fafb; padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.5rem;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span style="color: var(--text-muted); font-size: 0.85rem;">Model Folder:</span>
+                                    <span style="font-weight: 500; font-size: 0.85rem;">clip-vit-base-patch16</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: var(--text-muted); font-size: 0.85rem;">Available
+                                        Precisions:</span>
+                                    <span style="font-weight: 500; font-size: 0.85rem;">Quantized, Full</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-weight: 600; color: var(--text-color);">Gemma (Caption) Pipeline</label>
+                            <div
+                                style="background: #f9fafb; padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.5rem;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span style="color: var(--text-muted); font-size: 0.85rem;">LLM Model:</span>
+                                    <span
+                                        style="font-weight: 500; font-size: 0.85rem;">gemma-3n-E2B-it-int4-Web.litertlm</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: var(--text-muted); font-size: 0.85rem;">Embedding Model:</span>
+                                    <span
+                                        style="font-weight: 500; font-size: 0.85rem;">universal_sentence_encoder.tflite</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Clustering Settings -->
                     <div class="card card-cluster">
                         <h3>🧩 Clustering Settings (Step 2)</h3>
+
                         <div class="form-group">
-                            <label for="cluster-epsilon">Epsilon (Distance Threshold)</label>
-                            <input type="number" id="cluster-epsilon" min="0" max="2" step="0.01" value="0.25">
-                            <small>Lower = stricter similarity, Higher = looser groups</small>
+                            <label for="clustering-algorithm-select">Algorithm</label>
+                            <select id="clustering-algorithm-select"
+                                style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+                                <option value="dbscan">DBSCAN (Density-Based)</option>
+                                <option value="kmeans">K-Means (Centroid-Based)</option>
+                                <option value="hierarchical">Hierarchical (Tree-Based)</option>
+                                <option value="optics">OPTICS (Variable Density)</option>
+                                <option value="hdbscan">HDBSCAN (Hierarchical Density)</option>
+                            </select>
                         </div>
-                        <div class="form-group">
-                            <label for="cluster-minpts">Minimum Cluster Size</label>
-                            <input type="number" id="cluster-minpts" min="1" max="100" step="1" value="4">
-                            <small>Min images needed to form a cluster</small>
+
+                        <!-- Dynamic Parameters Container -->
+                        <div id="clustering-params-container">
+                            <!-- Density-Based Params (DBSCAN, OPTICS, HDBSCAN) -->
+                            <div class="algo-params" data-algo="dbscan optics hdbscan">
+                                <div class="form-group">
+                                    <label for="cluster-epsilon">Epsilon (Distance Threshold)</label>
+                                    <input type="number" id="cluster-epsilon" min="0" max="2" step="0.01" value="0.45">
+                                    <small>Lower = stricter similarity, Higher = looser groups.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cluster-minpts">Minimum Cluster Size (MinPts)</label>
+                                    <input type="number" id="cluster-minpts" min="1" max="100" step="1" value="2">
+                                </div>
+                            </div>
+
+                            <!-- Centroid/Tree-Based Params (K-Means, Hierarchical) -->
+                            <div class="algo-params" data-algo="kmeans hierarchical" hidden>
+                                <div class="form-group">
+                                    <label for="cluster-k">Number of Clusters (K)</label>
+                                    <input type="number" id="cluster-k" min="2" max="100" step="1" value="5">
+                                    <small>How many groups to create.</small>
+                                </div>
+                            </div>
+
+                            <!-- Hierarchical Specific (Linkage) -->
+                            <div class="algo-params" data-algo="hierarchical" hidden>
+                                <div class="form-group">
+                                    <label for="cluster-linkage">Linkage Criterion</label>
+                                    <select id="cluster-linkage"
+                                        style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+                                        <option value="average">Average (UPGMA)</option>
+                                        <option value="single">Single (nearest neighbor)</option>
+                                        <option value="complete">Complete (farthest neighbor)</option>
+                                        <option value="ward">Ward (min variance)</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -157,9 +220,16 @@
                 </header>
 
                 <div class="action-bar">
-                    <button id="btn-start-generation" class="primary-btn">Start Sequential Analysis</button>
-                    <button id="btn-start-generation-random" class="secondary-btn" style="margin-left: 10px;">Start
-                        Random Analysis</button>
+                    <div class="form-group inline" style="margin-right: 1rem;">
+                        <label>Resume:</label>
+                        <select id="gen-resume-select" style="min-width: 250px;">
+                            <option value="">(New Run)</option>
+                        </select>
+                    </div>
+                    <button id="btn-start-generation" class="primary-btn sequential-btn">Start Sequential
+                        Analysis</button>
+                    <button id="btn-start-generation-random" class="primary-btn random-btn"
+                        style="margin-left: 10px;">Start Random Analysis</button>
                     <button id="btn-abort-generation" class="danger-btn" hidden>Abort</button>
 
                     <div class="progress-bar-container" hidden>

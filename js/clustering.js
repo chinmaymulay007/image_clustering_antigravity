@@ -1,4 +1,5 @@
-import clustering from 'https://cdn.jsdelivr.net/npm/density-clustering@1.3.0/+esm';
+import clustering from './vendor/density-clustering.js';
+import { agnes } from './vendor/ml-hclust.js';
 
 export class ClusteringStep {
     constructor(fileSystem, logger) {
@@ -93,7 +94,7 @@ export class ClusteringStep {
 
 
     async run(sourceRun, config) {
-        this.log(`Starting clustering on ${sourceRun}...`);
+        this.log(`Starting clustering on ${sourceRun} using ${config.algorithm}...`);
         console.log('Clustering run started with:', sourceRun, config);
 
         try {
@@ -108,11 +109,38 @@ export class ClusteringStep {
             const distanceMatrix = embeddings.map(e1 => embeddings.map(e2 => this.cosineDistance(e1, e2)));
             console.log('Distance matrix calculated');
 
-            // Run DBSCAN
-            this.log(`Running DBSCAN (Eps: ${config.epsilon}, MinPts: ${config.minPts})...`);
-            const dbscan = new clustering.DBSCAN();
-            const clusters = dbscan.run(distanceMatrix, config.epsilon, config.minPts);
-            console.log('DBSCAN completed, found', clusters.length, 'clusters');
+            // Visual Cue: Clustering in Progress
+            const resultsArea = document.getElementById('clustering-results-area');
+            if (resultsArea) {
+                resultsArea.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
+                    <h3>Clustering in Progress...</h3>
+                    <p>Running ${config.algorithm.toUpperCase()} on ${filenames.length} images.</p>
+                    <small>This may take a few seconds...</small>
+                </div>
+                `;
+            }
+
+            // Allow UI to render the loading state
+            await new Promise(r => setTimeout(r, 100));
+
+            let clusters;
+            if (config.algorithm === 'kmeans') {
+                // K-Means uses raw embeddings, not distance matrix
+                clusters = this.runKMEANS(embeddings, config);
+            } else if (config.algorithm === 'hierarchical') {
+                clusters = this.runHierarchical(distanceMatrix, config);
+            } else if (config.algorithm === 'optics') {
+                clusters = this.runOPTICS(distanceMatrix, config);
+            } else if (config.algorithm === 'hdbscan') {
+                clusters = this.runHDBSCAN(distanceMatrix, config);
+            } else {
+                // Default to DBSCAN
+                clusters = this.runDBSCAN(distanceMatrix, config);
+            }
+
+            console.log(`${config.algorithm} completed, found ${clusters.length} clusters`);
 
             // Sort clusters by size
             const orderedClusters = clusters.sort((a, b) => b.length - a.length);
@@ -131,7 +159,91 @@ export class ClusteringStep {
         } catch (error) {
             this.log(`Clustering failed: ${error.message}`, 'error');
             console.error('Clustering error:', error);
+
+            const resultsArea = document.getElementById('clustering-results-area');
+            if (resultsArea) {
+                resultsArea.innerHTML = `
+                <div class="alert-box error" style="margin: 20px; text-align: center; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 20px; border-radius: 8px;">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">⚠️</div>
+                    <h3>Clustering Error</h3>
+                    <p>${error.message}</p>
+                    <button class="secondary-btn" onclick="location.reload()" style="margin-top: 15px;">Retry System</button>
+                </div>
+                `;
+            }
         }
+    }
+
+    runDBSCAN(distanceMatrix, config) {
+        this.log(`Running DBSCAN (Eps: ${config.epsilon}, MinPts: ${config.minPts})...`);
+        const dbscan = new clustering.DBSCAN();
+        return dbscan.run(distanceMatrix, config.epsilon, config.minPts);
+    }
+
+    runKMEANS(embeddings, config) {
+        this.log(`Running K-Means (K: ${config.k})...`);
+        const kmeans = new clustering.KMEANS();
+        return kmeans.run(embeddings, config.k);
+    }
+
+    runOPTICS(distanceMatrix, config) {
+        this.log(`Running OPTICS (Eps: ${config.epsilon}, MinPts: ${config.minPts})...`);
+        const optics = new clustering.OPTICS();
+        // OPTICS run returns clusters similar to DBSCAN in this library
+        return optics.run(distanceMatrix, config.epsilon, config.minPts);
+    }
+
+    runHierarchical(distanceMatrix, config) {
+        this.log(`Running Hierarchical Clustering (K: ${config.k}, Linkage: ${config.linkage})...`);
+
+        try {
+            const tree = agnes(distanceMatrix, {
+                method: config.linkage || 'average',
+                isDistanceMatrix: true
+            });
+
+            // Use group(k) to force k clusters
+            const groups = tree.group(config.k);
+            console.log('Hierarchical Tree Grouping:', groups);
+
+            const clusters = [];
+
+            // groups is Array<Cluster>
+            for (const clusterNode of groups) {
+                const indices = this.getAllIndices(clusterNode);
+                if (indices.length > 0) clusters.push(indices);
+            }
+            console.log('Hierarchical found clusters:', clusters.length);
+            return clusters;
+        } catch (err) {
+            console.error("Hierarchical error:", err);
+            throw new Error("Hierarchical clustering failed: " + err.message);
+        }
+    }
+
+    getAllIndices(node) {
+        if (node.children) {
+            let indices = [];
+            for (const child of node.children) {
+                indices = indices.concat(this.getAllIndices(child));
+            }
+            return indices;
+        } else {
+            // Leaf node, check check for undefined because index 0 is falsy
+            if (node.index !== undefined && node.index !== null) {
+                return [node.index];
+            }
+            return [];
+        }
+    }
+
+    runHDBSCAN(distanceMatrix, config) {
+        this.log(`Running HDBSCAN (via OPTICS, Eps: ${config.epsilon}, MinPts: ${config.minPts})...`);
+        // Now using user-defined epsilon to allow manual tuning
+        const optics = new clustering.OPTICS();
+        const clusters = optics.run(distanceMatrix, config.epsilon, config.minPts);
+        console.log('HDBSCAN found:', clusters.length, 'clusters');
+        return clusters;
     }
 
     async saveSelectedClusters() {
@@ -272,17 +384,58 @@ export class ClusteringStep {
             const grid = document.createElement('div');
             grid.className = 'cluster-grid';
 
+            // Lazy load images using IntersectionObserver
+            const observer = new IntersectionObserver((entries, obs) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        const idx = img.dataset.index;
+                        this.fs.readFile(filenames[idx], 'blob').then(async (blob) => {
+                            if (blob) {
+                                try {
+                                    // Create a thumbnail on the fly to save memory
+                                    const imgBitmap = await createImageBitmap(blob);
+                                    const canvas = document.createElement('canvas');
+                                    const ctx = canvas.getContext('2d');
+
+                                    // Set thumbnail size
+                                    const size = 300;
+                                    const scale = Math.min(size / imgBitmap.width, size / imgBitmap.height);
+                                    canvas.width = imgBitmap.width * scale;
+                                    canvas.height = imgBitmap.height * scale;
+
+                                    ctx.drawImage(imgBitmap, 0, 0, canvas.width, canvas.height);
+
+                                    img.src = canvas.toDataURL('image/jpeg', 0.85); // Compress to Jpeg
+                                    imgBitmap.close(); // Immediate memory release
+                                    img.removeAttribute('data-index');
+                                    obs.unobserve(img);
+                                } catch (e) {
+                                    console.error("Thumbnail error:", e);
+                                    // Fallback to original if canvas fails
+                                    img.src = URL.createObjectURL(blob);
+                                    img.removeAttribute('data-index');
+                                    obs.unobserve(img);
+                                }
+                            }
+                        });
+                    }
+                });
+            }, { rootMargin: '100px' });
+
             cluster.forEach(imgIndex => {
                 const imgContainer = document.createElement('div');
                 imgContainer.className = 'cluster-image';
 
                 const img = document.createElement('img');
                 img.title = captions[imgIndex];
-                img.loading = 'lazy';
+                img.dataset.index = imgIndex; // Store index for observer
+                img.alt = "Loading...";
 
-                this.fs.readFile(filenames[imgIndex], 'blob').then(blob => {
-                    if (blob) img.src = URL.createObjectURL(blob);
-                });
+                // Show a placeholder or small icon first
+                img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmM2Y0ZjYiLz48L3N2Zz4=';
+
+                observer.observe(img);
 
                 imgContainer.appendChild(img);
                 grid.appendChild(imgContainer);

@@ -1,0 +1,1 @@
+Couldn't find the requested file /wasm/text_embedder_wasm_internal.js in @mediapipe/tasks-text.
