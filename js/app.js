@@ -14,7 +14,11 @@ class App {
         this.hasWebGPU = !!navigator.gpu;
         this.isGenerationRunning = false;
 
+        // Track available CLIP model precisions
+        this.clipModelAvailability = { hasQuantized: false, hasFull: false };
+
         this.initEventListeners();
+        this.scanClipModels(); // Scan on startup
         this.log("System initialized. Please select an image folder to begin.");
     }
 
@@ -284,6 +288,47 @@ class App {
         });
     }
 
+    async scanClipModels() {
+        const modelFolder = 'clip-vit-base-patch16'; // Default model folder
+        try {
+            const availability = await this.generation.scanModelVersions(modelFolder);
+            this.clipModelAvailability = availability;
+
+            // Update settings page display
+            this.updateClipSettingsDisplay();
+
+            if (!availability.hasQuantized && !availability.hasFull) {
+                this.log(`⚠️ No CLIP model files found in models/${modelFolder}. CLIP pipeline will not work.`, 'error');
+            } else {
+                const available = [];
+                if (availability.hasQuantized) available.push('Quantized');
+                if (availability.hasFull) available.push('Full');
+                this.log(`✅ CLIP models detected: ${available.join(', ')}`);
+            }
+        } catch (error) {
+            this.log(`Failed to scan CLIP models: ${error.message}`, 'error');
+        }
+    }
+
+    updateClipSettingsDisplay() {
+        const precisionEl = document.getElementById('clip-precision-display');
+        if (!precisionEl) return;
+
+        const { hasQuantized, hasFull } = this.clipModelAvailability;
+
+        if (!hasQuantized && !hasFull) {
+            precisionEl.textContent = '⚠️ No models found';
+            precisionEl.style.color = '#ef4444';
+        } else {
+            const available = [];
+            if (hasQuantized) available.push('Quantized');
+            if (hasFull) available.push('Full');
+            precisionEl.textContent = available.join(', ');
+            precisionEl.style.color = '';
+        }
+    }
+
+
     async handleStartGeneration(type) { // type = 'sequential' or 'random'
         const resumeRun = document.getElementById('gen-resume-select').value;
         let configItems = [];
@@ -329,6 +374,33 @@ class App {
 
         const defaultDevice = this.hasWebGPU ? 'webgpu' : 'wasm';
 
+        // Build dynamic precision options based on available models
+        const precisionOptions = [];
+        let defaultPrecision = 'quantized'; // fallback
+
+        if (this.clipModelAvailability.hasQuantized) {
+            precisionOptions.push({ v: 'quantized', l: 'Quantized (Faster, Lower Memory)' });
+        }
+        if (this.clipModelAvailability.hasFull) {
+            precisionOptions.push({ v: 'full', l: 'Full Precision (Slower, Higher Quality)' });
+            if (!this.clipModelAvailability.hasQuantized) {
+                defaultPrecision = 'full'; // Auto-select full if it's the only option
+            }
+        }
+
+        // If no models available, add a disabled placeholder
+        if (precisionOptions.length === 0) {
+            precisionOptions.push({ v: '', l: '⚠️ No models found' });
+        }
+
+        // Determine initial precision value
+        let initialPrecision = defaultPrecision;
+        if (initialConfig.quantized === true && this.clipModelAvailability.hasQuantized) {
+            initialPrecision = 'quantized';
+        } else if (initialConfig.quantized === false && this.clipModelAvailability.hasFull) {
+            initialPrecision = 'full';
+        }
+
         // CLIP specific fields
         configItems.push(
             {
@@ -343,14 +415,13 @@ class App {
             },
             {
                 key: 'precision', label: 'Precision',
-                value: (initialConfig.quantized === true ? 'quantized' : (initialConfig.quantized === false ? 'full' : 'quantized')),
-                type: 'select',
-                options: [
-                    { v: 'quantized', l: 'Quantized (Faster, Lower Memory)' },
-                    { v: 'full', l: 'Full Precision (Slower, Higher Quality)' }
-                ],
+                value: initialPrecision,
+                type: precisionOptions.length > 1 ? 'select' : 'text',
+                options: precisionOptions,
+                readonly: precisionOptions.length === 1,
+                displayValue: precisionOptions.length === 1 ? precisionOptions[0].l : undefined,
                 group: 'direct_clip',
-                help: "Quantized is recommended for most use cases."
+                help: precisionOptions.length > 1 ? "Quantized is recommended for most use cases." : undefined
             },
             { key: 'modelFolderName', label: 'Model Folder', value: initialConfig.modelFolderName || 'clip-vit-base-patch16', type: 'text', readonly: true, group: 'direct_clip' }
         );

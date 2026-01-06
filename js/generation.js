@@ -10,15 +10,16 @@ export class GenerationStep {
         this.llmInference = null;
         this.textEmbedder = null;
         this.clipPipeline = null; // Store the CLIP pipeline
-        this.isModelLoaded = false;
+        this.loadedMode = null; // Track which mode is currently loaded ('direct_clip' or 'legacy')
         this.isAborted = false;
         this.mode = 'sequential'; // default
     }
 
     async loadModels(config) {
-        if (this.isModelLoaded) return;
+        // If the same mode is already loaded, skip loading
+        if (this.loadedMode === config.mode) return;
 
-        this.log("Loading AI models... This may take a moment.");
+        this.log(`Loading AI models for ${config.mode === 'direct_clip' ? 'CLIP' : 'Gemma'}... This may take a moment.`);
 
         try {
             if (config.mode === 'direct_clip') {
@@ -30,44 +31,41 @@ export class GenerationStep {
                 env.localModelPath = 'models/'; // Base path for models
                 env.allowRemoteModels = false; // Disable remote fetching
 
-                // Determine quantization setting
-                // config.quantized can be: 'true' (force q), 'false' (force full), or undefined (auto)
-                // However, transformers.js 'quantized' option expects boolean.
-                // We will default to true if not specified, OR respect user choice.
-
                 let quantizedOption = true; // Default
                 if (config.quantized === 'false' || config.quantized === false) quantizedOption = false;
 
                 this.log(`Loading CLIP model (Quantized: ${quantizedOption})...`);
 
-                try {
-                    // Initialize Processor and Model explicitly
-                    this.clipProcessor = await AutoProcessor.from_pretrained(config.modelFolderName);
+                // Initialize Processor and Model explicitly
+                this.clipProcessor = await AutoProcessor.from_pretrained(config.modelFolderName);
 
-                    // Use CLIPVisionModelWithProjection to get the projected image embeddings
-                    this.clipModel = await CLIPVisionModelWithProjection.from_pretrained(config.modelFolderName, {
-                        quantized: quantizedOption,
-                        device: config.device || 'webgpu' // Attempt WebGPU if possible
-                    });
-                    this.log("✅ Local CLIP model loaded successfully.");
-                } catch (err) {
-                    this.log(`❌ Failed to load local model: ${err.message}. Ensure 'models/${config.modelFolderName}' exists and contains .onnx files.`, 'error');
-                    throw err;
-                }
+                // Use CLIPVisionModelWithProjection to get the projected image embeddings
+                this.clipModel = await CLIPVisionModelWithProjection.from_pretrained(config.modelFolderName, {
+                    quantized: quantizedOption,
+                    device: config.device || 'webgpu' // Attempt WebGPU if possible
+                });
+                this.log("✅ Local CLIP model loaded successfully.");
 
             } else {
                 // --- GEMMA / LEGACY MODE ---
-                // Load Text Embedder
+                this.log("Initializing MediaPipe Gemma & USE...");
+
+                // Load Text Embedder (USE)
+                this.log("  - Resolving files for Text Tasks...");
                 const textFiles = await FilesetResolver.forTextTasks("js/vendor/wasm");
+                this.log("  - Creating Text Embedder (USE)...");
                 this.textEmbedder = await TextEmbedder.createFromOptions(textFiles, {
                     baseOptions: {
                         modelAssetPath: config.embeddingModel || 'universal_sentence_encoder.tflite',
-                        delegate: "GPU" // Experimental GPU delegate for USE
+                        delegate: "CPU" // CPU is safer and plenty fast for USE
                     }
                 });
+                this.log("  ✅ Text Embedder ready.");
 
-                // Load LLM
+                // Load LLM (Gemma)
+                this.log("  - Resolving files for GenAi Tasks...");
                 const genaiFileset = await FilesetResolver.forGenAiTasks('js/vendor/wasm');
+                this.log(`  - Creating LLM Inference (${config.modelFileName})...`);
                 this.llmInference = await LlmInference.createFromOptions(genaiFileset, {
                     baseOptions: { modelAssetPath: config.modelFileName },
                     temperature: config.temperature !== undefined ? config.temperature : 0,
@@ -77,9 +75,10 @@ export class GenerationStep {
                 this.log("✅ Gemma & USE models loaded successfully.");
             }
 
-            this.isModelLoaded = true;
+            this.loadedMode = config.mode;
         } catch (error) {
             this.log(`Error loading models: ${error.message}`, 'error');
+            this.loadedMode = null; // Reset on failure
             throw error;
         }
     }
@@ -133,53 +132,6 @@ export class GenerationStep {
         btnAbort.disabled = true;
         btnAbort.textContent = 'Aborting...';
         this.log("Aborting... Please wait for current image to finish processing.", 'error');
-    }
-
-    showResumeDialog(runName, processed, total) {
-        return new Promise((resolve) => {
-            // Create modal
-            const modal = document.createElement('div');
-            modal.className = 'resume-modal';
-            modal.innerHTML = `
-                <div class="resume-modal-content">
-                    <h2>🔄 Resume Previous Run?</h2>
-                    <p>Found an incomplete generation run from a previous session.</p>
-                    
-                    <div class="resume-stats">
-                        <div>
-                            <span>Run Name:</span>
-                            <strong>${runName}</strong>
-                        </div>
-                        <div>
-                            <span>Progress:</span>
-                            <strong>${processed} / ${total} images (${Math.round((processed / total) * 100)}%)</strong>
-                        </div>
-                        <div>
-                            <span>Remaining:</span>
-                            <strong>${total - processed} images</strong>
-                        </div>
-                    </div>
-                    
-                    <div class="resume-modal-actions">
-                        <button class="btn-new">Start Fresh</button>
-                        <button class="btn-resume">Resume</button>
-                    </div>
-                </div>
-            `;
-
-            document.body.appendChild(modal);
-
-            // Handle button clicks
-            modal.querySelector('.btn-resume').addEventListener('click', () => {
-                document.body.removeChild(modal);
-                resolve(true);
-            });
-
-            modal.querySelector('.btn-new').addEventListener('click', () => {
-                document.body.removeChild(modal);
-                resolve(false);
-            });
-        });
     }
 
     async validateAndSyncMetadata(runFolder) {
@@ -257,38 +209,36 @@ export class GenerationStep {
                 return !isRandomRun;
             }).sort().reverse();
 
-            let runFolder;
+            let runFolder = config.runFolder;
             let filenames = [];
             let captions = [];
             let embeddings = [];
 
             // Resume logic
-            if (genRuns.length > 0) {
-                const lastRun = genRuns[0];
-                const syncedData = await this.validateAndSyncMetadata(lastRun);
+            if (runFolder) {
+                // Explicit resume from UI selection
+                const syncedData = await this.validateAndSyncMetadata(runFolder);
+                filenames = syncedData.filenames;
+                captions = syncedData.captions;
+                embeddings = syncedData.embeddings;
 
-                if (syncedData.filenames.length < allImages.length) {
-                    const shouldResume = await this.showResumeDialog(
-                        lastRun,
-                        syncedData.filenames.length,
-                        allImages.length
-                    );
-
-                    if (shouldResume) {
-                        runFolder = lastRun;
-                        filenames = syncedData.filenames;
-                        captions = syncedData.captions;
-                        embeddings = syncedData.embeddings;
-
-                        // Load previous config to ensure continuity
-                        const prevConfig = await this.fs.readFile(`metadata/${runFolder}/config.json`, 'json');
-                        if (prevConfig) {
-                            config = { ...config, ...prevConfig };
-                        }
-
-                        this.log(`Resuming ${mode} run from ${filenames.length} processed images...`);
-                    }
+                // Load previous config to ensure continuity (e.g. system prompt, model files)
+                const prevConfig = await this.fs.readFile(`metadata/${runFolder}/config.json`, 'json');
+                if (prevConfig) {
+                    config = { ...config, ...prevConfig };
                 }
+                this.log(`Resuming ${mode} run: ${runFolder} (${filenames.length} images processed)`);
+            } else if (genRuns.length > 0) {
+                // Legacy / Auto-detect resume (optional, can be kept as fallback or removed)
+                // Since App.js now handles run selection, we could theoretically skip this,
+                // but we'll keep a simpler version for robustness if no run was explicitly selected
+                // but one is available. However, the user complained about the prompt.
+                // Best to skip auto-prompting if they explicitly chose "New Run" in App.js.
+
+                /* Selection in App.js is the source of truth now. 
+                   If runFolder is null here, it means the user chose "(New Run)".
+                   We should skip the auto-prompt to avoid the "additional modal" issue.
+                */
             }
 
             if (!runFolder) {
@@ -385,12 +335,21 @@ export class GenerationStep {
 
                 } else {
                     // --- MEDIA PIPE GEMMA + USE ---
-                    // Generate Caption
-                    captionResult = await this.llmInference.generateResponse([config.systemPrompt, { imageSource: imageUrl }]);
+                    try {
+                        // Generate Caption
+                        // console.log("Calling generateResponse...");
+                        captionResult = await this.llmInference.generateResponse([config.systemPrompt, { imageSource: imageUrl }]);
+                        // console.log("Caption received.");
 
-                    // Generate Embedding
-                    const embeddingResult = this.textEmbedder.embed(captionResult);
-                    embeddingArray = embeddingResult.embeddings[0].floatEmbedding;
+                        // Generate Embedding
+                        const embeddingResult = this.textEmbedder.embed(captionResult);
+                        embeddingArray = embeddingResult.embeddings[0].floatEmbedding;
+                    } catch (e) {
+                        this.log(`❌ Error processing image with Gemma/USE: ${e.message}`, 'error');
+                        // Use empty values so we can continue with other images if possible
+                        captionResult = "[ERROR: Generation failed]";
+                        embeddingArray = new Array(512).fill(0); // USE defaults to 512
+                    }
                 }
 
                 filenames.push(filename);
@@ -400,6 +359,9 @@ export class GenerationStep {
                 // Update Preview
                 previewImg.src = imageUrl;
                 previewCaption.textContent = captionResult;
+
+                // Cleanup Blob URL to prevent memory leaks
+                previewImg.onload = () => URL.revokeObjectURL(imageUrl);
 
                 // Calculate and Update Stats
                 const elapsed = Date.now() - startTime;
@@ -434,9 +396,15 @@ export class GenerationStep {
                 document.getElementById('gen-stat-speed').textContent = `⚡ ${speedStr}`;
                 document.getElementById('gen-stat-eta').textContent = `🏁 ${etaStr}`;
 
-                // Save every image
+                // Save every image as requested
                 await this.saveData(runFolder, filenames, captions, embeddings, config);
+
+                // Give the UI a chance to breathe, especially during heavy LLM tasks
+                await new Promise(r => setTimeout(r, 100)); // Slightly longer breather
             }
+
+            // Final save after loop for safety
+            await this.saveData(runFolder, filenames, captions, embeddings, config);
 
             if (!this.isAborted) {
                 this.log(`Generation complete (${mode}). Metadata saved.`);
