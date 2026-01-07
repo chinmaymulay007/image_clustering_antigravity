@@ -35,7 +35,8 @@ class App {
             onExcludeImage: (path) => this.handleExclude(path),
             onLoadThumbnail: (path) => this.loadThumbnail(path),
             onGetExcludedPaths: () => this.excludedPaths,
-            onRestoreImage: (path) => this.handleRestore(path)
+            onRestoreImage: (path) => this.handleRestore(path),
+            onConfirmSaveLocation: (isDifferent) => this.handleConfirmSaveLocation(isDifferent)
         });
     }
 
@@ -247,7 +248,6 @@ class App {
             }
 
             const btn = document.getElementById('btn-save-clusters');
-            const originalText = btn.textContent;
 
             // 1. Determine which clusters to save
             const selectedIndices = this.ui.getSelectedClusterIndices();
@@ -256,23 +256,31 @@ class App {
                 return;
             }
 
+            // 2. Clear state and show choice
+            this.ui.showSaveChoice();
+        } catch (e) {
+            console.error("Save initiation failed:", e);
+        }
+    }
+
+    async handleConfirmSaveLocation(isDifferent) {
+        try {
+            const btn = document.getElementById('btn-save-clusters');
+            const originalText = "💾 SAVE CLUSTERS";
+
+            let targetHandle = null;
+            if (isDifferent) {
+                try {
+                    targetHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                } catch (userCancelled) {
+                    return; // Stop if user cancels folder picker
+                }
+            }
+
             btn.textContent = "SAVING...";
             btn.disabled = true;
 
-            // 2. Use Cached CLUSTERS (WYSIWYG)
-            // We do NOT re-calculate here because K-Means is non-deterministic.
-            // We use exactly what the user is looking at.
-
-            const allClusters = this.currentClusters;
-            if (!allClusters || allClusters.length === 0) {
-                // Should ideally rely on refreshClusters having run at least once.
-                // Fallback if empty?
-                console.warn("No cached clusters found, forcing refresh...");
-                await this.refreshClusters();
-                // Now use updated
-            }
-
-            // 3. Filter Clusters
+            const selectedIndices = this.ui.getSelectedClusterIndices();
             const clustersToSave = this.currentClusters.filter((c, i) => selectedIndices.includes(i));
 
             if (clustersToSave.length === 0) {
@@ -288,7 +296,7 @@ class App {
             // 5. Execute Save with Progress Callback
             const folderName = await this.fs.saveClusters(clustersToSave, this.handleMap, (current, total, text) => {
                 this.ui.updateProgress(current, total, text);
-            });
+            }, targetHandle);
 
             this.ui.hideProgress();
             alert(`Curated clusters saved successfully to folder: ${folderName}`);

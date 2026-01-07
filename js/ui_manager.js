@@ -35,6 +35,12 @@ export class UIManager {
         this.btnSave = document.getElementById('btn-save-clusters');
         this.statusBarText = document.getElementById('status-bar-text');
 
+        // Save Choice Modal
+        this.modalSaveChoice = document.getElementById('modal-save-choice');
+        this.btnSaveSame = document.getElementById('btn-save-same');
+        this.btnSaveDiff = document.getElementById('btn-save-diff');
+        this.btnCancelSave = document.getElementById('btn-cancel-save');
+
         // State
         this.callbacks = {};
     }
@@ -89,6 +95,20 @@ export class UIManager {
         });
 
         this.btnSave.addEventListener('click', () => this.callbacks.onSave?.());
+
+        this.btnSaveSame.addEventListener('click', () => {
+            this.modalSaveChoice.classList.add('hidden');
+            this.callbacks.onConfirmSaveLocation?.(false); // same
+        });
+
+        this.btnSaveDiff.addEventListener('click', () => {
+            this.modalSaveChoice.classList.add('hidden');
+            this.callbacks.onConfirmSaveLocation?.(true); // different
+        });
+
+        this.btnCancelSave.addEventListener('click', () => {
+            this.modalSaveChoice.classList.add('hidden');
+        });
     }
 
     hideInitialOverlay() {
@@ -219,6 +239,10 @@ export class UIManager {
             if (cb.checked) indices.push(index);
         });
         return indices;
+    }
+
+    showSaveChoice() {
+        this.modalSaveChoice.classList.remove('hidden');
     }
 
     showProgress(title) {

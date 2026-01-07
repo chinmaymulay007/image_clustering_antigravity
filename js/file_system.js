@@ -203,18 +203,20 @@ export class FileSystemManager {
      * @param {Array} clusters - Array of cluster objects.
      * @param {Map} handleMap - Map of path -> FileHandle.
      * @param {Function} onProgress - Callback (current, total, text)
+     * @param {FileSystemDirectoryHandle} [targetHandle] - Optional handle to save into.
      * @returns {Promise<string>} Name of the created folder.
      */
-    async saveClusters(clusters, handleMap, onProgress) {
-        if (!this.dirHandle) throw new Error("No directory selected");
+    async saveClusters(clusters, handleMap, onProgress, targetHandle = null) {
+        const parentHandle = targetHandle || this.dirHandle;
+        if (!parentHandle) throw new Error("No directory selected");
 
         // Create root save folder
         const now = new Date();
         const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
         const rootFolderName = `clusterai_curated_${timestamp}`; // Renamed for clarity
 
-        console.log(`[FileSystem] Initializing save folder: ${rootFolderName}`);
-        const rootDir = await this.dirHandle.getDirectoryHandle(rootFolderName, { create: true });
+        console.log(`[FileSystem] Initializing save folder: ${rootFolderName} in ${parentHandle.name}`);
+        const rootDir = await parentHandle.getDirectoryHandle(rootFolderName, { create: true });
 
         // Calculate total files for progress
         let totalFiles = 0;
