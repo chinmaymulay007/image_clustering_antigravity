@@ -4,336 +4,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Clustering Dashboard</title>
+    <title>ClusterAI</title>
     <link rel="stylesheet" href="css/style.css">
-    <title>Image Clustering Dashboard</title>
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Using System Fonts for Offline reliability -->
-    <style>
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-    </style>
+
 </head>
 
 <body>
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2>ClusterAI</h2>
-            </div>
-
-            <div class="folder-selection">
-                <button id="btn-select-folder" class="primary-btn">
-                    <span class="icon">📂</span> Select Image Folder
-                </button>
-                <div id="selected-folder-name" class="folder-name">No folder selected</div>
-            </div>
-
-            <nav class="nav-menu">
-                <button class="nav-item active" data-tab="settings">
-                    <span class="icon">⚙️</span> Settings
-                </button>
-                <button class="nav-item" data-tab="generation" id="nav-generation" disabled>
-                    <span class="icon">🧠</span> Generation (Step 1)
-                </button>
-                <button class="nav-item" data-tab="clustering" id="nav-clustering" disabled>
-                    <span class="icon">🧩</span> Clustering (Step 2)
-                </button>
-                <button class="nav-item" data-tab="organization" id="nav-organization" disabled>
-                    <span class="icon">📁</span> Organization (Step 3)
-                </button>
-                <button class="nav-item" data-tab="logs">
-                    <span class="icon">📜</span> Logs
-                </button>
-            </nav>
-
-            <div class="sidebar-footer">
-                <div class="status-indicator">
-                    <span class="status-dot" id="global-status-dot"></span>
-                    <span id="global-status-text">Idle</span>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content">
-
-            <!-- Settings Tab -->
-            <section id="tab-settings" class="tab-content active">
-                <header class="tab-header">
-                    <h1>Configuration</h1>
-                    <p>Configure your AI models and clustering parameters.</p>
-                </header>
-
-                <div class="card guide-card">
-                    <h3>📖 Quick Start Guide</h3>
-                    <div class="guide-content" style="display: flex; flex-direction: column; gap: 15px;">
-                        <div
-                            style="background: rgba(var(--primary-rgb), 0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--primary-color);">
-                            <h4
-                                style="margin: 0 0 8px 0; color: var(--primary-color); display: flex; align-items: center; gap: 8px;">
-                                🚀 Getting Started
-                            </h4>
-                            <ol style="margin: 0; padding-left: 20px; line-height: 1.6;">
-                                <li><strong>Select Folder:</strong> Click "Select Image Folder" in the sidebar.</li>
-                                <li><strong>Run Analysis:</strong> Go to <strong>Generation (Step 1)</strong> tab and
-                                    click "Start Sequential" or "Start Random".</li>
-                                <li><strong>Choose Pipeline:</strong> Select CLIP (visual) or Gemma (caption) in the
-                                    modal.</li>
-                                <li><strong>Cluster & Organize:</strong> Run clustering (Step 2), then organize (Step
-                                    3).</li>
-                            </ol>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9em;">
-                            <div class="guide-tip">
-                                <strong>💡 CLIP Tip:</strong> Fastest & best for visual sorting. Use the
-                                <strong>Scan</strong> button below to verify your local files.
-                            </div>
-                            <div class="guide-tip">
-                                <strong>💡 Gemma Tip:</strong> Best if you want text captions for your images. Requires
-                                more RAM/GPU.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card-grid">
-                    <!-- Generation Settings -->
-                    <div class="card card-gen">
-                        <h3>🤖 Generation Settings (Step 1)</h3>
-                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Model
-                            configurations for image analysis pipelines.</p>
-
-                        <div class="form-group">
-                            <label style="font-weight: 600; color: var(--text-color);">CLIP (Visual) Pipeline</label>
-                            <div
-                                style="background: #f9fafb; padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.5rem;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                    <span style="color: var(--text-muted); font-size: 0.85rem;">Model Folder:</span>
-                                    <span style="font-weight: 500; font-size: 0.85rem;">clip-vit-base-patch16</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span style="color: var(--text-muted); font-size: 0.85rem;">Available
-                                        Precisions:</span>
-                                    <span id="clip-precision-display" style="font-weight: 500; font-size: 0.85rem;">Checking...</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label style="font-weight: 600; color: var(--text-color);">Gemma (Caption) Pipeline</label>
-                            <div
-                                style="background: #f9fafb; padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.5rem;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                    <span style="color: var(--text-muted); font-size: 0.85rem;">LLM Model:</span>
-                                    <span
-                                        style="font-weight: 500; font-size: 0.85rem;">gemma-3n-E2B-it-int4-Web.litertlm</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span style="color: var(--text-muted); font-size: 0.85rem;">Embedding Model:</span>
-                                    <span
-                                        style="font-weight: 500; font-size: 0.85rem;">universal_sentence_encoder.tflite</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Clustering Settings -->
-                    <div class="card card-cluster">
-                        <h3>🧩 Clustering Settings (Step 2)</h3>
-
-                        <div class="form-group">
-                            <label for="clustering-algorithm-select">Algorithm</label>
-                            <select id="clustering-algorithm-select"
-                                style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
-                                <option value="dbscan">DBSCAN (Density-Based)</option>
-                                <option value="kmeans">K-Means (Centroid-Based)</option>
-                                <option value="hierarchical">Hierarchical (Tree-Based)</option>
-                                <option value="optics">OPTICS (Variable Density)</option>
-                                <option value="hdbscan">HDBSCAN (Hierarchical Density)</option>
-                            </select>
-                        </div>
-
-                        <!-- Dynamic Parameters Container -->
-                        <div id="clustering-params-container">
-                            <!-- Density-Based Params (DBSCAN, OPTICS, HDBSCAN) -->
-                            <div class="algo-params" data-algo="dbscan optics hdbscan">
-                                <div class="form-group">
-                                    <label for="cluster-epsilon">Epsilon (Distance Threshold)</label>
-                                    <input type="number" id="cluster-epsilon" min="0" max="2" step="0.01" value="0.45">
-                                    <small>Lower = stricter similarity, Higher = looser groups.</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="cluster-minpts">Minimum Cluster Size (MinPts)</label>
-                                    <input type="number" id="cluster-minpts" min="1" max="100" step="1" value="2">
-                                </div>
-                            </div>
-
-                            <!-- Centroid/Tree-Based Params (K-Means, Hierarchical) -->
-                            <div class="algo-params" data-algo="kmeans hierarchical" hidden>
-                                <div class="form-group">
-                                    <label for="cluster-k">Number of Clusters (K)</label>
-                                    <input type="number" id="cluster-k" min="2" max="100" step="1" value="5">
-                                    <small>How many groups to create.</small>
-                                </div>
-                            </div>
-
-                            <!-- Hierarchical Specific (Linkage) -->
-                            <div class="algo-params" data-algo="hierarchical" hidden>
-                                <div class="form-group">
-                                    <label for="cluster-linkage">Linkage Criterion</label>
-                                    <select id="cluster-linkage"
-                                        style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
-                                        <option value="average">Average (UPGMA)</option>
-                                        <option value="single">Single (nearest neighbor)</option>
-                                        <option value="complete">Complete (farthest neighbor)</option>
-                                        <option value="ward">Ward (min variance)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Organization Settings -->
-                    <div class="card card-org">
-                        <h3>📁 Organization Settings (Step 3)</h3>
-                        <div class="form-group">
-                            <label>File Operation</label>
-                            <div class="radio-group">
-                                <label><input type="radio" name="org-mode" value="copy" checked> Copy Files
-                                    (Safe)</label>
-                                <label><input type="radio" name="org-mode" value="move"> Move Files</label>
-                            </div>
-                            <small>Copy keeps originals, Move deletes originals after copying</small>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Generation Tab -->
-            <section id="tab-generation" class="tab-content">
-                <header class="tab-header">
-                    <h1>Image Analysis (Step 1)</h1>
-                    <p>Generate captions and embeddings for your images.</p>
-                </header>
-
-                <div class="action-bar">
-                    <div class="form-group inline" style="margin-right: 1rem;">
-                        <label>Resume:</label>
-                        <select id="gen-resume-select" style="min-width: 250px;">
-                            <option value="">(New Run)</option>
-                        </select>
-                    </div>
-                    <button id="btn-start-generation" class="primary-btn sequential-btn">Start Sequential
-                        Analysis</button>
-                    <button id="btn-start-generation-random" class="primary-btn random-btn"
-                        style="margin-left: 10px;">Start Random Analysis</button>
-                    <button id="btn-abort-generation" class="danger-btn" hidden>Abort</button>
-
-                    <div class="progress-bar-container" hidden>
-                        <div class="progress-bar" id="gen-progress-bar" style="width: 0%"></div>
-                        <span id="gen-progress-text">0%</span>
-                    </div>
-                </div>
-
-                <div class="progress-stats" id="gen-progress-stats" hidden>
-                    <span id="gen-stat-elapsed">⏱️ 0:00 | 0/0 images</span>
-                    <span id="gen-stat-speed">⚡ -</span>
-                    <span id="gen-stat-eta">🏁 -</span>
-                </div>
-
-                <div class="preview-area" id="gen-preview-area" hidden>
-                    <div class="preview-image-container">
-                        <img id="gen-preview-img" alt="Last processed image">
-                    </div>
-                    <div class="preview-caption">
-                        <strong>Last Processed</strong>
-                        <p id="gen-preview-caption">-</p>
-                    </div>
-                </div>
-
-                <div class="log-window" id="gen-log-window">
-                    <div class="log-entry">Waiting to start...</div>
-                </div>
-            </section>
-
-            <!-- Clustering Tab -->
-            <section id="tab-clustering" class="tab-content">
-                <header class="tab-header">
-                    <h1>Clustering (Step 2)</h1>
-                    <p>Group images based on semantic similarity.</p>
-                </header>
-
-                <div class="controls-bar">
-                    <div class="form-group inline">
-                        <label>Source Data:</label>
-                        <select id="clustering-source-select">
-                            <option value="">Select a Generation Run...</option>
-                        </select>
-                    </div>
-                    <button id="btn-run-clustering" class="primary-btn" disabled>Run Clustering</button>
-                </div>
-
-                <!-- Summary & Filter (outside scrollable area) -->
-                <div id="clustering-summary-area" hidden>
-                    <div class="cluster-summary">
-                        <div class="summary-stats" id="cluster-summary-stats"></div>
-                        <div class="filter-controls">
-                            <label>
-                                Filter by min images:
-                                <input type="number" id="cluster-min-filter" min="1" value="1"
-                                    style="width: 60px; margin-left: 8px;">
-                            </label>
-                            <button id="btn-apply-filter" class="secondary-btn">Apply Filter</button>
-                            <button id="btn-select-all-clusters" class="secondary-btn">Select All</button>
-                            <button id="btn-deselect-all-clusters" class="secondary-btn">Deselect All</button>
-                            <button id="btn-save-clusters" class="primary-btn">💾 Save Selected Clusters</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Scrollable clusters list -->
-                <div id="clustering-results-area" class="results-area">
-                    <div class="placeholder-text">Run clustering to see results here.</div>
-                </div>
-            </section>
-
-            <!-- Organization Tab -->
-            <section id="tab-organization" class="tab-content">
-                <header class="tab-header">
-                    <h1>Organization (Step 3)</h1>
-                    <p>Organize your files into folders based on clusters.</p>
-                </header>
-
-                <div class="controls-bar">
-                    <div class="form-group inline">
-                        <label>Source Clusters:</label>
-                        <select id="org-source-select">
-                            <option value="">Select a Clustering Run...</option>
-                        </select>
-                    </div>
-                    <button id="btn-run-organization" class="primary-btn" disabled>Organize Files</button>
-                </div>
-
-                <div class="log-window" id="org-log-window">
-                    <div class="log-entry">Waiting to start...</div>
-                </div>
-            </section>
-
-            <!-- Logs Tab -->
-            <section id="tab-logs" class="tab-content">
-                <header class="tab-header">
-                    <h1>System Logs</h1>
-                </header>
-                <div class="log-window full-height" id="system-log-window"></div>
-            </section>
-
-        </main>
+    <!-- Initial Folder Selection Overlay -->
+    <div id="overlay-initial" class="overlay">
+        <div style="text-align: center;">
+            <h1
+                style="margin-bottom: 2rem; font-size: 2.5rem; background: -webkit-linear-gradient(45deg, #3b82f6, #8b5cf6); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                ClusterAI</h1>
+            <button id="btn-select-folder-initial" class="btn-primary" style="font-size: 1.5rem; padding: 20px 40px;">📂
+                Select Parent Folder</button>
+        </div>
     </div>
 
-    <!-- Scripts -->
+    <div class="app-container">
+        <header>
+            <div class="brand" style="display:flex; align-items:center; gap:10px;">
+                <button id="btn-settings"
+                    style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #374151; background: #1f2937; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s;"
+                    title="Settings">⚙️</button>
+                <button id="btn-view-excluded"
+                    style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #374151; background: #1f2937; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s;"
+                    title="Excluded Images">🗑️</button>
+                <h2>ClusterAI</h2>
+            </div>
+            <div class="stats-bar" id="stats-bar">
+                <span>Processed: <strong id="stat-processed">0</strong>/<span id="stat-total">0</span></span>
+                <span>Speed: <strong id="stat-speed">-</strong></span>
+                <span>ETA: <strong id="stat-eta">-</strong></span>
+            </div>
+            <div class="controls">
+                <button id="btn-pause-resume" class="btn-secondary">PAUSE</button>
+            </div>
+        </header>
+
+        <div id="status-bar"
+            style="background: #1f2937; padding: 5px 10px; font-size: 0.8rem; color: #9ca3af; border-bottom: 1px solid #374151; margin-bottom: 10px;">
+            <span id="status-bar-text">Ready to start...</span>
+        </div>
+
+        <main class="cluster-grid" id="cluster-grid-container">
+            <!-- Clusters will be injected here -->
+        </main>
+
+        <footer class="footer">
+            <button id="btn-save-clusters" class="btn-primary">💾 SAVE CLUSTERS</button>
+        </footer>
+
+        <!-- Settings Modal -->
+        <div id="modal-settings" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Settings</h3>
+                    <button id="btn-close-settings" class="btn-close">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-group">
+                        <label>Number of Clusters (K)</label>
+                        <div class="range-wrap">
+                            <input type="range" id="setting-k" min="2" max="20" value="6" step="1">
+                            <span id="val-k">6</span>
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <label>Uniqueness Threshold (0.0 - 0.5)</label>
+                        <div class="range-wrap">
+                            <input type="range" id="setting-threshold" min="0" max="0.5" value="0.15" step="0.01">
+                            <span id="val-threshold">0.15</span>
+                        </div>
+                        <small style="color:#9ca3af">Higher = More different images. Lower = Allows strict
+                            duplicates.</small>
+                    </div>
+                    <div class="setting-group">
+                        <label>Refresh Interval (Images)</label>
+                        <div class="range-wrap">
+                            <input type="number" id="setting-refresh" value="20" min="5" max="500"
+                                style="background:#111827; border:1px solid #374151; color:white; padding:5px; border-radius:4px; width:60px;">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-apply-settings" class="btn-primary" style="width:100%">Apply & Re-Cluster</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excluded Images Modal -->
+    <div id="modal-excluded" class="modal hidden">
+        <div class="modal-content"
+            style="width: 80%; max-width: 800px; height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3>Excluded Images</h3>
+                <button id="btn-close-excluded" class="btn-close">×</button>
+            </div>
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 10px; background: #111827;">
+                <div id="excluded-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px;">
+                    <!-- Excluded items injected here -->
+                </div>
+                <div id="excluded-empty-message"
+                    style="text-align: center; color: #9ca3af; margin-top: 50px; display: none;">
+                    No excluded images.
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end;">
+                <button id="btn-close-excluded-action" class="btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Modal -->
+    <div id="modal-progress" class="modal hidden" style="z-index: 3000;">
+        <div class="modal-content" style="text-align: center; padding: 40px;">
+            <h3 id="progress-title" style="margin-bottom: 20px;">Saving Clusters...</h3>
+            <div
+                style="width: 100%; background: #374151; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 10px;">
+                <div id="progress-bar-fill"
+                    style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s;"></div>
+            </div>
+            <p id="progress-text" style="color: #9ca3af;">0 / 0</p>
+        </div>
+    </div>
+
     <script type="module" src="js/app.js"></script>
 </body>
 

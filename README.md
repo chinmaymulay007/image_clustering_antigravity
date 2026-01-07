@@ -1,14 +1,35 @@
-# Image Clustering Antigravity
+# Image Clustering Antigravity v2
 
-This project is a browser-based application for clustering images using local AI models. It offers two processing pipelines:
-1.  **Dense Captioning (Gemma + USE)**: Generates descriptive captions and embeds them using Universal Sentence Encoder.
-2.  **Direct Image Embedding (CLIP)**: Uses OpenAI's CLIP models to generate embeddings directly from images (faster and multi-modal).
+A high-performance, browser-based application for semantic image clustering using local AI models. Point it at any folder on your computer, and it will automatically group images by visual and semantic themes without ever uploading data to the cloud.
 
-## Features
-- **Step 1: Generation**: Analyzes images to generate captions (optional) and visual/semantic embeddings.
-- **Step 2: Clustering**: Groups similar images based on semantic meaning using algorithms like DBSCAN, K-Means, etc.
-- **Step 3: Organization**: Physically organizes files into folders based on clusters.
-- **Privacy First**: All processing happens locally in your browser. No images are uploaded.
+## 🚀 Key Features
+
+- **Local CLIP Embedding**: Uses OpenAI's CLIP (ViT-Base-Patch16) quantized for the browser to extract semantic vectors from images.
+- **Dynamic Clustering**: Real-time K-Means clustering that evolves as images are processed.
+- **Clustering Stability (Warm Start)**: Centers "remember" their positions during updates, preventing the UI from jumping around.
+- **Smart Deduplication**: Adjust the "Uniqueness Threshold" to ensure cluster previews show diverse images rather than near-duplicates.
+- **Selective Saving**: Choose specific clusters to save; the app will physically organize them into folders on your disk.
+- **Excluded Images (Trash)**: Easily remove images from clusters. View and restore them at any time via the Trash icon.
+- **Size-based Sorting**: Clusters are automatically ordered by the number of images they contain (largest first).
+- **Project Isolation**: All metadata and saved outputs are prefixed with `clusterai_` to keep your original folders clean.
+
+## 🛠️ Processing Pipeline
+
+1.  **Step 1: Scan & Embed**: Recursively scans your selected folder for images and generates 512-dimensional semantic vectors.
+2.  **Step 2: Dynamic Update**: Every 20 images (configurable), the system refreshes clusters using the latest data.
+3.  **Step 3: Organize**: Filter, select, and save your curated clusters to disk.
+
+## ⚙️ Settings
+
+- **Number of Clusters (K)**: Define how many broad categories you want to find.
+- **Update Frequency**: How often the UI refreshes (e.g., every 20 images).
+- **Uniqueness Threshold**: Controls how different two images must be to both appear in the cluster preview grid.
+
+## 📦 Data & Persistence
+
+The application maintains a `clusterai_metadata` folder inside your image directory:
+- **`embeddings.json`**: Cached semantic vectors for instant resume.
+- **`manifest.json`**: Stores session info and excluded image paths.
 
 ## Setup & Installation
 
@@ -19,42 +40,15 @@ This project is a browser-based application for clustering images using local AI
     ```
 
 2.  **Download Model Files**:
-    This project requires local AI models. You must download them manually:
-    
-    ### For Dense Captioning (Gemma):
-    - **Download**: `gemma-3n-E2B-it-int4-Web.litertlm`
-        - [Download Link](https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/blob/main/gemma-3n-E2B-it-int4-Web.litertlm)
-    - **Place the file** in the project root directory.
-
-    ### For Direct Image Embedding (CLIP):
-    - **Directory**: Create a folder `models/` in the project root. (If not already present)
-    - **Recommended Model**: `clip-vit-base-patch16`
-        - [Download ONNX Files](https://huggingface.co/Xenova/clip-vit-base-patch16/tree/main/onnx)
-        - Download file `vision_model_quantized.onnx` and place it like below.
-    - **Structure**:
-      ```text
-      /project-root
-        /models
-          /clip-vit-base-patch16
-            /onnx
-              vision_model_quantized.onnx
-            config.json
-            preprocessor_config.json
-            ...
-      ```
+    Create a `models/` folder in the project root.
+    - **CLIP Model**: Download `vision_model_quantized.onnx` from [Xenova/clip-vit-base-patch16](https://huggingface.co/Xenova/clip-vit-base-patch16/tree/main/onnx) and place it in `models/clip-vit-base-patch16/onnx/`.
 
 3.  **Run the Application**:
-    - You need a simple HTTP server to run this due to browser security restrictions on local file access.
-    - If you have Python installed:
-        ```bash
-        python -m http.server 8000
-        ```
-    - Or use Node.js `http-server`:
-        ```bash
-        npx http-server .
-        ```
-    - Open your browser to `http://localhost:8000`.
+    Use a simple HTTP server (Python, Node, or VS Code Live Server):
+    ```bash
+    npx http-server .
+    ```
+    Open your browser to `http://localhost:8080`.
 
-## Legacy Code
-Older versions of the processing pipeline (`step1.html`, `step2.html`, etc.) have been moved to the `legacy_code/` directory. The main application entry point is `index.html`.
-
+---
+*Built with ❤️ for privacy-first AI.*

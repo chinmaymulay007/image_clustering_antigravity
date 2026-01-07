@@ -17,9 +17,10 @@ export class FileSystemManager {
             this.dirHandle = await window.showDirectoryPicker({
                 mode: 'readwrite'
             });
+            console.log(`[FileSystem] Directory selected: ${this.dirHandle.name}`);
             return this.dirHandle.name;
         } catch (error) {
-            console.error('Error selecting directory:', error);
+            console.error('[FileSystem] Error selecting directory:', error);
             throw error;
         }
     }
@@ -67,6 +68,7 @@ export class FileSystemManager {
         const writable = await fileHandle.createWritable();
         await writable.write(content);
         await writable.close();
+        console.log(`[FileSystem] Wrote file: ${path} (${typeof content === 'string' ? content.length : 'blob'} bytes)`);
     }
 
     /**
@@ -126,88 +128,132 @@ export class FileSystemManager {
      * List all files in the root directory (for Step 1).
      * @returns {Promise<string[]>} List of filenames.
      */
-    async listRootImages() {
-        if (!this.dirHandle) return [];
-        const images = [];
-        const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    /**
+     * Recursively scans the directory and its subdirectories for images.
+     * @returns {Promise<Array<{path: string, handle: FileSystemFileHandle}>>} Flat list of images.
+     */
+    async scanAllImagesRecursive() {
+        if (!this.dirHandle) throw new Error("No directory selected");
 
-        for await (const [name, handle] of this.dirHandle.entries()) {
-            if (handle.kind === 'file') {
-                const ext = name.substring(name.lastIndexOf('.')).toLowerCase();
-                if (validExtensions.includes(ext)) {
-                    images.push(name);
+        const images = [];
+        const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'];
+
+        const scanDir = async (dirHandle, relativePath) => {
+            for await (const [name, handle] of dirHandle.entries()) {
+                if (handle.kind === 'file') {
+                    const ext = name.substring(name.lastIndexOf('.')).toLowerCase();
+                    if (validExtensions.includes(ext)) {
+                        const fullPath = relativePath ? `${relativePath}/${name}` : name;
+                        images.push({ path: fullPath, handle: handle });
+                    }
+                } else if (handle.kind === 'directory') {
+                    // Skip hidden folders, metadata folder, or previous output folders
+                    if (name.startsWith('.') || name === 'clusterai_metadata' || name.toLowerCase().startsWith('clusterai_')) continue;
+
+                    const subDirPath = relativePath ? `${relativePath}/${name}` : name;
+                    await scanDir(handle, subDirPath);
                 }
             }
-        }
+        };
+
+        console.log("[FileSystem] Starting recursive image scan...");
+        await scanDir(this.dirHandle, '');
+        console.log(`[FileSystem] Scan complete. Found ${images.length} images.`);
         return images;
     }
 
     /**
-     * Create a new timestamped folder for a run.
-     * @param {string} prefix - 'gen' or 'cluster'.
-     * @param {string} suffix - Optional suffix (e.g., source run ID or mode).
-     * @param {boolean} isRawSuffix - If true, appends suffix directly (e.g., '_random'). If false, uses '_from_' (e.g., '_from_run1').
-     * @returns {Promise<string>} The name of the created folder.
+     * ensures the 'clusterai_metadata' folder exists.
+     * @returns {Promise<FileSystemDirectoryHandle>}
      */
-    async createRunFolder(prefix, suffix = '', isRawSuffix = false) {
-        const now = new Date();
-        // Use local timezone instead of GMT
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-
-        const timestamp = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-
-        let suffixPart = '';
-        if (suffix) {
-            suffixPart = isRawSuffix ? `_${suffix}` : `_from_${suffix}`;
-        }
-
-        const folderName = `${prefix}_${timestamp}${suffixPart}`;
-        await this.getDirectoryHandle(`metadata/${folderName}`, true);
-        return folderName;
+    async ensureMetadataFolder() {
+        if (!this.dirHandle) throw new Error("No directory selected");
+        return await this.dirHandle.getDirectoryHandle('clusterai_metadata', { create: true });
     }
 
     /**
-     * Delete empty or invalid metadata folders.
-     * @returns {Promise<string[]>} List of deleted folder names.
+     * Specialized writer for metadata.
+     * @param {string} filename 
+     * @param {object|array} data 
      */
-    async deleteEmptyMetadataFolders() {
-        if (!this.dirHandle) return [];
+    async writeMetadata(filename, data) {
+        const metaDir = await this.ensureMetadataFolder();
+        const fileHandle = await metaDir.getFileHandle(filename, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(data)); // indent for debug? No, save space.
+        await writable.close();
+    }
 
-        const deleted = [];
+    /**
+     * Reads metadata file if exists
+     */
+    async readMetadata(filename) {
         try {
-            const metadataHandle = await this.getDirectoryHandle('metadata');
+            const metaDir = await this.ensureMetadataFolder(); // will create if missing, ensuring non-null
+            const fileHandle = await metaDir.getFileHandle(filename);
+            const file = await fileHandle.getFile();
+            const text = await file.text();
+            return JSON.parse(text);
+        } catch (e) {
+            return null; // File doesn't exist
+        }
+    }
+    /**
+     * Saves the clustered images to disk (Selective: Only Representatives).
+     * @param {Array} clusters - Array of cluster objects.
+     * @param {Map} handleMap - Map of path -> FileHandle.
+     * @param {Function} onProgress - Callback (current, total, text)
+     * @returns {Promise<string>} Name of the created folder.
+     */
+    async saveClusters(clusters, handleMap, onProgress) {
+        if (!this.dirHandle) throw new Error("No directory selected");
 
-            for await (const [name, handle] of metadataHandle.entries()) {
-                if (handle.kind !== 'directory') continue;
+        // Create root save folder
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+        const rootFolderName = `clusterai_curated_${timestamp}`; // Renamed for clarity
 
-                let isEmpty = true;
+        console.log(`[FileSystem] Initializing save folder: ${rootFolderName}`);
+        const rootDir = await this.dirHandle.getDirectoryHandle(rootFolderName, { create: true });
 
-                // Check if gen_ folder has filenamesArray.json with data
-                if (name.startsWith('gen_')) {
-                    const filenames = await this.readFile(`metadata/${name}/filenamesArray.json`, 'json');
-                    if (filenames && filenames.length > 0) isEmpty = false;
+        // Calculate total files for progress
+        let totalFiles = 0;
+        clusters.forEach(c => totalFiles += c.representatives.length);
+        let processedFiles = 0;
+
+        // Process each cluster
+        for (const [index, cluster] of clusters.entries()) {
+            // Create cluster subfolder
+            const safeLabel = cluster.label.replace(/[^a-z0-9]/gi, '_');
+            const clusterDir = await rootDir.getDirectoryHandle(safeLabel, { create: true });
+
+            // Iterate ONLY Visible Representatives
+            for (const member of cluster.representatives) {
+                const handle = handleMap.get(member.path);
+
+                processedFiles++;
+                if (onProgress) onProgress(processedFiles, totalFiles, `Saving ${originalName} to ${safeLabel}...`);
+
+                if (!handle) {
+                    console.warn(`Cannot find handle for ${member.path}, skipping save.`);
+                    continue;
                 }
-                // Check if cluster_ folder has clusters.json with data
-                else if (name.startsWith('cluster_')) {
-                    const clusters = await this.readFile(`metadata/${name}/clusters.json`, 'json');
-                    if (clusters && clusters.length > 0) isEmpty = false;
-                }
 
-                if (isEmpty) {
-                    // Delete the empty folder
-                    await metadataHandle.removeEntry(name, { recursive: true });
-                    deleted.push(name);
+                try {
+                    const file = await handle.getFile();
+                    // Create new file in destination
+                    var originalName = member.path.split('/').pop();
+                    const newFileHandle = await clusterDir.getFileHandle(originalName, { create: true });
+                    const writable = await newFileHandle.createWritable();
+                    await writable.write(file);
+                    await writable.close();
+                } catch (e) {
+                    console.error(`Failed to copy ${member.path} to cluster folder:`, e);
                 }
             }
-        } catch (error) {
-            console.warn('Error cleaning up metadata folders:', error);
         }
 
-        return deleted;
+        console.log(`[FileSystem] Save complete. Folders created in: ${rootFolderName}`);
+        return rootFolderName;
     }
 }
