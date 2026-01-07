@@ -17,6 +17,7 @@ export class ProcessingManager {
         this.allImages = []; // { path, handle } mechanism
         this.processedPaths = new Set();
         this.excludedPaths = new Set(); // Sync with App
+        this.refreshInterval = 20; // Default
 
         // Callbacks
         this.onProgress = null; // (stats) => void
@@ -29,6 +30,14 @@ export class ProcessingManager {
         env.localModelPath = 'models/';
         env.allowRemoteModels = false;
 
+        // Point to local WASM binaries for 100% offline mode
+        // In Transformers.js v2, wasm is under backends.onnx
+        if (env.backends && env.backends.onnx) {
+            env.backends.onnx.wasm.wasmPaths = 'js/vendor/dist/';
+        } else if (env.wasm) {
+            env.wasm.wasmPaths = 'js/vendor/dist/';
+        }
+
         this.processor = await AutoProcessor.from_pretrained(this.modelId);
         this.model = await CLIPVisionModelWithProjection.from_pretrained(this.modelId, {
             quantized: true, // User requested ONLY quantized
@@ -39,6 +48,7 @@ export class ProcessingManager {
     }
 
     async start(refreshInterval = 20) {
+        this.refreshInterval = refreshInterval;
         if (!this.model) await this.loadModel();
 
         // 1. Scan Files
@@ -72,10 +82,10 @@ export class ProcessingManager {
         this.aborted = false;
         this.startTime = Date.now();
         this.sessionStartTime = Date.now();
-        this.processLoop(refreshInterval);
+        this.processLoop();
     }
 
-    async processLoop(refreshInterval) {
+    async processLoop() {
         let sessionProcessedCount = 0;
         let pendingEmbeddings = [];
 
@@ -115,7 +125,7 @@ export class ProcessingManager {
                 sessionProcessedCount++;
 
                 // Trigger Update / Save
-                if (pendingEmbeddings.length >= refreshInterval || unprocessed.length === 1) {
+                if (pendingEmbeddings.length >= this.refreshInterval || unprocessed.length === 1) {
                     // Update Status Bar
                     if (this.onProgress) {
                         this.onProgress({

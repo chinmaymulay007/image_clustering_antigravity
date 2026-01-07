@@ -46,7 +46,8 @@ class App {
         this.k = settings.k;
         this.threshold = settings.threshold;
 
-        // Persist settings (optional, maybe to localStorage later)
+        // Sync to processing manager
+        this.processing.refreshInterval = this.refreshInterval;
 
         // Immediate Re-cluster
         console.log("[App] Triggering immediate re-cluster due to settings change.");
