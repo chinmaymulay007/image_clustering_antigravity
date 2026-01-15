@@ -44,6 +44,7 @@ export class UIManager {
 
         // State
         this.callbacks = {};
+        this.cards = new Map(); // Index -> Card DOM node
     }
 
     setCallbacks(callbacks) {
@@ -175,13 +176,14 @@ export class UIManager {
 
         existingCards.forEach(card => {
             if (!activeIds.has(card.dataset.clusterId)) {
+                this.cards.delete(parseInt(card.dataset.clusterId));
                 card.remove();
             }
         });
 
         // 2. Update or Create clusters
         clusters.forEach((cluster, index) => {
-            let card = this.clusterGrid.querySelector(`.cluster-card[data-cluster-id="${index}"]`);
+            let card = this.cards.get(index);
             const memberCount = cluster.memberCount !== undefined ? cluster.memberCount : cluster.members.length;
             const titleHtml = `${cluster.label || `Cluster ${index + 1}`} <span style="color:#9ca3af; font-size:0.8em">${memberCount} items</span>`;
 
@@ -190,6 +192,7 @@ export class UIManager {
                 card = document.createElement('div');
                 card.className = 'cluster-card';
                 card.dataset.clusterId = index;
+                this.cards.set(index, card);
 
                 const header = document.createElement('div');
                 header.className = 'card-header';
@@ -203,6 +206,7 @@ export class UIManager {
                 const title = document.createElement('span');
                 title.className = 'cluster-title';
                 title.innerHTML = titleHtml;
+                card._titleNode = title; // Link
 
                 header.appendChild(checkbox);
                 header.appendChild(title);
@@ -210,27 +214,38 @@ export class UIManager {
 
                 const grid = document.createElement('div');
                 grid.className = 'image-grid';
+                card._gridNode = grid; // Link
                 card.appendChild(grid);
 
                 this.clusterGrid.appendChild(card);
             } else {
-                // Update Existing Header
-                const title = card.querySelector('.cluster-title');
+                // Update Existing Header (No search)
+                const title = card._titleNode;
                 if (title && title.innerHTML !== titleHtml) {
                     title.innerHTML = titleHtml;
                 }
             }
 
             // 3. Update Image Grid (Representatives)
-            const grid = card.querySelector('.image-grid');
-            const cells = Array.from(grid.querySelectorAll('.img-cell'));
+            const grid = card._gridNode;
+            if (!grid._cells) grid._cells = []; // Link
 
             for (let i = 0; i < 16; i++) {
-                let cell = cells[i];
+                let cell = grid._cells[i];
                 if (!cell) {
                     cell = document.createElement('div');
                     cell.className = 'img-cell';
                     grid.appendChild(cell);
+                    grid._cells[i] = cell; // Link
+
+                    // Direct Link: Cache children immediately
+                    cell._img = document.createElement('img');
+                    cell._btn = document.createElement('button');
+                    cell._btn.innerHTML = '×';
+                    cell._btn.style.cssText = 'position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; display:none; justify-content:center; align-items:center; line-height:1; z-index:10;';
+
+                    cell.appendChild(cell._img);
+                    cell.appendChild(cell._btn);
                 }
 
                 if (i < cluster.representatives.length) {
@@ -239,44 +254,50 @@ export class UIManager {
                     // Only update if the image changed
                     if (cell.dataset.path !== imgData.path) {
                         cell.dataset.path = imgData.path;
-                        cell.innerHTML = ''; // Clear previous content
 
-                        const image = document.createElement('img');
-                        const btnRemove = document.createElement('button');
-                        btnRemove.innerHTML = '×';
-                        btnRemove.style.cssText = 'position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; display:none; justify-content:center; align-items:center; line-height:1; z-index:10;';
+                        const image = cell._img;
+                        const btnRemove = cell._btn;
+
+                        // Clean Slate Reset (Instant)
+                        image.src = '';
+                        image.className = '';
+                        cell.classList.add('skeleton');
 
                         cell.onmouseenter = () => btnRemove.style.display = 'flex';
                         cell.onmouseleave = () => btnRemove.style.display = 'none';
-
                         btnRemove.onclick = (e) => {
                             e.stopPropagation();
                             this.callbacks.onExcludeImage?.(imgData.path);
                         };
 
-                        cell.appendChild(image);
-                        cell.appendChild(btnRemove);
-
-                        // Add skeleton loading state
-                        cell.classList.add('skeleton');
+                        const isLowPerf = document.body.getAttribute('data-low-perf') === 'true';
 
                         this.callbacks.onLoadThumbnail?.(imgData.path).then(url => {
                             if (!url) {
-                                cell.classList.remove('skeleton'); // Failed, remove shimmer
+                                cell.classList.remove('skeleton');
                                 return;
                             }
 
+                            // Race condition check: Ensure the cell hasn't been recycled for a new path
                             if (cell.dataset.path === imgData.path) {
                                 image.src = url;
-                                // Handle both fresh loads and already-complete cached images
-                                if (image.complete) {
-                                    image.classList.add('loaded');
+
+                                if (isLowPerf) {
+                                    // Zero overhead: Remove shimmer and show immediately
                                     cell.classList.remove('skeleton');
                                 } else {
-                                    image.onload = () => {
+                                    // Premium path: Smooth fade-in
+                                    if (image.complete) {
                                         image.classList.add('loaded');
                                         cell.classList.remove('skeleton');
-                                    };
+                                    } else {
+                                        image.onload = () => {
+                                            if (cell.dataset.path === imgData.path) {
+                                                image.classList.add('loaded');
+                                                cell.classList.remove('skeleton');
+                                            }
+                                        };
+                                    }
                                 }
                             }
                         }).catch(() => {
@@ -287,7 +308,7 @@ export class UIManager {
                     // Empty slot
                     if (cell.dataset.path || cell.innerHTML !== '') {
                         cell.dataset.path = '';
-                        cell.innerHTML = '';
+                        if (cell._img) cell._img.src = '';
                         cell.classList.remove('skeleton'); // Ensure no shimmer on empty
                         cell.style.cssText = 'background: #1f2937; opacity: 0.3;';
                     }
