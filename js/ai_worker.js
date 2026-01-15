@@ -33,23 +33,23 @@ async function init(config) {
     let device = model.device || 'Unknown';
 
     try {
+        // Deep walk to find session or environment markers
         const session = model?.model?.session || model?.session || model?._session;
         if (session) {
-            const ep = session.config?.executionProviders?.[0] || '';
-            if (ep.includes('webgpu')) backend = 'WebGPU';
-            else if (ep.includes('wasm')) backend = 'WASM';
-            else if (ep.includes('cpu')) backend = 'CPU';
+            // Check execution providers list
+            const eps = session.config?.executionProviders || [];
+            if (eps.some(e => String(e).toLowerCase().includes('webgpu'))) backend = 'WebGPU';
+            else if (eps.some(e => String(e).toLowerCase().includes('wasm'))) backend = 'WASM';
 
-            // If still unknown, try the handler name but avoid minified 'd'
-            if (backend === 'Unknown') {
-                const handlerName = session.handler?.constructor?.name;
-                if (handlerName && handlerName.length > 1) {
-                    backend = handlerName.replace('OnnxruntimeWeb', '').replace('Backend', '');
-                }
+            // Second check: Handler name
+            if (backend === 'Unknown' && session.handler) {
+                const name = session.handler.constructor.name.toLowerCase();
+                if (name.includes('webgpu')) backend = 'WebGPU';
+                else if (name.includes('wasm')) backend = 'WASM';
             }
         }
     } catch (e) {
-        console.warn("[AI Worker] Backend probe failed:", e);
+        console.warn("[AI Worker] Hardware probe hit a snag:", e);
     }
 
     console.log(`%c[AI Worker] Backend: ${backend} | Device: ${device}`, "color: #10b981; font-weight: bold;");
@@ -79,6 +79,18 @@ async function processBatch(batch) {
         const { image_embeds } = await model(inputs);
         const end = performance.now();
         const duration = end - start;
+
+        // 3. Extract results (FIXED: Restored missing logic)
+        const result = [];
+        const numImages = batch.length;
+        const totalElements = image_embeds.data.length;
+        const dim = totalElements / numImages;
+
+        for (let i = 0; i < numImages; i++) {
+            const rowStart = i * dim;
+            const rowEnd = rowStart + dim;
+            result.push(Array.from(image_embeds.data.slice(rowStart, rowEnd)));
+        }
 
         console.log(`%c[AI Worker] Processed batch of ${batch.length} in ${duration.toFixed(1)}ms (${(duration / batch.length).toFixed(1)}ms/img)`, "color: #10b981;");
 

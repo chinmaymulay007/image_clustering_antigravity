@@ -126,6 +126,11 @@ export class ProcessingManager {
                 // Offload entirely to worker
                 const embeddings = await this.processBatch(batchImages);
 
+                if (!embeddings || embeddings.length === 0) {
+                    console.error("[Processing] AI Worker returned empty embeddings or error. Skipping this batch.");
+                    continue;
+                }
+
                 for (let i = 0; i < batchImages.length; i++) {
                     pendingEmbeddings.push({
                         id: Date.now() + Math.random(),

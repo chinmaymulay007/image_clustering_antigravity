@@ -11,6 +11,9 @@ export class ClusteringEngine {
      * @returns {Array} - Array of formatted cluster objects
      */
     updateClusters(allEmbeddings, k = 6, dedupThreshold = 0.15, previousCentroids = null) {
+        // Safety: Filter out any corrupted records (e.g. from previous worker crashes)
+        allEmbeddings = allEmbeddings.filter(e => e && e.embedding && Array.isArray(e.embedding));
+
         if (!allEmbeddings || allEmbeddings.length === 0) return { clusters: [], centroids: [] };
         if (allEmbeddings.length < k) k = allEmbeddings.length;
 
