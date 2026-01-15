@@ -39,11 +39,7 @@ The application maintains a `clusterai_metadata` folder inside your image direct
     cd image_clustering_antigravity
     ```
 
-2.  **Download Model Files**:
-    Create a `models/` folder in the project root.
-    - **CLIP Model**: Download `vision_model_quantized.onnx` from [Xenova/clip-vit-base-patch16](https://huggingface.co/Xenova/clip-vit-base-patch16/tree/main/onnx) and place it in `models/clip-vit-base-patch16/onnx/`.
-
-3.  **Run the Application**:
+2.  **Run the Application**:
     Use a simple HTTP server (Python, Node, or VS Code Live Server):
     ```bash
     npx http-server .
