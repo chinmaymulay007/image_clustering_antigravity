@@ -11,7 +11,7 @@ export class ProcessingManager {
         // Model State
         this.processor = null;
         this.model = null;
-        this.modelId = 'clip-vit-base-patch16';
+        this.modelId = 'Xenova/clip-vit-base-patch16';
 
         // Session State
         this.allImages = []; // { path, handle } mechanism
@@ -28,7 +28,7 @@ export class ProcessingManager {
         console.log("Loading CLIP model...");
         env.allowLocalModels = true;
         env.localModelPath = 'models/';
-        env.allowRemoteModels = false;
+        env.allowRemoteModels = true;
 
         // Point to local WASM binaries for 100% offline mode
         // In Transformers.js v2, wasm is under backends.onnx

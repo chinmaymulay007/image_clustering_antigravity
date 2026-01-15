@@ -1,0 +1,4 @@
+# Exclude large models from Vercel deployment to save bandwidth
+# The app will fallback to Hugging Face CDN automatically
+
+models
