@@ -2,3 +2,6 @@
 # The app will fallback to Hugging Face CDN automatically
 
 models
+clustering_algorithm.md
+clustering_logic.png
+README.md

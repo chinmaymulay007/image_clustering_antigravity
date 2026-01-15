@@ -255,3 +255,46 @@ header {
     /* Red hover */
     color: white !important;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .app-container {
+        padding: 10px;
+    }
+
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+        padding-bottom: 15px;
+    }
+
+    .stats-bar {
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 0.8rem;
+    }
+
+    .cluster-grid {
+        grid-template-columns: 1fr; /* Single column on mobile */
+        gap: 15px;
+    }
+
+    .image-grid {
+        grid-template-columns: repeat(4, 1fr); /* Keep it compact */
+    }
+
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .btn-primary {
+        width: 100%;
+        padding: 15px;
+    }
+
+    .landing-content h1 {
+        font-size: 2rem !important;
+    }
+}
