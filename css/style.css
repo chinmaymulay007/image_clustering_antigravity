@@ -229,8 +229,15 @@ header {
 
 .setting-group label {
     display: block;
+    /* Default for single-item groups */
     margin-bottom: 8px;
     font-weight: 500;
+}
+
+.setting-header label {
+    display: inline-block;
+    /* Override for dual-item headers */
+    margin-bottom: 0;
 }
 
 .range-wrap {
@@ -279,22 +286,56 @@ header {
 }
 
 /* Settings UI Refinements */
+.setting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.setting-header label {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #d1d5db;
+}
+
 .badge {
     background: #3b82f6;
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 0.8rem;
     font-weight: bold;
+    color: white;
 }
 
-.range-steps,
+.range-ticks {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding: 0 5px;
+}
+
+.range-ticks span {
+    width: 2px;
+    height: 8px;
+    background: #4b5563;
+    display: block;
+    border-radius: 1px;
+}
+
 .range-labels {
     display: flex;
     justify-content: space-between;
-    margin-top: 4px;
+    margin-top: 6px;
     font-size: 0.75rem;
     color: #9ca3af;
-    padding: 0 5px;
+    padding: 0 2px;
+}
+
+.range-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .option-group {

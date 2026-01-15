@@ -99,14 +99,15 @@ export class ProcessingManager {
         let sessionProcessedCount = 0;
         let pendingEmbeddings = [];
 
+        // PERFORMANCE FIX: Create a copy and work from it to avoid O(N^2) filtering in every batch
+        let unprocessed = this.allImages.filter(img => !this.processedPaths.has(img.path));
+        console.log(`[Processing] Loop started with ${unprocessed.length} images remaining.`);
+
         while (this.isRunning && !this.aborted) {
             if (this.isPaused) {
                 await new Promise(r => setTimeout(r, 500));
                 continue;
             }
-
-            // Identify unprocessed images
-            const unprocessed = this.allImages.filter(img => !this.processedPaths.has(img.path));
 
             if (unprocessed.length === 0) {
                 console.log("Processing complete!");
@@ -115,17 +116,18 @@ export class ProcessingManager {
                 return;
             }
 
-            // Pick a batch of images
+            // Pick a batch of images (Splicing is much faster than global filter)
             const currentBatchSize = Math.min(this.batchSize, unprocessed.length);
             const batchImages = [];
             for (let i = 0; i < currentBatchSize; i++) {
-                // For randomness, we slice a random one
                 const randIndex = Math.floor(Math.random() * unprocessed.length);
                 batchImages.push(unprocessed.splice(randIndex, 1)[0]);
             }
 
             try {
-                // Parallel I/O and Batch Processing
+                // LOGGING: Start of batch
+                const firstName = batchImages[0].path.split('/').pop();
+
                 const embeddings = await this.processBatch(batchImages);
 
                 for (let i = 0; i < batchImages.length; i++) {
@@ -140,14 +142,14 @@ export class ProcessingManager {
                     sessionProcessedCount++;
                 }
 
-                // Batch Save to Disk
+                // Batch Save to Disk & Clustering
                 if (pendingEmbeddings.length >= this.refreshInterval || unprocessed.length === 0) {
                     if (this.onProgress) {
                         this.onProgress({
                             processed: this.processedPaths.size,
                             total: this.allImages.length,
                             completed: false,
-                            currentAction: "Updating clusters... (This may take a moment)"
+                            currentAction: "💾 Syncing Clusters..."
                         });
                     }
 
@@ -168,15 +170,14 @@ export class ProcessingManager {
                     pendingEmbeddings = [];
                 }
 
-                // Progress UI (Throttled to max 2 updates per second)
+                // UI Progress (Throttled for smoothness)
                 const now = Date.now();
-                if (this.onProgress && (now - this.lastUiUpdate > 500 || unprocessed.length === 0)) {
+                if (this.onProgress && (now - this.lastUiUpdate > 800 || unprocessed.length === 0)) {
                     const sessionElapsed = now - this.sessionStartTime;
                     const speedSec = (sessionElapsed / sessionProcessedCount) / 1000;
-                    const remaining = this.allImages.length - this.processedPaths.size;
-                    const eta = (speedSec * 1000) * remaining;
+                    const remainingIdx = unprocessed.length;
+                    const eta = (speedSec * 1000) * remainingIdx;
 
-                    const firstName = batchImages[0].path.split('/').pop();
                     this.onProgress({
                         processed: this.processedPaths.size,
                         total: this.allImages.length,
@@ -189,16 +190,18 @@ export class ProcessingManager {
                 }
             } catch (err) {
                 console.error("Batch processing error:", err);
-                // Mark as processed to avoid infinite loops, but maybe re-scan?
-                batchImages.forEach(img => this.processedPaths.add(img.path));
             }
 
-            await new Promise(r => setTimeout(r, 10));
+            // Yield to UI thread
+            await new Promise(r => setTimeout(r, 30)); // 30ms yield for much smoother UI
         }
     }
 
     async processBatch(batchImages) {
-        // 1. Parallel I/O
+        // 1. Parallel I/O: Runs ONLY for current batch
+        const ioStart = performance.now();
+        console.info(`%c[CPU Thread] Loading batch of ${batchImages.length} images...`, "color: #eab308;");
+
         const rawImages = await Promise.all(batchImages.map(async (img) => {
             const file = await img.handle.getFile();
             const url = URL.createObjectURL(file);
@@ -208,6 +211,8 @@ export class ProcessingManager {
                 URL.revokeObjectURL(url);
             }
         }));
+        const ioEnd = performance.now();
+        console.info(`[CPU Thread] I/O completed in ${(ioEnd - ioStart).toFixed(1)}ms`);
 
         // 2. Batch Inference
         const start = performance.now();
