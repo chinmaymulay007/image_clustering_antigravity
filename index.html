@@ -108,24 +108,27 @@
                 </div>
                 <div class="modal-body">
                     <div class="setting-group">
-                        <label>Number of Clusters (K)</label>
-                        <div class="range-wrap">
-                            <input type="range" id="setting-k" min="2" max="20" value="6" step="1">
+                        <div class="setting-header">
+                            <label>Number of Clusters (K)</label>
                             <span id="val-k" class="badge">6</span>
                         </div>
-                        <div class="range-steps">
-                            <span>2</span>
-                            <span>5</span>
-                            <span>10</span>
-                            <span>15</span>
-                            <span>20</span>
+                        <div class="range-wrap">
+                            <input type="range" id="setting-k" min="2" max="20" value="6" step="1">
+                        </div>
+                        <div class="range-ticks">
+                            <span></span><span></span><span></span><span></span><span></span>
+                            <span></span><span></span><span></span><span></span><span></span>
+                            <span></span><span></span><span></span><span></span><span></span>
+                            <span></span><span></span><span></span><span></span><span></span>
                         </div>
                     </div>
                     <div class="setting-group">
-                        <label>Uniqueness Threshold</label>
+                        <div class="setting-header">
+                            <label>Uniqueness Threshold</label>
+                            <span id="val-threshold" class="badge">0.15</span>
+                        </div>
                         <div class="range-wrap">
                             <input type="range" id="setting-threshold" min="0" max="0.5" value="0.15" step="0.01">
-                            <span id="val-threshold" class="badge">0.15</span>
                         </div>
                         <div class="range-labels">
                             <span>Allow similar</span>

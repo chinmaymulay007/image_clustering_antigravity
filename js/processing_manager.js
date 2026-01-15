@@ -25,6 +25,7 @@ export class ProcessingManager {
 
         // Optimization Configuration
         this.batchSize = 4; // Start with 4, safe for most devices
+        this.lastUiUpdate = 0; // Throttling UI
     }
 
     async loadModel() {
@@ -33,33 +34,25 @@ export class ProcessingManager {
         env.localModelPath = 'models/';
         env.allowRemoteModels = true;
 
-        // Comprehensive Debugging & Logging
         env.debug = true;
         env.logLevel = 'verbose';
         if (env.backends && env.backends.onnx) {
             env.backends.onnx.debug = true;
             env.backends.onnx.logLevel = 'verbose';
-        }
-
-        // Request dedicated GPU (High Performance) for multi-GPU systems
-        if (env.backends && env.backends.onnx) {
             env.backends.onnx.webgpu = { powerPreference: 'high-performance' };
-        }
-
-        // Point to local WASM binaries for 100% offline mode
-        // In Transformers.js v2, wasm is under backends.onnx
-        if (env.backends && env.backends.onnx) {
             env.backends.onnx.wasm.wasmPaths = 'js/vendor/dist/';
-        } else if (env.wasm) {
-            env.wasm.wasmPaths = 'js/vendor/dist/';
         }
 
         this.processor = await AutoProcessor.from_pretrained(this.modelId);
         this.model = await CLIPVisionModelWithProjection.from_pretrained(this.modelId, {
-            quantized: true, // User requested ONLY quantized
-            device: 'webgpu' // Prefer WebGPU
-            // Fallback to wasm is automatic in transformers.js if webgpu fails usually
+            quantized: true,
+            device: 'webgpu'
         });
+
+        // HARDWARE VERIFICATION LOG
+        const backend = this.model?.model?.session?.handler?.constructor?.name || 'Unknown';
+        console.info(`%c[Hardware Check] Backend: ${backend} | Device: ${this.model?.device || 'Unknown'}`, "color: #3b82f6; font-weight: bold; font-size: 1.1em; border: 1px solid #3b82f6; padding: 2px 5px;");
+
         console.log("CLIP model loaded.");
     }
 
@@ -98,6 +91,7 @@ export class ProcessingManager {
         this.aborted = false;
         this.startTime = Date.now();
         this.sessionStartTime = Date.now();
+        this.lastUiUpdate = 0; // Throttling
         this.processLoop();
     }
 
@@ -174,22 +168,24 @@ export class ProcessingManager {
                     pendingEmbeddings = [];
                 }
 
-                // Progress UI
-                if (this.onProgress) {
-                    const now = Date.now();
+                // Progress UI (Throttled to max 2 updates per second)
+                const now = Date.now();
+                if (this.onProgress && (now - this.lastUiUpdate > 500 || unprocessed.length === 0)) {
                     const sessionElapsed = now - this.sessionStartTime;
                     const speedSec = (sessionElapsed / sessionProcessedCount) / 1000;
                     const remaining = this.allImages.length - this.processedPaths.size;
                     const eta = (speedSec * 1000) * remaining;
 
+                    const firstName = batchImages[0].path.split('/').pop();
                     this.onProgress({
                         processed: this.processedPaths.size,
                         total: this.allImages.length,
                         speed: speedSec,
                         eta: eta,
                         completed: false,
-                        currentAction: `Processed batch of ${batchImages.length} images`
+                        currentAction: `✨ Processing: ${firstName}${batchImages.length > 1 ? ` (+${batchImages.length - 1} more)` : ''}`
                     });
+                    this.lastUiUpdate = now;
                 }
             } catch (err) {
                 console.error("Batch processing error:", err);
@@ -202,7 +198,7 @@ export class ProcessingManager {
     }
 
     async processBatch(batchImages) {
-        // 1. Parallel I/O: Load and decode all images in the batch concurrently
+        // 1. Parallel I/O
         const rawImages = await Promise.all(batchImages.map(async (img) => {
             const file = await img.handle.getFile();
             const url = URL.createObjectURL(file);
@@ -214,10 +210,14 @@ export class ProcessingManager {
         }));
 
         // 2. Batch Inference
+        const start = performance.now();
         const batchInputs = await this.processor(rawImages);
         const { image_embeds } = await this.model(batchInputs);
+        const end = performance.now();
 
-        // 3. Extract individual embeddings from the batch tensor
+        console.info(`%c[Inference] Processed ${batchImages.length} images in ${(end - start).toFixed(1)}ms (${((end - start) / batchImages.length).toFixed(1)}ms/img)`, "color: #10b981; font-weight: bold;");
+
+        // 3. Extract individual embeddings
         const result = [];
         const numImages = batchImages.length;
         const totalElements = image_embeds.data.length;
