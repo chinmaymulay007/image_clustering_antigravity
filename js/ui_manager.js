@@ -31,6 +31,8 @@ export class UIManager {
         this.settingThreshold = document.getElementById('setting-threshold');
         this.valThreshold = document.getElementById('val-threshold');
 
+        this.clusterGrid = document.getElementById('cluster-grid-container');
+        this.btnSave = document.getElementById('btn-save-clusters');
         this.statusBarText = document.getElementById('status-bar-text');
         this.settingAnimations = document.getElementById('setting-animations');
 
