@@ -44,7 +44,6 @@ export class ProcessingManager {
                     this.workerReady = true;
                     resolve();
                 } else if (status === 'success') {
-                    console.info(`%c[Background AI] Processed batch of ${e.data.batchSize} in ${time.toFixed(1)}ms`, "color: #10b981; font-weight: bold;");
                     if (this.pendingBatchResolve) {
                         this.pendingBatchResolve(embeddings);
                         this.pendingBatchResolve = null;

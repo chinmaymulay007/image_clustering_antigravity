@@ -5,16 +5,18 @@
 
 class HealthMonitor {
     constructor() {
+        this.startTime = performance.now();
         this.lastTime = performance.now();
-        this.frameThreshold = 100; // 100ms (10 FPS) is a major hitch
+        this.frameThreshold = 250; // Increased to 250ms - only report major stutters
         this.enabled = true;
         this.running = false;
+        this.gracePeriod = 5000; // 5s grace period to ignore noise during model/folder loading
     }
 
     start() {
         if (this.running) return;
         this.running = true;
-        console.info("%c[Health Monitor] Started. Watching for main-thread hitches...", "color: #8b5cf6; font-weight: bold;");
+        console.info("%c[Health Monitor] Monitoring main thread (Threshold: 250ms)...", "color: #8b5cf6; font-weight: bold;");
         this.check();
     }
 
@@ -22,8 +24,9 @@ class HealthMonitor {
         const now = performance.now();
         const delta = now - this.lastTime;
 
-        if (delta > this.frameThreshold) {
-            console.warn(`%c[Health Check] ⚠️ Frame hitch detected: ${delta.toFixed(0)}ms. Main thread was blocked.`, "color: #ef4444; font-weight: bold;");
+        // Skip reporting during the initial heavy loading grace period
+        if (delta > this.frameThreshold && (now - this.startTime) > this.gracePeriod) {
+            console.warn(`%c[Health Check] ⚠️ Main thread hitch: ${delta.toFixed(0)}ms.`, "color: #ef4444; font-weight: bold;");
         }
 
         this.lastTime = now;

@@ -26,44 +26,33 @@ async function init(config) {
         device: 'webgpu'
     });
 
+    console.log("%c[AI Worker] Model loaded & ready.", "color: #10b981; font-weight: bold;");
+
     // Enhanced Probing for Hardware Info
     let backend = 'Unknown';
     let device = model.device || 'Unknown';
 
     try {
-        // Deep probe for ONNX Session
-        const findSession = (obj, depth = 0) => {
-            if (!obj || depth > 5) return null;
-            if (obj.session) return obj.session;
-            if (obj._session) return obj._session;
-            for (const key of Object.keys(obj)) {
-                if (typeof obj[key] === 'object') {
-                    const found = findSession(obj[key], depth + 1);
-                    if (found) return found;
-                }
-            }
-            return null;
-        };
-
-        const session = findSession(model);
+        const session = model?.model?.session || model?.session || model?._session;
         if (session) {
-            // Check for specific backend handlers or labels
-            const handler = session.handler || session._handler;
-            const handlerName = handler?.constructor?.name || session.constructor?.name;
+            const ep = session.config?.executionProviders?.[0] || '';
+            if (ep.includes('webgpu')) backend = 'WebGPU';
+            else if (ep.includes('wasm')) backend = 'WASM';
+            else if (ep.includes('cpu')) backend = 'CPU';
 
-            if (handlerName) {
-                backend = handlerName.replace('OnnxruntimeWeb', '').replace('Backend', '');
-            }
-
-            // Fallback for some versions of ORT
-            if (backend === 'Unknown' && session.config?.executionProviders) {
-                backend = session.config.executionProviders[0];
+            // If still unknown, try the handler name but avoid minified 'd'
+            if (backend === 'Unknown') {
+                const handlerName = session.handler?.constructor?.name;
+                if (handlerName && handlerName.length > 1) {
+                    backend = handlerName.replace('OnnxruntimeWeb', '').replace('Backend', '');
+                }
             }
         }
     } catch (e) {
-        console.warn("[Worker] Backend probe hit a snag:", e);
+        console.warn("[AI Worker] Backend probe failed:", e);
     }
 
+    console.log(`%c[AI Worker] Backend: ${backend} | Device: ${device}`, "color: #10b981; font-weight: bold;");
     self.postMessage({ status: 'ready', backend, device });
 }
 
@@ -89,23 +78,14 @@ async function processBatch(batch) {
         const inputs = await processor(rawImages);
         const { image_embeds } = await model(inputs);
         const end = performance.now();
+        const duration = end - start;
 
-        // 3. Extract results
-        const result = [];
-        const numImages = batch.length;
-        const totalElements = image_embeds.data.length;
-        const dim = totalElements / numImages;
-
-        for (let i = 0; i < numImages; i++) {
-            const rowStart = i * dim;
-            const rowEnd = rowStart + dim;
-            result.push(Array.from(image_embeds.data.slice(rowStart, rowEnd)));
-        }
+        console.log(`%c[AI Worker] Processed batch of ${batch.length} in ${duration.toFixed(1)}ms (${(duration / batch.length).toFixed(1)}ms/img)`, "color: #10b981;");
 
         self.postMessage({
             status: 'success',
             embeddings: result,
-            time: end - start,
+            time: duration,
             batchSize: batch.length
         });
     } catch (err) {
