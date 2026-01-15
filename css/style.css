@@ -102,6 +102,11 @@ body:not([data-low-perf="true"]) .img-cell img.loaded {
     opacity: 1;
 }
 
+/* Hide broken/empty images during skeleton state */
+.skeleton img {
+    visibility: hidden;
+}
+
 .img-cell:hover img {
     transform: scale(1.05);
 }

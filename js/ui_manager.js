@@ -259,7 +259,7 @@ export class UIManager {
                         const btnRemove = cell._btn;
 
                         // Clean Slate Reset (Instant)
-                        image.src = '';
+                        image.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
                         image.className = '';
                         cell.classList.add('skeleton');
 
@@ -308,7 +308,7 @@ export class UIManager {
                     // Empty slot
                     if (cell.dataset.path || cell.innerHTML !== '') {
                         cell.dataset.path = '';
-                        if (cell._img) cell._img.src = '';
+                        if (cell._img) cell._img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
                         cell.classList.remove('skeleton'); // Ensure no shimmer on empty
                         cell.style.cssText = 'background: #1f2937; opacity: 0.3;';
                     }
