@@ -65,6 +65,8 @@ async function processBatch(batch) {
         // 1. Load and Decode in Worker (No main-thread hitches!)
         const rawImages = await Promise.all(batch.map(async (item) => {
             const file = await item.handle.getFile();
+            console.log(`%c[AI Worker] Reading file: ${item.path.split('/').pop()}`, "color: #fb8c00; font-size: 0.8rem;");
+
             // In a worker, we can use simpler Buffer-based approach or the same Blob approach
             const url = URL.createObjectURL(file);
             try {

@@ -17,7 +17,7 @@ export class FileSystemManager {
             this.dirHandle = await window.showDirectoryPicker({
                 mode: 'readwrite'
             });
-            console.log(`[FileSystem] Directory selected: ${this.dirHandle.name}`);
+            console.log(`%c[FileSystem] Directory selected: ${this.dirHandle.name}`, "color: #fb8c00; font-weight: bold;");
             return this.dirHandle.name;
         } catch (error) {
             console.error('[FileSystem] Error selecting directory:', error);
@@ -68,7 +68,7 @@ export class FileSystemManager {
         const writable = await fileHandle.createWritable();
         await writable.write(content);
         await writable.close();
-        console.log(`[FileSystem] Wrote file: ${path} (${typeof content === 'string' ? content.length : 'blob'} bytes)`);
+        console.log(`%c[FileSystem] File written: ${path} (${typeof content === 'string' ? content.length : 'blob'} bytes)`, "color: #fb8c00;");
     }
 
     /**
@@ -145,6 +145,10 @@ export class FileSystemManager {
                     if (validExtensions.includes(ext)) {
                         const fullPath = relativePath ? `${relativePath}/${name}` : name;
                         images.push({ path: fullPath, handle: handle });
+                        // Log occasional file access
+                        if (images.length % 50 === 0) {
+                            console.log(`%c[FileSystem] Scanned ${images.length} files...`, "color: #fb8c00; font-size: 0.8rem;");
+                        }
                     }
                 } else if (handle.kind === 'directory') {
                     // Skip hidden folders, metadata folder, or previous output folders
@@ -156,9 +160,9 @@ export class FileSystemManager {
             }
         };
 
-        console.log("[FileSystem] Starting recursive image scan...");
+        console.log("%c[FileSystem] Starting recursive image scan...", "color: #fb8c00; font-weight: bold;");
         await scanDir(this.dirHandle, '');
-        console.log(`[FileSystem] Scan complete. Found ${images.length} images.`);
+        console.log(`%c[FileSystem] Scan complete. Found ${images.length} images.`, "color: #fb8c00; font-weight: bold;");
         return images;
     }
 
@@ -215,7 +219,7 @@ export class FileSystemManager {
         const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
         const rootFolderName = `clusterai_curated_${timestamp}`; // Renamed for clarity
 
-        console.log(`[FileSystem] Initializing save folder: ${rootFolderName} in ${parentHandle.name}`);
+        console.log(`%c[FileSystem] Initializing save folder: ${rootFolderName} in ${parentHandle.name}`, "color: #fb8c00;");
         const rootDir = await parentHandle.getDirectoryHandle(rootFolderName, { create: true });
 
         // Calculate total files for progress
@@ -255,7 +259,7 @@ export class FileSystemManager {
             }
         }
 
-        console.log(`[FileSystem] Save complete. Folders created in: ${rootFolderName}`);
+        console.log(`%c[FileSystem] Save complete. Folders created in: ${rootFolderName}`, "color: #fb8c00; font-weight: bold;");
         return rootFolderName;
     }
 }

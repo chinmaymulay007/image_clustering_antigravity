@@ -39,12 +39,12 @@ class DatabaseManager {
 
             request.onsuccess = (e) => {
                 this.db = e.target.result;
-                console.log(`[DB] Database initialized for project: ${projectName}`);
+                console.log(`%c[Database] Connected to project: ${projectName}`, "color: #2196f3; font-weight: bold;");
                 resolve(this.db);
             };
 
             request.onerror = (e) => {
-                console.error("[DB] Error opening database:", e.target.error);
+                console.error("%c[Database] Connection Error:", "color: #ef4444;", e.target.error);
                 reject(e.target.error);
             };
         });
@@ -70,7 +70,10 @@ class DatabaseManager {
                 store.put(entry);
             });
 
-            transaction.oncomplete = () => resolve();
+            transaction.oncomplete = () => {
+                console.log(`%c[Database] Persisted ${records.length} records to IndexedDB`, "color: #2196f3;");
+                resolve();
+            };
             transaction.onerror = (e) => reject(e.target.error);
         });
     }
@@ -88,7 +91,10 @@ class DatabaseManager {
             const index = store.index('project');
             const request = index.getAll(IDBKeyRange.only(this.currentProject));
 
-            request.onsuccess = () => resolve(request.result);
+            request.onsuccess = () => {
+                console.log(`%c[Database] Retreived ${request.result.length} previous processed images`, "color: #2196f3;");
+                resolve(request.result);
+            };
             request.onerror = (e) => reject(e.target.error);
         });
     }
@@ -109,7 +115,10 @@ class DatabaseManager {
                 lastUpdated: Date.now()
             });
 
-            transaction.oncomplete = () => resolve();
+            transaction.oncomplete = () => {
+                console.log(`%c[Database] Project manifest updated in browser storage`, "color: #2196f3; font-style: italic;");
+                resolve();
+            };
             transaction.onerror = (e) => reject(e.target.error);
         });
     }

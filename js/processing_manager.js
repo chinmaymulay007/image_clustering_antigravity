@@ -32,7 +32,7 @@ export class ProcessingManager {
     async loadModel() {
         if (this.worker) return;
 
-        console.log("[ProcessingManager] Initializing AI Worker...");
+        console.log("%c[ProcessingManager] Initializing AI Worker...", "color: #3f51b5; font-weight: bold;");
         this.worker = new Worker('js/ai_worker.js', { type: 'module' });
 
         return new Promise((resolve) => {
@@ -69,7 +69,7 @@ export class ProcessingManager {
         if (!this.workerReady) await this.loadModel();
 
         // 1. Scan Files
-        console.log("Scanning files...");
+        console.log("%c[ProcessingManager] Scanning files...", "color: #3f51b5;");
         this.allImages = await this.fs.scanAllImagesRecursive();
 
         // 2. Resume Logic (Using IndexedDB instead of files)
@@ -99,7 +99,7 @@ export class ProcessingManager {
         let pendingEmbeddings = [];
 
         let unprocessed = this.allImages.filter(img => !this.processedPaths.has(img.path));
-        console.log(`[Processing] Loop started with ${unprocessed.length} items.`);
+        console.log(`%c[ProcessingManager] Loop started with ${unprocessed.length} items.`, "color: #3f51b5; font-weight: bold;");
 
         while (this.isRunning && !this.aborted) {
             if (this.isPaused) {

@@ -29,13 +29,8 @@ self.onmessage = async (e) => {
         // 4. Send back the Blob (Transferrable)
         self.postMessage({ status: 'success', blob, path });
 
-        // Occasional log to show it's alive (first 10 images)
-        if (!self.logCount) self.logCount = 0;
-        if (self.logCount < 10) {
-            self.logCount++;
-            console.log(`%c[Image Worker] Generated thumb for ${path.split('/').pop()}`, "color: #06b6d4;");
-            if (self.logCount === 10) console.log("%c[Image Worker] Further logs silenced for performance.", "color: #06b6d4;");
-        }
+        // Continuous Logging (Cyan)
+        console.log(`%c[Image Worker] Generated thumbnail for ${path.split('/').pop()}`, "color: #00bcd4;");
     } catch (err) {
         self.postMessage({ status: 'error', error: err.message, path });
     }
