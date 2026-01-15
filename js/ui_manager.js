@@ -167,76 +167,111 @@ export class UIManager {
             return;
         }
 
-        const fragment = document.createDocumentFragment();
+        // 1. Remove clusters that are no longer present
+        const existingCards = Array.from(this.clusterGrid.querySelectorAll('.cluster-card'));
+        const activeIds = new Set(clusters.map((_, i) => i.toString()));
 
+        existingCards.forEach(card => {
+            if (!activeIds.has(card.dataset.clusterId)) {
+                card.remove();
+            }
+        });
+
+        // 2. Update or Create clusters
         clusters.forEach((cluster, index) => {
-            const card = document.createElement('div');
-            card.className = 'cluster-card';
-            card.dataset.clusterId = index;
-
+            let card = this.clusterGrid.querySelector(`.cluster-card[data-cluster-id="${index}"]`);
             const memberCount = cluster.memberCount !== undefined ? cluster.memberCount : cluster.members.length;
+            const titleHtml = `${cluster.label || `Cluster ${index + 1}`} <span style="color:#9ca3af; font-size:0.8em">${memberCount} items</span>`;
 
-            const header = document.createElement('div');
-            header.className = 'card-header';
-            header.style.cssText = 'display:flex; align-items:center; gap:10px; padding: 5px;';
+            if (!card) {
+                // Create New
+                card = document.createElement('div');
+                card.className = 'cluster-card';
+                card.dataset.clusterId = index;
 
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'cluster-checkbox';
-            checkbox.style.cssText = 'cursor:pointer; width:18px; height:18px;';
+                const header = document.createElement('div');
+                header.className = 'card-header';
+                header.style.cssText = 'display:flex; align-items:center; gap:10px; padding: 5px;';
 
-            const title = document.createElement('span');
-            title.innerHTML = `${cluster.label || `Cluster ${index + 1}`} <span style="color:#9ca3af; font-size:0.8em">${memberCount} items</span>`;
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'cluster-checkbox';
+                checkbox.style.cssText = 'cursor:pointer; width:18px; height:18px;';
 
-            header.appendChild(checkbox);
-            header.appendChild(title);
-            card.appendChild(header);
+                const title = document.createElement('span');
+                title.className = 'cluster-title';
+                title.innerHTML = titleHtml;
 
-            const grid = document.createElement('div');
-            grid.className = 'image-grid';
+                header.appendChild(checkbox);
+                header.appendChild(title);
+                card.appendChild(header);
 
-            // Render up to 16 representatives
+                const grid = document.createElement('div');
+                grid.className = 'image-grid';
+                card.appendChild(grid);
+
+                this.clusterGrid.appendChild(card);
+            } else {
+                // Update Existing Header
+                const title = card.querySelector('.cluster-title');
+                if (title && title.innerHTML !== titleHtml) {
+                    title.innerHTML = titleHtml;
+                }
+            }
+
+            // 3. Update Image Grid (Representatives)
+            const grid = card.querySelector('.image-grid');
+            const cells = Array.from(grid.querySelectorAll('.img-cell'));
+
             for (let i = 0; i < 16; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'img-cell';
+                let cell = cells[i];
+                if (!cell) {
+                    cell = document.createElement('div');
+                    cell.className = 'img-cell';
+                    grid.appendChild(cell);
+                }
 
                 if (i < cluster.representatives.length) {
                     const imgData = cluster.representatives[i];
-                    const image = document.createElement('img');
-                    cell.dataset.path = imgData.path;
 
-                    const btnRemove = document.createElement('button');
-                    btnRemove.innerHTML = '×';
-                    btnRemove.style.cssText = 'position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; display:none; justify-content:center; align-items:center; line-height:1; z-index:10;';
+                    // Only update if the image changed
+                    if (cell.dataset.path !== imgData.path) {
+                        cell.dataset.path = imgData.path;
+                        cell.innerHTML = ''; // Clear previous content
 
-                    cell.onmouseenter = () => btnRemove.style.display = 'flex';
-                    cell.onmouseleave = () => btnRemove.style.display = 'none';
+                        const image = document.createElement('img');
+                        const btnRemove = document.createElement('button');
+                        btnRemove.innerHTML = '×';
+                        btnRemove.style.cssText = 'position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; display:none; justify-content:center; align-items:center; line-height:1; z-index:10;';
 
-                    btnRemove.onclick = (e) => {
-                        e.stopPropagation();
-                        this.callbacks.onExcludeImage?.(imgData.path);
-                    };
+                        cell.onmouseenter = () => btnRemove.style.display = 'flex';
+                        cell.onmouseleave = () => btnRemove.style.display = 'none';
 
-                    cell.appendChild(image);
-                    cell.appendChild(btnRemove);
+                        btnRemove.onclick = (e) => {
+                            e.stopPropagation();
+                            this.callbacks.onExcludeImage?.(imgData.path);
+                        };
 
-                    // Load thumb
-                    this.callbacks.onLoadThumbnail?.(imgData.path).then(url => {
-                        if (url) image.src = url;
-                    });
+                        cell.appendChild(image);
+                        cell.appendChild(btnRemove);
+                        cell.style.cssText = ''; // Reset skeleton style
+
+                        this.callbacks.onLoadThumbnail?.(imgData.path).then(url => {
+                            if (url && cell.dataset.path === imgData.path) {
+                                image.src = url;
+                            }
+                        });
+                    }
                 } else {
-                    cell.style.cssText = 'background: #1f2937; opacity: 0.3;';
+                    // Empty skeleton slot
+                    if (cell.dataset.path || cell.innerHTML !== '') {
+                        cell.dataset.path = '';
+                        cell.innerHTML = '';
+                        cell.style.cssText = 'background: #1f2937; opacity: 0.3;';
+                    }
                 }
-                grid.appendChild(cell);
             }
-
-            card.appendChild(grid);
-            fragment.appendChild(card);
         });
-
-        // Atomic swap
-        this.clusterGrid.innerHTML = '';
-        this.clusterGrid.appendChild(fragment);
     }
 
     getSelectedClusterIndices() {

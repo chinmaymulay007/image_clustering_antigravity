@@ -3,6 +3,7 @@ import { FileSystemManager } from './file_system.js';
 import { ProcessingManager } from './processing_manager.js';
 import { ClusteringEngine } from './clustering_engine.js';
 import { UIManager } from './ui_manager.js';
+import { monitor } from './health_monitor.js';
 
 class App {
     constructor() {
@@ -24,9 +25,12 @@ class App {
         this.isClustering = false;
         this.pendingRecluster = false;
         this.clusterWorker = null;
+        this.imageWorker = null;
+        this.thumbnailPromises = new Map(); // Path -> Promise
 
         console.log("Antigravity v2 Orchestrator Initialized");
         this.init();
+        monitor.start(); // Start watching for hitches
     }
 
     init() {
@@ -195,67 +199,43 @@ class App {
     }
 
     async loadThumbnail(path) {
-        // 1. Check Cache
-        if (this.thumbnailCache.has(path)) {
-            return this.thumbnailCache.get(path);
-        }
+        if (this.thumbnailCache.has(path)) return this.thumbnailCache.get(path);
+        if (this.thumbnailPromises.has(path)) return this.thumbnailPromises.get(path);
 
-        // Try looking up in our map
-        let handle = this.handleMap.get(path);
+        const promise = (async () => {
+            const handle = this.handleMap.get(path);
+            if (!handle) return null;
 
-        // Fallback: search processing list if map empty
-        if (!handle && this.processing.allImages) {
-            const found = this.processing.allImages.find(i => i.path === path);
-            if (found) handle = found.handle;
-        }
+            if (!this.imageWorker) {
+                this.imageWorker = new Worker('js/image_worker.js');
+                this.imageWorker.onmessage = (e) => {
+                    const { status, blob, path: resPath, error } = e.data;
+                    const resolver = this.thumbnailPromises.get(resPath)?.resolver;
+                    if (status === 'success') {
+                        const url = URL.createObjectURL(blob);
+                        this.thumbnailCache.set(resPath, url);
+                        if (resolver) resolver(url);
+                    } else {
+                        console.warn("ImageWorker failed:", error);
+                        if (resolver) resolver(null);
+                    }
+                    this.thumbnailPromises.delete(resPath);
+                };
+            }
 
-        if (handle) {
             try {
                 const file = await handle.getFile();
-
-                // 2. Generate Thumbnail Efficiently
-                // Use createImageBitmap for GPU-accelerated decoding/resizing if supported
-                let blob = null;
-                const TARGET_WIDTH = 300;
-
-                if (window.createImageBitmap) {
-                    try {
-                        const bitmap = await createImageBitmap(file, { resizeWidth: TARGET_WIDTH });
-
-                        // Draw to canvas to get Blob
-                        // We use an OffscreenCanvas if available for speed, else standard
-                        if (window.OffscreenCanvas) {
-                            const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(bitmap, 0, 0);
-                            blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
-                        } else {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = bitmap.width;
-                            canvas.height = bitmap.height;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(bitmap, 0, 0);
-                            blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
-                        }
-                        bitmap.close();
-                    } catch (err) {
-                        console.warn("createImageBitmap failed, falling back to full file:", err);
-                        blob = file; // Fallback
-                    }
-                } else {
-                    blob = file; // Fallback for really old browsers (unlikely given context)
-                }
-
-                if (blob) {
-                    const url = URL.createObjectURL(blob);
-                    this.thumbnailCache.set(path, url);
-                    return url;
-                }
+                return new Promise((resolve) => {
+                    this.thumbnailPromises.set(path, { resolver: resolve });
+                    this.imageWorker.postMessage({ file, targetWidth: 300, path });
+                });
             } catch (e) {
-                console.warn("Failed to load/resize file:", path, e);
+                return null;
             }
-        }
-        return null;
+        })();
+
+        this.thumbnailPromises.set(path, promise);
+        return promise;
     }
 
     async handleSave() {

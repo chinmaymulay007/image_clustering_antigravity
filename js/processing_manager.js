@@ -26,6 +26,7 @@ export class ProcessingManager {
         // Optimization Configuration
         this.batchSize = 4; // Start with 4, safe for most devices
         this.lastUiUpdate = 0; // Throttling UI
+        this.memoryEmbeddings = null; // Internal cache to avoid R-W cycles
     }
 
     async loadModel() {
@@ -149,22 +150,32 @@ export class ProcessingManager {
                             processed: this.processedPaths.size,
                             total: this.allImages.length,
                             completed: false,
-                            currentAction: "💾 Syncing Clusters..."
+                            currentAction: "💾 Syncing Data..."
                         });
                     }
 
-                    const currentAllEmbeddings = (await this.fs.readMetadata('embeddings.json') || []).concat(pendingEmbeddings);
-                    await this.fs.writeMetadata('embeddings.json', currentAllEmbeddings);
+                    // Memory-first optimization
+                    if (!this.memoryEmbeddings) {
+                        this.memoryEmbeddings = await this.fs.readMetadata('embeddings.json') || [];
+                    }
+                    this.memoryEmbeddings = this.memoryEmbeddings.concat(pendingEmbeddings);
 
+                    const saveStart = performance.now();
+                    await this.fs.writeMetadata('embeddings.json', this.memoryEmbeddings);
                     await this.fs.writeMetadata('manifest.json', {
-                        processedCount: currentAllEmbeddings.length,
+                        processedCount: this.memoryEmbeddings.length,
                         totalImagesFound: this.allImages.length,
                         lastUpdated: Date.now(),
                         excludedImages: Array.from(this.excludedPaths)
                     });
+                    const saveEnd = performance.now();
+
+                    if (saveEnd - saveStart > 150) {
+                        console.warn(`%c[Performance] Slow Metadata Save: ${(saveEnd - saveStart).toFixed(0)}ms.`, "color: #f59e0b;");
+                    }
 
                     if (this.onClusterUpdate) {
-                        await this.onClusterUpdate(currentAllEmbeddings);
+                        await this.onClusterUpdate(this.memoryEmbeddings);
                     }
 
                     pendingEmbeddings = [];
