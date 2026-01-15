@@ -32,6 +32,7 @@ export class ProcessingManager {
     async loadModel() {
         if (this.worker) return;
 
+        if (this.onProgress) this.onProgress({ currentAction: "⚡ Initializing AI Worker..." });
         console.log("%c[ProcessingManager] Initializing AI Worker...", "color: #3f51b5; font-weight: bold;");
         this.worker = new Worker('js/ai_worker.js', { type: 'module' });
 
@@ -69,6 +70,7 @@ export class ProcessingManager {
         if (!this.workerReady) await this.loadModel();
 
         // 1. Scan Files
+        if (this.onProgress) this.onProgress({ currentAction: "🔍 Scanning folder for images..." });
         console.log("%c[ProcessingManager] Scanning files...", "color: #3f51b5;");
         this.allImages = await this.fs.scanAllImagesRecursive();
 
@@ -142,7 +144,13 @@ export class ProcessingManager {
                 }
 
                 if (pendingEmbeddings.length >= this.refreshInterval || unprocessed.length === 0) {
-                    if (this.onProgress) this.onProgress({ processed: this.processedPaths.size, total: this.allImages.length, currentAction: "💾 Syncing Data..." });
+                    if (this.onProgress) {
+                        this.onProgress({
+                            processed: this.processedPaths.size,
+                            total: this.allImages.length,
+                            currentAction: `💾 Syncing ${pendingEmbeddings.length} items to Database...`
+                        });
+                    }
 
                     // Memory-first optimization + DB Persistence
                     if (!this.memoryEmbeddings) this.memoryEmbeddings = [];
@@ -156,7 +164,10 @@ export class ProcessingManager {
                         excludedImages: Array.from(this.excludedPaths)
                     });
 
-                    if (this.onClusterUpdate) await this.onClusterUpdate(this.memoryEmbeddings);
+                    if (this.onClusterUpdate) {
+                        if (this.onProgress) this.onProgress({ currentAction: "🧩 Re-calculating clusters..." });
+                        await this.onClusterUpdate(this.memoryEmbeddings);
+                    }
                     pendingEmbeddings = [];
                 }
 
@@ -172,7 +183,7 @@ export class ProcessingManager {
                         speed: speedSec,
                         eta: eta,
                         completed: false,
-                        currentAction: `✨ Processing: ${firstName}${batchImages.length > 1 ? ` (+${batchImages.length - 1} more)` : ''}`
+                        currentAction: `🧠 Analyzing: ${firstName}${batchImages.length > 1 ? ` (+${batchImages.length - 1} more)` : ''}`
                     });
                     this.lastUiUpdate = now;
                 }

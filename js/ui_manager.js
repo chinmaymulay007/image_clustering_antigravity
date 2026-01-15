@@ -254,19 +254,39 @@ export class UIManager {
 
                         cell.appendChild(image);
                         cell.appendChild(btnRemove);
-                        cell.style.cssText = ''; // Reset skeleton style
+
+                        // Add skeleton loading state
+                        cell.classList.add('skeleton');
 
                         this.callbacks.onLoadThumbnail?.(imgData.path).then(url => {
-                            if (url && cell.dataset.path === imgData.path) {
-                                image.src = url;
+                            if (!url) {
+                                cell.classList.remove('skeleton'); // Failed, remove shimmer
+                                return;
                             }
+
+                            if (cell.dataset.path === imgData.path) {
+                                image.src = url;
+                                // Handle both fresh loads and already-complete cached images
+                                if (image.complete) {
+                                    image.classList.add('loaded');
+                                    cell.classList.remove('skeleton');
+                                } else {
+                                    image.onload = () => {
+                                        image.classList.add('loaded');
+                                        cell.classList.remove('skeleton');
+                                    };
+                                }
+                            }
+                        }).catch(() => {
+                            cell.classList.remove('skeleton');
                         });
                     }
                 } else {
-                    // Empty skeleton slot
+                    // Empty slot
                     if (cell.dataset.path || cell.innerHTML !== '') {
                         cell.dataset.path = '';
                         cell.innerHTML = '';
+                        cell.classList.remove('skeleton'); // Ensure no shimmer on empty
                         cell.style.cssText = 'background: #1f2937; opacity: 0.3;';
                     }
                 }

@@ -95,6 +95,7 @@ class App {
                 this.processing.excludedPaths.forEach(p => this.excludedPaths.add(p));
                 console.log(`[App] Synced ${this.excludedPaths.size} exclusions from manifest.`);
 
+                this.ui.updateStats({ currentAction: "✅ Scan complete. Starting AI analysis..." });
                 console.log("[App] Initial scan complete. Handle map rebuilt.");
             });
 
@@ -116,8 +117,10 @@ class App {
     handlePauseResume(shouldPause) {
         if (shouldPause) {
             this.processing.pause();
+            this.ui.updateStats({ currentAction: "⏸️ Processing Paused." });
         } else {
             this.processing.resume();
+            this.ui.updateStats({ currentAction: "▶️ Resuming..." });
         }
         this.ui.setPauseState(shouldPause);
     }
@@ -135,6 +138,7 @@ class App {
         });
 
         // Immediate UI Refresh
+        this.ui.updateStats({ currentAction: `🚫 Excluding: ${path.split('/').pop()}` });
         this.refreshClusters();
     }
 
@@ -152,6 +156,7 @@ class App {
         console.log(`[App] Restored ${path}. Exclusions persisted to DB.`);
 
         // Immediate UI Refresh
+        this.ui.updateStats({ currentAction: `♻️ Restoring: ${path.split('/').pop()}` });
         this.refreshClusters();
     }
 
