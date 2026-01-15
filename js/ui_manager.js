@@ -31,9 +31,8 @@ export class UIManager {
         this.settingThreshold = document.getElementById('setting-threshold');
         this.valThreshold = document.getElementById('val-threshold');
 
-        this.clusterGrid = document.getElementById('cluster-grid-container');
-        this.btnSave = document.getElementById('btn-save-clusters');
         this.statusBarText = document.getElementById('status-bar-text');
+        this.settingAnimations = document.getElementById('setting-animations');
 
         // Save Choice Modal
         this.modalSaveChoice = document.getElementById('modal-save-choice');
@@ -100,7 +99,8 @@ export class UIManager {
             const settings = {
                 k: parseInt(this.settingK.value),
                 threshold: parseFloat(this.settingThreshold.value),
-                refreshInterval: parseInt(hiddenBatchInput.value)
+                refreshInterval: parseInt(hiddenBatchInput.value),
+                disableAnimations: this.settingAnimations.checked
             };
             this.callbacks.onApplySettings?.(settings);
             this.modalSettings.classList.add('hidden');

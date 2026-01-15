@@ -4,6 +4,7 @@ import { ProcessingManager } from './processing_manager.js';
 import { ClusteringEngine } from './clustering_engine.js';
 import { UIManager } from './ui_manager.js';
 import { db } from './db_manager.js';
+import { PerformanceMonitor } from './performance_monitor.js';
 
 class App {
     constructor() {
@@ -28,6 +29,12 @@ class App {
         this.imageWorker = null;
         this.thumbnailPromises = new Map(); // Path -> Promise
 
+        this.perf = new PerformanceMonitor();
+        this.perf.onLowPerfDetected = () => {
+            if (this.ui.settingAnimations) this.ui.settingAnimations.checked = true;
+            this.ui.updateStats({ currentAction: "⚡ Low Performance Mode: Animations disabled." });
+        };
+
         console.log("Antigravity v2 Orchestrator Initialized");
         this.init();
     }
@@ -51,6 +58,14 @@ class App {
         this.refreshInterval = settings.refreshInterval;
         this.k = settings.k;
         this.threshold = settings.threshold;
+
+        // Manual Animation Toggle
+        if (settings.disableAnimations) {
+            document.body.setAttribute('data-low-perf', 'true');
+            if (this.perf) this.perf.stop(); // Stop automatic monitor if manually disabled
+        } else {
+            document.body.removeAttribute('data-low-perf');
+        }
 
         // Sync to processing manager
         this.processing.refreshInterval = this.refreshInterval;

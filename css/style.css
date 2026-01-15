@@ -110,6 +110,17 @@ header {
     animation: shimmer 1.5s infinite linear;
 }
 
+/* Low Performance Mode Overrides */
+body[data-low-perf="true"] .skeleton {
+    animation: none !important;
+    background: #1f2937 !important;
+}
+
+body[data-low-perf="true"] .img-cell img {
+    transition: none !important;
+    opacity: 1 !important;
+}
+
 @keyframes shimmer {
     from {
         background-position: 200% 0;
