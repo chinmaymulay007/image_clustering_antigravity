@@ -3,7 +3,6 @@ import { FileSystemManager } from './file_system.js';
 import { ProcessingManager } from './processing_manager.js';
 import { ClusteringEngine } from './clustering_engine.js';
 import { UIManager } from './ui_manager.js';
-import { monitor } from './health_monitor.js';
 import { db } from './db_manager.js';
 
 class App {
@@ -31,7 +30,6 @@ class App {
 
         console.log("Antigravity v2 Orchestrator Initialized");
         this.init();
-        monitor.start(); // Start watching for hitches
     }
 
     init() {
