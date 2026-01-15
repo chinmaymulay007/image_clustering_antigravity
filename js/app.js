@@ -21,6 +21,9 @@ class App {
         this.threshold = 0.15;
         this.handleMap = new Map(); // Path -> FileHandle
         this.thumbnailCache = new Map(); // Path -> Blob URL
+        this.isClustering = false;
+        this.pendingRecluster = false;
+        this.clusterWorker = null;
 
         console.log("Antigravity v2 Orchestrator Initialized");
         this.init();
@@ -148,33 +151,47 @@ class App {
     }
 
     async refreshClusters() {
-        console.log("Refreshing clusters with", this.currentEmbeddings.length, "embeddings");
-        // Filter out excluded
-        const validEmbeddings = this.currentEmbeddings.filter(e => !this.excludedPaths.has(e.path));
-
-        // Run Clustering (Warm Start)
-        // Destructure result from engine
-        const result = this.clustering.updateClusters(validEmbeddings, this.k, this.threshold, this.lastCentroids);
-
-        // Handle both new object return and potential legacy array (safety)
-        let clusters, centroids;
-        if (Array.isArray(result)) {
-            clusters = result; // Should not happen with new engine code
-            centroids = null;
-        } else {
-            clusters = result.clusters;
-            centroids = result.centroids;
+        if (this.isClustering) {
+            this.pendingRecluster = true;
+            return;
         }
 
-        this.currentClusters = clusters; // Store for saving
-        this.lastCentroids = centroids; // Store for stability
-        console.log(`[App] Clustering updated: ${clusters.length} groups. Stability(lastCentroids): ${centroids ? 'Active' : 'Missing'}`);
+        const validEmbeddings = this.currentEmbeddings.filter(e => !this.excludedPaths.has(e.path));
+        if (validEmbeddings.length === 0) return;
 
-        // Update UI
-        this.ui.renderClusters(clusters);
+        console.log(`[App] Offloading clustering of ${validEmbeddings.length} items to Worker...`);
+        this.isClustering = true;
 
-        // Ensure handle map exists if needed (in case updates happened)
-        if (this.handleMap.size === 0) this.rebuildHandleMap();
+        if (!this.clusterWorker) {
+            this.clusterWorker = new Worker('js/clustering_worker.js', { type: 'module' });
+            this.clusterWorker.onmessage = (e) => {
+                const { status, result, error } = e.data;
+                this.isClustering = false;
+
+                if (status === 'success') {
+                    this.currentClusters = result.clusters;
+                    this.lastCentroids = result.centroids;
+
+                    // Update UI
+                    this.ui.renderClusters(this.currentClusters);
+
+                    // If a re-cluster was requested while we were busy, do it now
+                    if (this.pendingRecluster) {
+                        this.pendingRecluster = false;
+                        this.refreshClusters();
+                    }
+                } else {
+                    console.error("Clustering Worker Error:", error);
+                }
+            };
+        }
+
+        this.clusterWorker.postMessage({
+            embeddings: validEmbeddings,
+            k: this.k,
+            threshold: this.threshold,
+            previousCentroids: this.lastCentroids
+        });
     }
 
     async loadThumbnail(path) {

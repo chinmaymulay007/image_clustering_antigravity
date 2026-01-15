@@ -162,7 +162,12 @@ export class UIManager {
     }
 
     renderClusters(clusters) {
-        this.clusterGrid.innerHTML = ''; // Clear
+        if (!clusters || clusters.length === 0) {
+            this.clusterGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; margin-top: 50px; color: #9ca3af;">Scanning for patterns...</div>';
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
 
         clusters.forEach((cluster, index) => {
             const card = document.createElement('div');
@@ -173,18 +178,12 @@ export class UIManager {
 
             const header = document.createElement('div');
             header.className = 'card-header';
-            header.style.display = 'flex';
-            header.style.alignItems = 'center';
-            header.style.gap = '10px';
+            header.style.cssText = 'display:flex; align-items:center; gap:10px; padding: 5px;';
 
-            // Checkbox for selection
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            checkbox.checked = false; // Unselected by default as requested
             checkbox.className = 'cluster-checkbox';
-            checkbox.style.cursor = 'pointer';
-            checkbox.style.width = '18px';
-            checkbox.style.height = '18px';
+            checkbox.style.cssText = 'cursor:pointer; width:18px; height:18px;';
 
             const title = document.createElement('span');
             title.innerHTML = `${cluster.label || `Cluster ${index + 1}`} <span style="color:#9ca3af; font-size:0.8em">${memberCount} items</span>`;
@@ -196,20 +195,16 @@ export class UIManager {
             const grid = document.createElement('div');
             grid.className = 'image-grid';
 
-            // Fixed 16 slots
+            // Render up to 16 representatives
             for (let i = 0; i < 16; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'img-cell';
 
                 if (i < cluster.representatives.length) {
                     const imgData = cluster.representatives[i];
-
                     const image = document.createElement('img');
-                    // image.loading = "lazy"; // Native lazy loading
-
                     cell.dataset.path = imgData.path;
 
-                    // Add Remove Button
                     const btnRemove = document.createElement('button');
                     btnRemove.innerHTML = '×';
                     btnRemove.style.cssText = 'position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; display:none; justify-content:center; align-items:center; line-height:1; z-index:10;';
@@ -225,23 +220,23 @@ export class UIManager {
                     cell.appendChild(image);
                     cell.appendChild(btnRemove);
 
-                    // Trigger load (Thumbnail)
+                    // Load thumb
                     this.callbacks.onLoadThumbnail?.(imgData.path).then(url => {
-                        if (url) {
-                            image.src = url;
-                        }
+                        if (url) image.src = url;
                     });
                 } else {
-                    // Empty skeleton slot
-                    cell.style.background = '#1f2937'; // Slightly lighter than black
-                    cell.style.opacity = '0.5';
+                    cell.style.cssText = 'background: #1f2937; opacity: 0.3;';
                 }
                 grid.appendChild(cell);
             }
 
             card.appendChild(grid);
-            this.clusterGrid.appendChild(card);
+            fragment.appendChild(card);
         });
+
+        // Atomic swap
+        this.clusterGrid.innerHTML = '';
+        this.clusterGrid.appendChild(fragment);
     }
 
     getSelectedClusterIndices() {
