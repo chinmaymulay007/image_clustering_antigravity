@@ -1,5 +1,4 @@
-
-import { env, AutoProcessor, CLIPVisionModelWithProjection, RawImage } from './vendor/transformers.js';
+import { db } from './db_manager.js';
 
 export class ProcessingManager {
     constructor(fileSystem) {
@@ -8,91 +7,91 @@ export class ProcessingManager {
         this.isPaused = false;
         this.aborted = false;
 
-        // Model State
-        this.processor = null;
-        this.model = null;
-        this.modelId = 'Xenova/clip-vit-base-patch16';
+        // Worker State
+        this.worker = null;
+        this.workerReady = false;
 
         // Session State
-        this.allImages = []; // { path, handle } mechanism
+        this.allImages = [];
         this.processedPaths = new Set();
-        this.excludedPaths = new Set(); // Sync with App
-        this.refreshInterval = 20; // Default
+        this.excludedPaths = new Set();
+        this.refreshInterval = 20;
 
         // Callbacks
-        this.onProgress = null; // (stats) => void
-        this.onClusterUpdate = null; // (newEmbeddings) => void
+        this.onProgress = null;
+        this.onClusterUpdate = null;
 
-        // Optimization Configuration
-        this.batchSize = 4; // Start with 4, safe for most devices
-        this.lastUiUpdate = 0; // Throttling UI
-        this.memoryEmbeddings = null; // Internal cache to avoid R-W cycles
+        // Optimization
+        this.batchSize = 4;
+        this.lastUiUpdate = 0;
+        this.memoryEmbeddings = null;
+
+        this.pendingBatchResolve = null;
     }
 
     async loadModel() {
-        console.log("Loading CLIP model...");
-        env.allowLocalModels = true;
-        env.localModelPath = 'models/';
-        env.allowRemoteModels = true;
+        if (this.worker) return;
 
-        env.debug = true;
-        env.logLevel = 'verbose';
-        if (env.backends && env.backends.onnx) {
-            env.backends.onnx.debug = true;
-            env.backends.onnx.logLevel = 'verbose';
-            env.backends.onnx.webgpu = { powerPreference: 'high-performance' };
-            env.backends.onnx.wasm.wasmPaths = 'js/vendor/dist/';
-        }
+        console.log("[ProcessingManager] Initializing AI Worker...");
+        this.worker = new Worker('js/ai_worker.js', { type: 'module' });
 
-        this.processor = await AutoProcessor.from_pretrained(this.modelId);
-        this.model = await CLIPVisionModelWithProjection.from_pretrained(this.modelId, {
-            quantized: true,
-            device: 'webgpu'
+        return new Promise((resolve) => {
+            this.worker.onmessage = (e) => {
+                const { status, backend, device, embeddings, error, time } = e.data;
+
+                if (status === 'ready') {
+                    console.info(`%c[Hardware Check] Worker Ready! Backend: ${backend} | Device: ${device}`, "color: #3b82f6; font-weight: bold; border: 1px solid #3b82f6; padding: 2px 5px;");
+                    this.workerReady = true;
+                    resolve();
+                } else if (status === 'success') {
+                    console.info(`%c[Background AI] Processed batch of ${e.data.batchSize} in ${time.toFixed(1)}ms`, "color: #10b981; font-weight: bold;");
+                    if (this.pendingBatchResolve) {
+                        this.pendingBatchResolve(embeddings);
+                        this.pendingBatchResolve = null;
+                    }
+                } else if (status === 'error') {
+                    console.error("AI Worker Error:", error);
+                    if (this.pendingBatchResolve) {
+                        this.pendingBatchResolve([]);
+                        this.pendingBatchResolve = null;
+                    }
+                }
+            };
+
+            this.worker.postMessage({
+                action: 'init',
+                payload: { debug: true }
+            });
         });
-
-        // HARDWARE VERIFICATION LOG
-        const backend = this.model?.model?.session?.handler?.constructor?.name || 'Unknown';
-        console.info(`%c[Hardware Check] Backend: ${backend} | Device: ${this.model?.device || 'Unknown'}`, "color: #3b82f6; font-weight: bold; font-size: 1.1em; border: 1px solid #3b82f6; padding: 2px 5px;");
-
-        console.log("CLIP model loaded.");
     }
 
     async start(refreshInterval = 20) {
         this.refreshInterval = refreshInterval;
-        if (!this.model) await this.loadModel();
+        if (!this.workerReady) await this.loadModel();
 
         // 1. Scan Files
         console.log("Scanning files...");
         this.allImages = await this.fs.scanAllImagesRecursive();
-        console.log(`Found ${this.allImages.length} images.`);
 
-        // 2. Load Existing Metadata (Resume capability)
-        const manifest = await this.fs.readMetadata('manifest.json');
-        const existingEmbeddings = await this.fs.readMetadata('embeddings.json') || [];
+        // 2. Resume Logic (Using IndexedDB instead of files)
+        const manifest = await db.getManifest();
+        const existingEmbeddings = await db.getEmbeddings();
 
         if (manifest && manifest.excludedImages) {
             manifest.excludedImages.forEach(p => this.excludedPaths.add(p));
-            console.log(`Loaded ${this.excludedPaths.size} excluded images.`);
         }
 
         if (existingEmbeddings.length > 0) {
+            this.memoryEmbeddings = existingEmbeddings;
             existingEmbeddings.forEach(e => this.processedPaths.add(e.path));
-            console.log(`Resumed with ${this.processedPaths.size} already processed images.`);
-
-            // Trigger initial update with existing data
-            if (this.onClusterUpdate) {
-                console.log("[ProcessingManager] Triggering initial cluster update...");
-                this.onClusterUpdate(existingEmbeddings);
-            }
+            if (this.onClusterUpdate) this.onClusterUpdate(existingEmbeddings);
         }
 
         // 3. Start Loop
         this.isRunning = true;
         this.isPaused = false;
         this.aborted = false;
-        this.startTime = Date.now();
         this.sessionStartTime = Date.now();
-        this.lastUiUpdate = 0; // Throttling
         this.processLoop();
     }
 
@@ -100,9 +99,8 @@ export class ProcessingManager {
         let sessionProcessedCount = 0;
         let pendingEmbeddings = [];
 
-        // PERFORMANCE FIX: Create a copy and work from it to avoid O(N^2) filtering in every batch
         let unprocessed = this.allImages.filter(img => !this.processedPaths.has(img.path));
-        console.log(`[Processing] Loop started with ${unprocessed.length} images remaining.`);
+        console.log(`[Processing] Loop started with ${unprocessed.length} items.`);
 
         while (this.isRunning && !this.aborted) {
             if (this.isPaused) {
@@ -111,13 +109,11 @@ export class ProcessingManager {
             }
 
             if (unprocessed.length === 0) {
-                console.log("Processing complete!");
                 this.isRunning = false;
                 if (this.onProgress) this.onProgress({ completed: true });
                 return;
             }
 
-            // Pick a batch of images (Splicing is much faster than global filter)
             const currentBatchSize = Math.min(this.batchSize, unprocessed.length);
             const batchImages = [];
             for (let i = 0; i < currentBatchSize; i++) {
@@ -126,68 +122,45 @@ export class ProcessingManager {
             }
 
             try {
-                // LOGGING: Start of batch
                 const firstName = batchImages[0].path.split('/').pop();
 
+                // Offload entirely to worker
                 const embeddings = await this.processBatch(batchImages);
 
                 for (let i = 0; i < batchImages.length; i++) {
-                    const record = {
+                    pendingEmbeddings.push({
                         id: Date.now() + Math.random(),
                         path: batchImages[i].path,
                         embedding: embeddings[i]
-                    };
-
-                    pendingEmbeddings.push(record);
+                    });
                     this.processedPaths.add(batchImages[i].path);
                     sessionProcessedCount++;
                 }
 
-                // Batch Save to Disk & Clustering
                 if (pendingEmbeddings.length >= this.refreshInterval || unprocessed.length === 0) {
-                    if (this.onProgress) {
-                        this.onProgress({
-                            processed: this.processedPaths.size,
-                            total: this.allImages.length,
-                            completed: false,
-                            currentAction: "💾 Syncing Data..."
-                        });
-                    }
+                    if (this.onProgress) this.onProgress({ processed: this.processedPaths.size, total: this.allImages.length, currentAction: "💾 Syncing Data..." });
 
-                    // Memory-first optimization
-                    if (!this.memoryEmbeddings) {
-                        this.memoryEmbeddings = await this.fs.readMetadata('embeddings.json') || [];
-                    }
+                    // Memory-first optimization + DB Persistence
+                    if (!this.memoryEmbeddings) this.memoryEmbeddings = [];
                     this.memoryEmbeddings = this.memoryEmbeddings.concat(pendingEmbeddings);
 
-                    const saveStart = performance.now();
-                    await this.fs.writeMetadata('embeddings.json', this.memoryEmbeddings);
-                    await this.fs.writeMetadata('manifest.json', {
+                    // Structured DB Save (No heavy file writing)
+                    await db.upsertEmbeddings(pendingEmbeddings);
+                    await db.saveManifest({
                         processedCount: this.memoryEmbeddings.length,
                         totalImagesFound: this.allImages.length,
-                        lastUpdated: Date.now(),
                         excludedImages: Array.from(this.excludedPaths)
                     });
-                    const saveEnd = performance.now();
 
-                    if (saveEnd - saveStart > 150) {
-                        console.warn(`%c[Performance] Slow Metadata Save: ${(saveEnd - saveStart).toFixed(0)}ms.`, "color: #f59e0b;");
-                    }
-
-                    if (this.onClusterUpdate) {
-                        await this.onClusterUpdate(this.memoryEmbeddings);
-                    }
-
+                    if (this.onClusterUpdate) await this.onClusterUpdate(this.memoryEmbeddings);
                     pendingEmbeddings = [];
                 }
 
-                // UI Progress (Throttled for smoothness)
                 const now = Date.now();
                 if (this.onProgress && (now - this.lastUiUpdate > 800 || unprocessed.length === 0)) {
                     const sessionElapsed = now - this.sessionStartTime;
                     const speedSec = (sessionElapsed / sessionProcessedCount) / 1000;
-                    const remainingIdx = unprocessed.length;
-                    const eta = (speedSec * 1000) * remainingIdx;
+                    const eta = (speedSec * 1000) * unprocessed.length;
 
                     this.onProgress({
                         processed: this.processedPaths.size,
@@ -200,51 +173,22 @@ export class ProcessingManager {
                     this.lastUiUpdate = now;
                 }
             } catch (err) {
-                console.error("Batch processing error:", err);
+                console.error("Batch error:", err);
             }
 
-            // Yield to UI thread
-            await new Promise(r => setTimeout(r, 30)); // 30ms yield for much smoother UI
+            await new Promise(r => setTimeout(r, 20)); // Small yield
         }
     }
 
-    async processBatch(batchImages) {
-        // 1. Parallel I/O: Runs ONLY for current batch
-        const ioStart = performance.now();
-        console.info(`%c[CPU Thread] Loading batch of ${batchImages.length} images...`, "color: #eab308;");
-
-        const rawImages = await Promise.all(batchImages.map(async (img) => {
-            const file = await img.handle.getFile();
-            const url = URL.createObjectURL(file);
-            try {
-                return await RawImage.read(url);
-            } finally {
-                URL.revokeObjectURL(url);
-            }
-        }));
-        const ioEnd = performance.now();
-        console.info(`[CPU Thread] I/O completed in ${(ioEnd - ioStart).toFixed(1)}ms`);
-
-        // 2. Batch Inference
-        const start = performance.now();
-        const batchInputs = await this.processor(rawImages);
-        const { image_embeds } = await this.model(batchInputs);
-        const end = performance.now();
-
-        console.info(`%c[Inference] Processed ${batchImages.length} images in ${(end - start).toFixed(1)}ms (${((end - start) / batchImages.length).toFixed(1)}ms/img)`, "color: #10b981; font-weight: bold;");
-
-        // 3. Extract individual embeddings
-        const result = [];
-        const numImages = batchImages.length;
-        const totalElements = image_embeds.data.length;
-        const dim = totalElements / numImages;
-
-        for (let i = 0; i < numImages; i++) {
-            const start = i * dim;
-            const end = start + dim;
-            result.push(Array.from(image_embeds.data.slice(start, end)));
-        }
-        return result;
+    async processBatch(batch) {
+        return new Promise((resolve) => {
+            this.pendingBatchResolve = resolve;
+            // Send handles directly! They are transferable.
+            this.worker.postMessage({
+                action: 'process',
+                payload: batch
+            });
+        });
     }
 
     pause() { this.isPaused = true; }

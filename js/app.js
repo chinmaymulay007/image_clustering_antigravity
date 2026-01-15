@@ -4,6 +4,7 @@ import { ProcessingManager } from './processing_manager.js';
 import { ClusteringEngine } from './clustering_engine.js';
 import { UIManager } from './ui_manager.js';
 import { monitor } from './health_monitor.js';
+import { db } from './db_manager.js';
 
 class App {
     constructor() {
@@ -66,6 +67,10 @@ class App {
         try {
             const dirName = await this.fs.selectDirectory();
             console.log(`[App] Selected: ${dirName}`);
+
+            // Initialize Database for this project
+            await db.init(dirName);
+
             this.ui.hideInitialOverlay();
 
             // Setup callbacks from Processing
@@ -124,11 +129,10 @@ class App {
         this.excludedPaths.add(path);
         this.processing.excludedPaths.add(path); // Sync
 
-        // Persist immediately
-        await this.fs.writeMetadata('manifest.json', {
+        // Persist immediately to DB
+        await db.saveManifest({
             processedCount: this.currentEmbeddings.length,
             totalImagesFound: this.processing.allImages?.length || 0,
-            lastUpdated: Date.now(),
             excludedImages: Array.from(this.excludedPaths)
         });
 
@@ -141,14 +145,13 @@ class App {
         this.excludedPaths.delete(path);
         this.processing.excludedPaths.delete(path); // Sync
 
-        // Persist immediately
-        await this.fs.writeMetadata('manifest.json', {
+        // Persist immediately to DB
+        await db.saveManifest({
             processedCount: this.currentEmbeddings.length,
             totalImagesFound: this.processing.allImages?.length || 0,
-            lastUpdated: Date.now(),
             excludedImages: Array.from(this.excludedPaths)
         });
-        console.log(`[App] Restored ${path}. Exclusions persisted to manifest.`);
+        console.log(`[App] Restored ${path}. Exclusions persisted to DB.`);
 
         // Immediate UI Refresh
         this.refreshClusters();
