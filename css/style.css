@@ -257,6 +257,78 @@ header {
 }
 
 /* Mobile Responsiveness */
+@media (max-width: 600px) {
+    .cluster-grid {
+        grid-template-columns: 1fr;
+    }
+
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .stats-bar {
+        font-size: 0.8rem;
+        flex-wrap: wrap;
+    }
+
+    .brand h2 {
+        font-size: 1.2rem;
+    }
+}
+
+/* Settings UI Refinements */
+.badge {
+    background: #3b82f6;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.range-steps,
+.range-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    padding: 0 5px;
+}
+
+.option-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.opt-btn {
+    flex: 1;
+    background: #111827;
+    border: 1px solid #374151;
+    color: #9ca3af;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.opt-btn:hover {
+    border-color: #3b82f6;
+    color: white;
+}
+
+.opt-btn.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+}
+
+/* Mobile Responsiveness */
 @media (max-width: 768px) {
     .app-container {
         padding: 10px;
@@ -276,12 +348,14 @@ header {
     }
 
     .cluster-grid {
-        grid-template-columns: 1fr; /* Single column on mobile */
+        grid-template-columns: 1fr;
+        /* Single column on mobile */
         gap: 15px;
     }
 
     .image-grid {
-        grid-template-columns: repeat(4, 1fr); /* Keep it compact */
+        grid-template-columns: repeat(4, 1fr);
+        /* Keep it compact */
     }
 
     .modal-content {

@@ -111,24 +111,37 @@
                         <label>Number of Clusters (K)</label>
                         <div class="range-wrap">
                             <input type="range" id="setting-k" min="2" max="20" value="6" step="1">
-                            <span id="val-k">6</span>
+                            <span id="val-k" class="badge">6</span>
+                        </div>
+                        <div class="range-steps">
+                            <span>2</span>
+                            <span>5</span>
+                            <span>10</span>
+                            <span>15</span>
+                            <span>20</span>
                         </div>
                     </div>
                     <div class="setting-group">
-                        <label>Uniqueness Threshold (0.0 - 0.5)</label>
+                        <label>Uniqueness Threshold</label>
                         <div class="range-wrap">
                             <input type="range" id="setting-threshold" min="0" max="0.5" value="0.15" step="0.01">
-                            <span id="val-threshold">0.15</span>
+                            <span id="val-threshold" class="badge">0.15</span>
                         </div>
-                        <small style="color:#9ca3af">Higher = More different images. Lower = Allows strict
-                            duplicates.</small>
+                        <div class="range-labels">
+                            <span>Allow similar</span>
+                            <span>More unique</span>
+                        </div>
                     </div>
                     <div class="setting-group">
-                        <label>Refresh Interval (Images)</label>
-                        <div class="range-wrap">
-                            <input type="number" id="setting-refresh" value="20" min="5" max="500"
-                                style="background:#111827; border:1px solid #374151; color:white; padding:5px; border-radius:4px; width:60px;">
+                        <label>Cluster Refresh Rate (Images)</label>
+                        <div class="option-group" id="batch-options">
+                            <button class="opt-btn" data-value="20">20</button>
+                            <button class="opt-btn active" data-value="40">40</button>
+                            <button class="opt-btn" data-value="100">100</button>
+                            <input type="hidden" id="setting-refresh" value="40">
                         </div>
+                        <small style="color:#9ca3af; display:block; margin-top:5px;">How often the UI updates during
+                            scan.</small>
                     </div>
                 </div>
                 <div class="modal-footer">

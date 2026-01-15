@@ -84,11 +84,23 @@ export class UIManager {
         this.settingK.addEventListener('input', (e) => this.valK.textContent = e.target.value);
         this.settingThreshold.addEventListener('input', (e) => this.valThreshold.textContent = e.target.value);
 
+        // Batch Options Buttons
+        const batchButtons = document.querySelectorAll('#batch-options .opt-btn');
+        const hiddenBatchInput = document.getElementById('setting-refresh');
+
+        batchButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                batchButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                hiddenBatchInput.value = btn.dataset.value;
+            });
+        });
+
         this.btnApplySettings.addEventListener('click', () => {
             const settings = {
                 k: parseInt(this.settingK.value),
                 threshold: parseFloat(this.settingThreshold.value),
-                refreshInterval: parseInt(this.inputRefresh.value)
+                refreshInterval: parseInt(hiddenBatchInput.value)
             };
             this.callbacks.onApplySettings?.(settings);
             this.modalSettings.classList.add('hidden');

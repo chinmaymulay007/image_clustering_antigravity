@@ -22,6 +22,9 @@ export class ProcessingManager {
         // Callbacks
         this.onProgress = null; // (stats) => void
         this.onClusterUpdate = null; // (newEmbeddings) => void
+
+        // Optimization Configuration
+        this.batchSize = 4; // Start with 4, safe for most devices
     }
 
     async loadModel() {
@@ -29,7 +32,14 @@ export class ProcessingManager {
         env.allowLocalModels = true;
         env.localModelPath = 'models/';
         env.allowRemoteModels = true;
-        env.logLevel = 'verbose'; // Enable detailed hardware logs
+
+        // Comprehensive Debugging & Logging
+        env.debug = true;
+        env.logLevel = 'verbose';
+        if (env.backends && env.backends.onnx) {
+            env.backends.onnx.debug = true;
+            env.backends.onnx.logLevel = 'verbose';
+        }
 
         // Request dedicated GPU (High Performance) for multi-GPU systems
         if (env.backends && env.backends.onnx) {
@@ -77,7 +87,7 @@ export class ProcessingManager {
 
             // Trigger initial update with existing data
             if (this.onClusterUpdate) {
-                console.log("[ProcessingManager] Triggering initial cluster update with existing metadata...");
+                console.log("[ProcessingManager] Triggering initial cluster update...");
                 this.onClusterUpdate(existingEmbeddings);
             }
         }
@@ -111,28 +121,33 @@ export class ProcessingManager {
                 return;
             }
 
-            // Pick Random
-            const randIndex = Math.floor(Math.random() * unprocessed.length);
-            const targetImage = unprocessed[randIndex];
+            // Pick a batch of images
+            const currentBatchSize = Math.min(this.batchSize, unprocessed.length);
+            const batchImages = [];
+            for (let i = 0; i < currentBatchSize; i++) {
+                // For randomness, we slice a random one
+                const randIndex = Math.floor(Math.random() * unprocessed.length);
+                batchImages.push(unprocessed.splice(randIndex, 1)[0]);
+            }
 
             try {
-                // Generate Embedding
-                const embedding = await this.generateEmbedding(targetImage.handle);
+                // Parallel I/O and Batch Processing
+                const embeddings = await this.processBatch(batchImages);
 
-                // Add to state
-                const record = {
-                    id: Date.now() + Math.random(), // Simple unique ID
-                    path: targetImage.path,
-                    embedding: embedding
-                };
+                for (let i = 0; i < batchImages.length; i++) {
+                    const record = {
+                        id: Date.now() + Math.random(),
+                        path: batchImages[i].path,
+                        embedding: embeddings[i]
+                    };
 
-                pendingEmbeddings.push(record);
-                this.processedPaths.add(targetImage.path);
-                sessionProcessedCount++;
+                    pendingEmbeddings.push(record);
+                    this.processedPaths.add(batchImages[i].path);
+                    sessionProcessedCount++;
+                }
 
-                // Trigger Update / Save
-                if (pendingEmbeddings.length >= this.refreshInterval || unprocessed.length === 1) {
-                    // Update Status Bar
+                // Batch Save to Disk
+                if (pendingEmbeddings.length >= this.refreshInterval || unprocessed.length === 0) {
                     if (this.onProgress) {
                         this.onProgress({
                             processed: this.processedPaths.size,
@@ -142,76 +157,78 @@ export class ProcessingManager {
                         });
                     }
 
-                    console.log(`[ProcessingManager] Batch full. Saving ${pendingEmbeddings.length} new embeddings.`);
-
-                    // Save to Disk
                     const currentAllEmbeddings = (await this.fs.readMetadata('embeddings.json') || []).concat(pendingEmbeddings);
                     await this.fs.writeMetadata('embeddings.json', currentAllEmbeddings);
 
-                    // Verify and Update Manifest
                     await this.fs.writeMetadata('manifest.json', {
                         processedCount: currentAllEmbeddings.length,
                         totalImagesFound: this.allImages.length,
                         lastUpdated: Date.now(),
-                        excludedImages: Array.from(this.excludedPaths) // Persist exclusion
+                        excludedImages: Array.from(this.excludedPaths)
                     });
-                    console.log(`[ProcessingManager] Session stats: ${sessionProcessedCount} images this run. Total processed: ${currentAllEmbeddings.length}`);
 
-                    // Trigger Clustering Callback
                     if (this.onClusterUpdate) {
-                        console.log("[ProcessingManager] Calling onClusterUpdate...");
                         await this.onClusterUpdate(currentAllEmbeddings);
-                        console.log("[ProcessingManager] Cluster update complete.");
                     }
 
-                    pendingEmbeddings = []; // Reset batch
+                    pendingEmbeddings = [];
                 }
 
-                // Update Progress UI (Calculated update)
+                // Progress UI
                 if (this.onProgress) {
                     const now = Date.now();
-
-                    // Calculate speed: Seconds per Image
-                    const sessionElapsed = now - (this.sessionStartTime || now);
-                    let speedSec = 0;
-                    if (sessionProcessedCount > 0 && sessionElapsed > 0) {
-                        speedSec = (sessionElapsed / sessionProcessedCount) / 1000; // seconds per image
-                    }
-
-                    // ETA
+                    const sessionElapsed = now - this.sessionStartTime;
+                    const speedSec = (sessionElapsed / sessionProcessedCount) / 1000;
                     const remaining = this.allImages.length - this.processedPaths.size;
-                    const eta = (speedSec * 1000) * remaining; // ETA in ms for formatTime
+                    const eta = (speedSec * 1000) * remaining;
 
                     this.onProgress({
                         processed: this.processedPaths.size,
                         total: this.allImages.length,
-                        speed: speedSec, // Passed as seconds
+                        speed: speedSec,
                         eta: eta,
                         completed: false,
-                        currentAction: `Processing: ${targetImage.path.split('/').pop()}`
+                        currentAction: `Processed batch of ${batchImages.length} images`
                     });
                 }
             } catch (err) {
-                console.error(`Error processing ${targetImage.path}:`, err);
-                this.processedPaths.add(targetImage.path);
+                console.error("Batch processing error:", err);
+                // Mark as processed to avoid infinite loops, but maybe re-scan?
+                batchImages.forEach(img => this.processedPaths.add(img.path));
             }
 
-            // Tiny Yield
             await new Promise(r => setTimeout(r, 10));
         }
     }
 
-    async generateEmbedding(fileHandle) {
-        const file = await fileHandle.getFile();
-        const url = URL.createObjectURL(file);
-        try {
-            const rawImage = await RawImage.read(url);
-            const imageInputs = await this.processor(rawImage);
-            const { image_embeds } = await this.model(imageInputs);
-            return Array.from(image_embeds.data); // Float32Array to regular Array
-        } finally {
-            URL.revokeObjectURL(url);
+    async processBatch(batchImages) {
+        // 1. Parallel I/O: Load and decode all images in the batch concurrently
+        const rawImages = await Promise.all(batchImages.map(async (img) => {
+            const file = await img.handle.getFile();
+            const url = URL.createObjectURL(file);
+            try {
+                return await RawImage.read(url);
+            } finally {
+                URL.revokeObjectURL(url);
+            }
+        }));
+
+        // 2. Batch Inference
+        const batchInputs = await this.processor(rawImages);
+        const { image_embeds } = await this.model(batchInputs);
+
+        // 3. Extract individual embeddings from the batch tensor
+        const result = [];
+        const numImages = batchImages.length;
+        const totalElements = image_embeds.data.length;
+        const dim = totalElements / numImages;
+
+        for (let i = 0; i < numImages; i++) {
+            const start = i * dim;
+            const end = start + dim;
+            result.push(Array.from(image_embeds.data.slice(start, end)));
         }
+        return result;
     }
 
     pause() { this.isPaused = true; }
