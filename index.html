@@ -19,16 +19,29 @@
         <div class="landing-content"
             style="max-width: 600px; padding: 30px; background: #1f2937; border-radius: 20px; border: 1px solid #374151; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); width: 90%;">
             <h1
-                style="margin-bottom: 1rem; font-size: 2.8rem; background: -webkit-linear-gradient(45deg, #3b82f6, #8b5cf6); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center;">
+                style="margin-bottom: 0.5rem; font-size: 2.8rem; background: -webkit-linear-gradient(45deg, #3b82f6, #8b5cf6); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center;">
                 ClusterAI</h1>
 
             <p style="color: #9ca3af; text-align: center; margin-bottom: 2rem; font-size: 1.1rem;">Privacy-first image
                 clustering powered by local AI.</p>
 
+            <div class="info-box"
+                style="background: #111827; border-radius: 12px; padding: 20px; margin-bottom: 1.5rem; border: 1px solid #374151;">
+                <h4 style="margin-top: 0; color: #3b82f6; display: flex; align-items: center; gap: 8px;">📂 Folder
+                    Scanning</h4>
+                <p style="color: #d1d5db; font-size: 0.95rem; line-height: 1.6; margin: 0;">
+                    All images in your selected folder (and its <strong>nested sub-folders</strong>) will be used for
+                    clustering.
+                </p>
+                <p style="margin-top: 10px; font-size: 0.85rem; color: #9ca3af;">
+                    <strong>Supported Formats:</strong> .jpg, .jpeg, .png, .webp, .gif, .bmp
+                </p>
+            </div>
+
             <div class="privacy-box"
-                style="background: #111827; border-radius: 12px; padding: 20px; margin-bottom: 2.5rem; border: 1px solid #374151;">
+                style="background: #111827; border-radius: 12px; padding: 20px; margin-bottom: 1.5rem; border: 1px solid #374151;">
                 <h4 style="margin-top: 0; color: #10b981; display: flex; align-items: center; gap: 8px;">🛡️ Privacy
-                    First</h4>
+                    Assured</h4>
                 <ul
                     style="list-style: none; padding: 0; margin: 0; color: #d1d5db; font-size: 0.95rem; line-height: 1.6;">
                     <li style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px;">
@@ -36,15 +49,10 @@
                         <span><strong>Zero Uploads</strong>: Your images never leave your device. All processing happens
                             locally in your browser.</span>
                     </li>
-                    <li style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px;">
+                    <li style="display: flex; align-items: flex-start; gap: 10px;">
                         <span>🛡️</span>
                         <span><strong>Total Security</strong>: We do not store, see, or transmit your data to any
                             server.</span>
-                    </li>
-                    <li style="display: flex; align-items: flex-start; gap: 10px;">
-                        <span>⚡</span>
-                        <span><strong>Local Intelligence</strong>: Powered by CLIP model running directly on your
-                            hardware.</span>
                     </li>
                 </ul>
             </div>
@@ -53,8 +61,6 @@
                 <button id="btn-select-folder-initial" class="btn-primary"
                     style="width: 100%; font-size: 1.3rem; padding: 18px;">📂
                     Select Folder to Begin</button>
-                <p style="margin-top: 15px; font-size: 0.8rem; color: #6b7280;">Compatible with Chrome, Edge & Safari
-                    (iOS 18.4+)</p>
             </div>
         </div>
     </div>

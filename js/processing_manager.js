@@ -29,6 +29,12 @@ export class ProcessingManager {
         env.allowLocalModels = true;
         env.localModelPath = 'models/';
         env.allowRemoteModels = true;
+        env.logLevel = 'verbose'; // Enable detailed hardware logs
+
+        // Request dedicated GPU (High Performance) for multi-GPU systems
+        if (env.backends && env.backends.onnx) {
+            env.backends.onnx.webgpu = { powerPreference: 'high-performance' };
+        }
 
         // Point to local WASM binaries for 100% offline mode
         // In Transformers.js v2, wasm is under backends.onnx
