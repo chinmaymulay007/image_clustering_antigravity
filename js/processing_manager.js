@@ -67,7 +67,7 @@ export class ProcessingManager {
 
     async start(refreshInterval = 20) {
         this.refreshInterval = refreshInterval;
-        if (!this.workerReady) await this.loadModel();
+        // Deferred loading: We don't load model here instantly anymore.
 
         // 1. Scan Files
         if (this.onProgress) this.onProgress({ currentAction: "🔍 Scanning folder for images..." });
@@ -110,6 +110,8 @@ export class ProcessingManager {
         } else {
             this.isPaused = false;
             console.log("[Processing] Fresh run detected. Auto-starting...");
+            // Load immediately for fresh runs
+            if (!this.workerReady) await this.loadModel();
         }
 
         this.processLoop();
@@ -126,6 +128,11 @@ export class ProcessingManager {
             if (this.isPaused) {
                 await new Promise(r => setTimeout(r, 500));
                 continue;
+            }
+
+            // Lazy Load: Ensure model is ready before processing
+            if (!this.workerReady) {
+                await this.loadModel();
             }
 
             if (unprocessed.length === 0) {
