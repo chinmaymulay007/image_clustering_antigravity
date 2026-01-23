@@ -5,7 +5,7 @@
 
 class DatabaseManager {
     constructor() {
-        this.dbName = 'AntigravityDB';
+        this.dbName = 'ClusterAIDB';
         this.dbVersion = 1;
         this.db = null;
         this.currentProject = null;

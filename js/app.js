@@ -27,7 +27,7 @@ class App {
         this.imageWorker = null;
         this.thumbnailPromises = new Map(); // Path -> Promise
 
-        console.log("Antigravity v2 Orchestrator Initialized");
+        console.log("ClusterAI Orchestrator Initialized");
         this.init();
     }
 

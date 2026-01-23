@@ -1,4 +1,4 @@
-# Image Clustering Antigravity v2
+# ClusterAI
 
 A high-performance, browser-based application for semantic image clustering using local AI models. Point it at any folder on your computer, and it will automatically group images by visual and semantic themes without ever uploading data to the cloud.
 
