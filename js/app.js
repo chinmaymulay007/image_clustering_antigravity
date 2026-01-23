@@ -102,8 +102,7 @@ class App {
                     this.ui.setPauseState(false);
                 }
 
-                console.log("[App] Initial scan complete. Handle map rebuilt. Triggering final UI refresh.");
-                this.refreshClusters();
+                console.log("[App] Initial scan complete. Handle map rebuilt.");
             });
 
         } catch (error) {

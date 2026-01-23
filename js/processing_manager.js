@@ -122,7 +122,12 @@ export class ProcessingManager {
         let pendingEmbeddings = [];
 
         let unprocessed = this.allImages.filter(img => !this.processedPaths.has(img.path));
-        console.log(`%c[ProcessingManager] Loop started with ${unprocessed.length} items.`, "color: #3f51b5; font-weight: bold;");
+
+        if (this.isPaused) {
+            console.log(`%c[ProcessingManager] Analysis queue ready: ${unprocessed.length} items pending. Waiting for Resume...`, "color: #f59e0b;");
+        } else {
+            console.log(`%c[ProcessingManager] Analysis started for ${unprocessed.length} items.`, "color: #3f51b5; font-weight: bold;");
+        }
 
         while (this.isRunning && !this.aborted) {
             if (this.isPaused) {
