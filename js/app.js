@@ -110,8 +110,16 @@ class App {
                 this.processing.excludedPaths.forEach(p => this.excludedPaths.add(p));
                 console.log(`[App] Synced ${this.excludedPaths.size} exclusions from manifest.`);
 
-                this.ui.updateStats({ currentAction: "✅ Scan complete. Starting AI analysis..." });
-                console.log("[App] Initial scan complete. Handle map rebuilt.");
+                if (this.processing.isPaused) {
+                    this.ui.updateStats({ currentAction: "⏸️ Database loaded. Ready to resume." });
+                    this.ui.setPauseState(true); // Ensure button says "RESUME"
+                } else {
+                    this.ui.updateStats({ currentAction: "✅ Scan complete. Starting AI analysis..." });
+                    this.ui.setPauseState(false);
+                }
+
+                console.log("[App] Initial scan complete. Handle map rebuilt. Triggering final UI refresh.");
+                this.refreshClusters();
             });
 
         } catch (error) {

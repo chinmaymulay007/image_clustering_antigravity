@@ -82,7 +82,9 @@ export class ProcessingManager {
             manifest.excludedImages.forEach(p => this.excludedPaths.add(p));
         }
 
+        let hasData = false;
         if (existingEmbeddings.length > 0) {
+            hasData = true;
             this.memoryEmbeddings = existingEmbeddings;
             existingEmbeddings.forEach(e => this.processedPaths.add(e.path));
             if (this.onClusterUpdate) this.onClusterUpdate(existingEmbeddings);
@@ -90,9 +92,26 @@ export class ProcessingManager {
 
         // 3. Start Loop
         this.isRunning = true;
-        this.isPaused = false;
         this.aborted = false;
         this.sessionStartTime = Date.now();
+
+        // NEW: If we have existing data, we default to PAUSED (Manual Resume)
+        // If we have NO data (fresh run), we AUTO-START.
+        if (hasData) {
+            this.isPaused = true;
+            console.log("[Processing] Existing database found. Pausing for user review.");
+            if (this.onProgress) {
+                this.onProgress({
+                    processed: this.processedPaths.size,
+                    total: this.allImages.length,
+                    currentAction: "⏸️ Database loaded. Ready to resume."
+                });
+            }
+        } else {
+            this.isPaused = false;
+            console.log("[Processing] Fresh run detected. Auto-starting...");
+        }
+
         this.processLoop();
     }
 
