@@ -41,7 +41,7 @@ export class ProcessingManager {
                 const { status, backend, device, embeddings, error, time } = e.data;
 
                 if (status === 'ready') {
-                    console.info(`%c[Hardware Check] Worker Ready! Backend: ${backend} | Device: ${device}`, "color: #3b82f6; font-weight: bold; border: 1px solid #3b82f6; padding: 2px 5px;");
+                    //console.info(`%c[Hardware Check] Worker Ready! Backend: ${backend} | Device: ${device}`, "color: #3b82f6; font-weight: bold; border: 1px solid #3b82f6; padding: 2px 5px;");
                     this.workerReady = true;
                     resolve();
                 } else if (status === 'success') {

@@ -130,14 +130,12 @@ export class UIManager {
 
     updateStats(stats) {
         if (!stats) return;
-        this.statProcessed.textContent = stats.processed;
-        this.statTotal.textContent = stats.total;
+        if (stats.processed !== undefined) this.statProcessed.textContent = stats.processed;
+        if (stats.total !== undefined) this.statTotal.textContent = stats.total;
 
         // Speed (sec per img)
         if (stats.speed !== undefined) {
             this.statSpeed.textContent = `${stats.speed.toFixed(2)} s/img`;
-        } else {
-            this.statSpeed.textContent = '-';
         }
 
         // ETA
