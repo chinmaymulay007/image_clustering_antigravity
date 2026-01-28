@@ -32,14 +32,18 @@ export class UIManager {
         this.valThreshold = document.getElementById('val-threshold');
 
         this.clusterGrid = document.getElementById('cluster-grid-container');
-        this.btnSave = document.getElementById('btn-save-clusters');
+        this.btnProceed = document.getElementById('btn-proceed');
         this.statusBarText = document.getElementById('status-bar-text');
 
-        // Save Choice Modal
-        this.modalSaveChoice = document.getElementById('modal-save-choice');
+        // Action Selection Modal
+        this.modalActionChoice = document.getElementById('modal-action-choice');
+        this.btnCloseAction = document.getElementById('btn-close-action');
         this.btnSaveSame = document.getElementById('btn-save-same');
         this.btnSaveDiff = document.getElementById('btn-save-diff');
-        this.btnCancelSave = document.getElementById('btn-cancel-save');
+        this.btnCancelAction = document.getElementById('btn-cancel-action');
+        this.passfacesUsername = document.getElementById('passfaces-username');
+        this.btnUploadPassfaces = document.getElementById('btn-upload-passfaces');
+        this.uploadErrorMsg = document.getElementById('upload-error-msg');
 
         // State
         this.callbacks = {};
@@ -107,21 +111,66 @@ export class UIManager {
             this.modalSettings.classList.add('hidden');
         });
 
-        this.btnSave.addEventListener('click', () => this.callbacks.onSave?.());
+        this.btnProceed.addEventListener('click', () => this.callbacks.onProceed?.());
 
         this.btnSaveSame.addEventListener('click', () => {
-            this.modalSaveChoice.classList.add('hidden');
+            this.modalActionChoice.classList.add('hidden');
             this.callbacks.onConfirmSaveLocation?.(false); // same
         });
 
         this.btnSaveDiff.addEventListener('click', () => {
-            this.modalSaveChoice.classList.add('hidden');
+            this.modalActionChoice.classList.add('hidden');
             this.callbacks.onConfirmSaveLocation?.(true); // different
         });
 
-        this.btnCancelSave.addEventListener('click', () => {
-            this.modalSaveChoice.classList.add('hidden');
+        this.btnCancelAction.addEventListener('click', () => this.modalActionChoice.classList.add('hidden'));
+        this.btnCloseAction.addEventListener('click', () => this.modalActionChoice.classList.add('hidden'));
+
+        this.passfacesUsername.addEventListener('input', () => this.validateUploadRequirements());
+        this.btnUploadPassfaces.addEventListener('click', () => {
+            const username = this.passfacesUsername.value.trim();
+            this.modalActionChoice.classList.add('hidden');
+            this.callbacks.onUploadPassfaces?.(username);
         });
+    }
+
+    validateUploadRequirements() {
+        if (!this.lastClusters) return;
+
+        const username = this.passfacesUsername.value.trim();
+        const selectedIndices = this.getSelectedClusterIndices();
+        const errorMsg = this.uploadErrorMsg;
+        const btnUpload = this.btnUploadPassfaces;
+
+        let error = "";
+        let isValid = true;
+
+        if (selectedIndices.length !== 6) {
+            error = `Selected ${selectedIndices.length}/6 groups. 6 groups required.`;
+            isValid = false;
+        } else if (!username) {
+            error = "Please enter a username.";
+            isValid = false;
+        } else {
+            // Check if each selected cluster has exactly 16 representatives
+            for (const idx of selectedIndices) {
+                const cluster = this.lastClusters[idx];
+                if (cluster.representatives.length !== 16) {
+                    error = `Group ${idx + 1} has only ${cluster.representatives.length}/16 images. (Try increasing cluster size/decreasing threshold)`;
+                    isValid = false;
+                    break;
+                }
+            }
+        }
+
+        if (error) {
+            errorMsg.textContent = error;
+            errorMsg.style.display = 'block';
+        } else {
+            errorMsg.style.display = 'none';
+        }
+
+        btnUpload.disabled = !isValid;
     }
 
     hideInitialOverlay() {
@@ -161,6 +210,7 @@ export class UIManager {
     }
 
     renderClusters(clusters) {
+        this.lastClusters = clusters; // Store for validation
         if (!clusters || clusters.length === 0) {
             this.clusterGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; margin-top: 50px; color: #9ca3af;">Scanning for patterns...</div>';
             return;
@@ -322,8 +372,9 @@ export class UIManager {
         return indices;
     }
 
-    showSaveChoice() {
-        this.modalSaveChoice.classList.remove('hidden');
+    showActionChoice() {
+        this.modalActionChoice.classList.remove('hidden');
+        this.validateUploadRequirements();
     }
 
     showProgress(title) {

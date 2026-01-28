@@ -36,7 +36,8 @@ class App {
             onSelectFolder: () => this.handleSelectFolder(),
             onPauseResume: (shouldPause) => this.handlePauseResume(shouldPause),
             onApplySettings: (settings) => this.handleApplySettings(settings),
-            onSave: () => this.handleSave(), // Phase 5
+            onProceed: () => this.handleProceed(),
+            onUploadPassfaces: (username) => this.handleUploadPassfaces(username),
             onExcludeImage: (path) => this.handleExclude(path),
             onLoadThumbnail: (path) => this.loadThumbnail(path),
             onGetExcludedPaths: () => this.excludedPaths,
@@ -250,33 +251,87 @@ class App {
         return promise;
     }
 
-    async handleSave() {
+    async handleProceed() {
         try {
             if (this.currentEmbeddings.length === 0) {
-                alert("No clusters to save yet. Process some images first.");
+                alert("No clusters to process yet. Process some images first.");
                 return;
             }
 
-            const btn = document.getElementById('btn-save-clusters');
-
-            // 1. Determine which clusters to save
-            const selectedIndices = this.ui.getSelectedClusterIndices();
-            if (selectedIndices.length === 0) {
-                alert("No clusters selected. Please check at least one cluster to save.");
-                return;
-            }
-
-            // 2. Clear state and show choice
-            this.ui.showSaveChoice();
+            // Show Action Selection Modal
+            this.ui.showActionChoice();
         } catch (e) {
-            console.error("Save initiation failed:", e);
+            console.error("Proceed initiation failed:", e);
         }
+    }
+
+    async handleUploadPassfaces(username) {
+        try {
+            const selectedIndices = this.ui.getSelectedClusterIndices();
+            const clustersToUpload = this.currentClusters.filter((c, i) => selectedIndices.includes(i));
+
+            if (clustersToUpload.length !== 6) {
+                alert("Please select exactly 6 clusters for Passfaces upload.");
+                return;
+            }
+
+            this.ui.showProgress("Preparing Passfaces Upload...");
+
+            const formData = new FormData();
+            formData.append('username', username);
+
+            let totalFiles = 0;
+            for (let i = 0; i < 6; i++) {
+                const cluster = clustersToUpload[i];
+                if (cluster.representatives.length !== 16) {
+                    throw new Error(`Group ${i + 1} does not have exactly 16 images.`);
+                }
+
+                for (const imgData of cluster.representatives) {
+                    const handle = this.handleMap.get(imgData.path);
+                    if (!handle) throw new Error(`File handle not found for ${imgData.path}`);
+                    const file = await handle.getFile();
+                    formData.append(`group${i}`, file);
+                    totalFiles++;
+                    this.ui.updateProgress(totalFiles, 96, `Packing image ${totalFiles}/96...`);
+                }
+            }
+
+            this.ui.updateProgress(96, 96, "Uploading to Passfaces...");
+
+            const response = await fetch('/api/external/initialize', {
+                method: 'POST',
+                body: formData,
+                redirect: 'follow'
+            });
+
+            if (response.ok) {
+                this.ui.updateProgress(96, 96, "Success! Redirecting...");
+                // Browser might have already followed redirect if it was 200/OK after redirect
+                // Or we manually navigate to the final URL
+                window.location.href = response.url;
+            } else {
+                const err = await response.json().catch(() => ({ error: "Server error during upload" }));
+                alert(`Upload failed: ${err.error || response.statusText}`);
+                this.ui.hideProgress();
+            }
+
+        } catch (e) {
+            console.error("Upload failed:", e);
+            alert(`Error: ${e.message}`);
+            this.ui.hideProgress();
+        }
+    }
+
+    async handleSave() {
+        // Obsolete but kept if needed by other components, though we removed its listener
+        this.handleProceed();
     }
 
     async handleConfirmSaveLocation(isDifferent) {
         try {
-            const btn = document.getElementById('btn-save-clusters');
-            const originalText = "💾 SAVE CLUSTERS";
+            const btn = document.getElementById('btn-proceed');
+            const originalText = "🚀 PROCEED";
 
             let targetHandle = null;
             if (isDifferent) {
@@ -317,8 +372,8 @@ class App {
             console.error("Save failed:", e);
             alert("Failed to save clusters. Check console for details.");
             this.ui.hideProgress();
-            document.getElementById('btn-save-clusters').disabled = false;
-            document.getElementById('btn-save-clusters').textContent = "💾 SAVE CLUSTERS";
+            document.getElementById('btn-proceed').disabled = false;
+            document.getElementById('btn-proceed').textContent = originalText;
         }
     }
 }
