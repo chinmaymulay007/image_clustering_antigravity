@@ -20,7 +20,7 @@ class App {
         this.k = 6;
         this.threshold = 0.15;
         this.handleMap = new Map(); // Path -> FileHandle
-        this.thumbnailCache = new Map(); // Path -> Blob URL
+        this.thumbnailCache = new Map(); // Path -> { url, blob }
         this.isClustering = false;
         this.pendingRecluster = false;
         this.clusterWorker = null;
@@ -212,7 +212,7 @@ class App {
     }
 
     async loadThumbnail(path) {
-        if (this.thumbnailCache.has(path)) return this.thumbnailCache.get(path);
+        if (this.thumbnailCache.has(path)) return this.thumbnailCache.get(path).url;
         if (this.thumbnailPromises.has(path)) return this.thumbnailPromises.get(path);
 
         const promise = (async () => {
@@ -226,7 +226,8 @@ class App {
                     const resolver = this.thumbnailPromises.get(resPath)?.resolver;
                     if (status === 'success') {
                         const url = URL.createObjectURL(blob);
-                        this.thumbnailCache.set(resPath, url);
+                        // Store both URL and blob for reuse during upload
+                        this.thumbnailCache.set(resPath, { url, blob });
                         if (resolver) resolver(url);
                     } else {
                         console.warn("ImageWorker failed:", error);
@@ -266,6 +267,10 @@ class App {
     }
 
     async handleUploadPassfaces(username) {
+        const API_BASE = 'https://passfaces.vercel.app';
+        const MAX_RETRIES = 3;
+        const TARGET_SIZE_KB = 200; // Target size per image
+
         try {
             const selectedIndices = this.ui.getSelectedClusterIndices();
             const clustersToUpload = this.currentClusters.filter((c, i) => selectedIndices.includes(i));
@@ -275,52 +280,228 @@ class App {
                 return;
             }
 
-            this.ui.showProgress("Preparing Passfaces Upload...");
+            console.log(`%c[UPLOAD] Starting Passfaces upload for user: ${username}`, "color: #4caf50; font-weight: bold;");
+            console.log(`[UPLOAD] Selected ${clustersToUpload.length} clusters (96 images total)`);
 
-            const formData = new FormData();
-            formData.append('username', username);
+            // ============ STEP 0: PREPARE IMAGES (Reuse Cached Thumbnails) ============
+            this.ui.showProgress("Preparing images...");
+            console.log(`%c[STEP 0] Preparing images for upload (reusing cached thumbnails)`, "color: #ff9800; font-weight: bold;");
 
-            let totalFiles = 0;
-            for (let i = 0; i < 6; i++) {
-                const cluster = clustersToUpload[i];
+            const compressedImages = []; // Array of 96 blobs
+            let processedCount = 0;
+            let reuseCount = 0;
+            let compressCount = 0;
+
+            for (let groupIdx = 0; groupIdx < 6; groupIdx++) {
+                const cluster = clustersToUpload[groupIdx];
                 if (cluster.representatives.length !== 16) {
-                    throw new Error(`Group ${i + 1} does not have exactly 16 images.`);
+                    throw new Error(`Group ${groupIdx + 1} has ${cluster.representatives.length} images, expected 16.`);
                 }
 
                 for (const imgData of cluster.representatives) {
                     const handle = this.handleMap.get(imgData.path);
-                    if (!handle) throw new Error(`File handle not found for ${imgData.path}`);
-                    const file = await handle.getFile();
-                    formData.append(`group${i}`, file);
-                    totalFiles++;
-                    this.ui.updateProgress(totalFiles, 96, `Packing image ${totalFiles}/96...`);
+                    if (!handle) throw new Error(`File handle not found: ${imgData.path}`);
+
+                    let blob;
+                    const cached = this.thumbnailCache.get(imgData.path);
+
+                    // Check if we already have a suitable compressed blob
+                    if (cached && cached.blob) {
+                        blob = cached.blob;
+                        reuseCount++;
+                        console.log(`[REUSE] ${processedCount + 1}/96: ${imgData.path.split('/').pop()} | ${(blob.size / 1024).toFixed(2)}KB (cached)`);
+                    } else {
+                        // Need to compress (shouldn't happen often since UI loads thumbnails)
+                        const file = await handle.getFile();
+                        const originalSizeKB = (file.size / 1024).toFixed(2);
+                        blob = await this.compressImageForUpload(file, TARGET_SIZE_KB);
+                        compressCount++;
+                        console.log(`[COMPRESS] ${processedCount + 1}/96: ${imgData.path.split('/').pop()} | ${originalSizeKB}KB → ${(blob.size / 1024).toFixed(2)}KB`);
+                    }
+
+                    compressedImages.push(blob);
+                    processedCount++;
+                    this.ui.updateProgress(processedCount, 96, `Preparing images... ${processedCount}/96`);
                 }
             }
 
-            this.ui.updateProgress(96, 96, "Uploading to Passfaces...");
+            const totalCompressedSizeMB = (compressedImages.reduce((sum, b) => sum + b.size, 0) / (1024 * 1024)).toFixed(2);
+            console.log(`%c[STEP 0] ✓ Preparation complete: ${totalCompressedSizeMB}MB total | Reused: ${reuseCount} | Compressed: ${compressCount}`, "color: #4caf50; font-weight: bold;");
 
-            const response = await fetch('https://passfaces.vercel.app/api/external/initialize', {
+            // ============ STEP 1: START SESSION ============
+            console.log(`%c[STEP 1] Starting session...`, "color: #2196f3; font-weight: bold;");
+            this.ui.updateProgress(96, 96, "Starting session...");
+
+            const startResponse = await fetch(`${API_BASE}/api/external/start-session`, {
                 method: 'POST',
-                body: formData,
-                redirect: 'follow'
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
             });
 
-            if (response.ok) {
-                this.ui.updateProgress(96, 96, "Success! Redirecting...");
-                // Browser might have already followed redirect if it was 200/OK after redirect
-                // Or we manually navigate to the final URL
-                window.location.href = response.url;
-            } else {
-                const err = await response.json().catch(() => ({ error: "Server error during upload" }));
-                alert(`Upload failed: ${err.error || response.statusText}`);
+            const startData = await startResponse.json();
+            console.log(`[STEP 1] Response (${startResponse.status}):`, startData);
+
+            if (!startResponse.ok) {
+                throw new Error(`Session start failed: ${startData.error || startResponse.statusText}`);
+            }
+
+            console.log(`%c[STEP 1] ✓ Session started successfully`, "color: #4caf50; font-weight: bold;");
+
+            // ============ STEP 2: UPLOAD GROUPS ============
+            console.log(`%c[STEP 2] Uploading 6 groups...`, "color: #2196f3; font-weight: bold;");
+
+            for (let groupIdx = 0; groupIdx < 6; groupIdx++) {
+                const groupImages = compressedImages.slice(groupIdx * 16, (groupIdx + 1) * 16);
+                const groupSizeKB = (groupImages.reduce((sum, b) => sum + b.size, 0) / 1024).toFixed(2);
+
+                console.log(`[STEP 2.${groupIdx + 1}] Uploading group ${groupIdx + 1}/6 (${groupSizeKB}KB, 16 images)...`);
+                this.ui.updateProgress(groupIdx, 6, `Uploading group ${groupIdx + 1}/6...`);
+
+                const formData = new FormData();
+                formData.append('username', username);
+
+                groupImages.forEach((blob, idx) => {
+                    formData.append('images', blob, `image_${groupIdx}_${idx}.jpg`);
+                });
+
+                // Upload with retry logic
+                let uploadSuccess = false;
+                for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                    try {
+                        console.log(`[STEP 2.${groupIdx + 1}] Attempt ${attempt}/${MAX_RETRIES}...`);
+
+                        const uploadResponse = await fetch(`${API_BASE}/api/external/upload-group/${groupIdx}`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const uploadData = await uploadResponse.json();
+                        console.log(`[STEP 2.${groupIdx + 1}] Response (${uploadResponse.status}):`, uploadData);
+
+                        if (uploadResponse.ok) {
+                            console.log(`%c[STEP 2.${groupIdx + 1}] ✓ Group ${groupIdx + 1} uploaded (${uploadData.count} images)`, "color: #4caf50;");
+                            uploadSuccess = true;
+                            break;
+                        } else {
+                            throw new Error(uploadData.error || uploadResponse.statusText);
+                        }
+                    } catch (error) {
+                        console.warn(`[STEP 2.${groupIdx + 1}] ⚠ Attempt ${attempt} failed:`, error.message);
+
+                        if (attempt < MAX_RETRIES) {
+                            const delayMs = Math.pow(2, attempt) * 1000; // Exponential backoff
+                            console.log(`[STEP 2.${groupIdx + 1}] Retrying in ${delayMs}ms...`);
+                            await new Promise(resolve => setTimeout(resolve, delayMs));
+                        } else {
+                            throw new Error(`Group ${groupIdx + 1} upload failed after ${MAX_RETRIES} attempts: ${error.message}`);
+                        }
+                    }
+                }
+
+                if (!uploadSuccess) {
+                    throw new Error(`Failed to upload group ${groupIdx + 1}`);
+                }
+            }
+
+            console.log(`%c[STEP 2] ✓ All 6 groups uploaded successfully`, "color: #4caf50; font-weight: bold;");
+
+            // ============ STEP 3: COMPLETE & VALIDATE ============
+            console.log(`%c[STEP 3] Validating upload...`, "color: #2196f3; font-weight: bold;");
+            this.ui.updateProgress(6, 6, "Validating upload...");
+
+            const completeResponse = await fetch(`${API_BASE}/api/external/complete?username=${encodeURIComponent(username)}`, {
+                method: 'GET',
+                redirect: 'manual' // Handle redirect manually to log it
+            });
+
+            console.log(`[STEP 3] Response status: ${completeResponse.status}`);
+            console.log(`[STEP 3] Response headers:`, Object.fromEntries(completeResponse.headers.entries()));
+
+            if (completeResponse.status === 302 || completeResponse.type === 'opaqueredirect') {
+                const redirectUrl = completeResponse.headers.get('Location') || completeResponse.url;
+                console.log(`%c[STEP 3] ✓ Validation successful! Redirecting to: ${redirectUrl}`, "color: #4caf50; font-weight: bold;");
+                this.ui.updateProgress(6, 6, "Success! Redirecting...");
+
+                // Allow redirect by fetching with default redirect policy
+                const finalResponse = await fetch(`${API_BASE}/api/external/complete?username=${encodeURIComponent(username)}`);
+                window.location.href = finalResponse.url;
+
+            } else if (completeResponse.ok) {
+                // 200 OK - still success
+                console.log(`%c[STEP 3] ✓ Upload complete!`, "color: #4caf50; font-weight: bold;");
+                this.ui.updateProgress(6, 6, "Success! Redirecting...");
+                window.location.href = completeResponse.url;
+
+            } else if (completeResponse.status === 400) {
+                const errorData = await completeResponse.json();
+                console.error(`%c[STEP 3] ✗ Validation failed:`, "color: #f44336; font-weight: bold;", errorData);
+
+                let errorMsg = `Validation failed. All uploaded data has been deleted.\n\n`;
+                if (errorData.details && Array.isArray(errorData.details)) {
+                    errorMsg += `Issues found:\n${errorData.details.join('\n')}`;
+                } else {
+                    errorMsg += errorData.error || 'Unknown validation error';
+                }
+
+                alert(errorMsg);
                 this.ui.hideProgress();
+
+            } else {
+                throw new Error(`Unexpected response: ${completeResponse.status} ${completeResponse.statusText}`);
             }
 
         } catch (e) {
-            console.error("Upload failed:", e);
-            alert(`Error: ${e.message}`);
+            console.error(`%c[UPLOAD] ✗ Upload failed:`, "color: #f44336; font-weight: bold;", e);
+            console.error('[UPLOAD] Stack trace:', e.stack);
+            alert(`Upload Error: ${e.message}`);
             this.ui.hideProgress();
         }
+    }
+
+    async compressImageForUpload(file, targetSizeKB) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Start with reasonable dimensions that should give us ~200KB
+                let targetWidth = 800;
+                let quality = 0.85;
+
+                // Create bitmap with target width
+                const bitmap = await createImageBitmap(file, {
+                    resizeWidth: targetWidth,
+                    resizeQuality: 'high'
+                });
+
+                // Convert to blob
+                const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(bitmap, 0, 0);
+
+                let blob = await canvas.convertToBlob({
+                    type: 'image/jpeg',
+                    quality: quality
+                });
+
+                bitmap.close();
+
+                // If still too large, reduce quality
+                if (blob.size > targetSizeKB * 1024 * 1.5) {
+                    quality = 0.7;
+                    const bitmap2 = await createImageBitmap(file, {
+                        resizeWidth: targetWidth,
+                        resizeQuality: 'medium'
+                    });
+                    const canvas2 = new OffscreenCanvas(bitmap2.width, bitmap2.height);
+                    const ctx2 = canvas2.getContext('2d');
+                    ctx2.drawImage(bitmap2, 0, 0);
+                    blob = await canvas2.convertToBlob({ type: 'image/jpeg', quality });
+                    bitmap2.close();
+                }
+
+                resolve(blob);
+            } catch (err) {
+                reject(err);
+            }
+        });
     }
 
     async handleSave() {
