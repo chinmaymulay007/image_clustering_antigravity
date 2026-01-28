@@ -299,7 +299,7 @@ class App {
 
             this.ui.updateProgress(96, 96, "Uploading to Passfaces...");
 
-            const response = await fetch('/api/external/initialize', {
+            const response = await fetch('https://passfaces.vercel.app/api/external/initialize', {
                 method: 'POST',
                 body: formData,
                 redirect: 'follow'
