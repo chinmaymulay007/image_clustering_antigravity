@@ -602,7 +602,7 @@ class App {
         cluster.isFrozen = true;
         cluster.driftCount = 0; // Initial drift
         this.ui.renderClusters(this.currentClusters);
-        console.log(`[App] Frozen cluster ${clusterIndex}`);
+        console.log(`[App] Frozen cluster ${clusterIndex + 1}`);
     }
 
     handleUnfreezeCluster(clusterIndex) {
@@ -626,20 +626,21 @@ class App {
             }
 
             this.ui.renderClusters(this.currentClusters);
-            console.log(`[App] Unfrozen cluster ${clusterIndex}`);
+            console.log(`[App] Unfrozen cluster ${clusterIndex + 1}`);
         }
     }
 
     applyFrozenConstraints(clusters) {
-        console.log(`%c[Freeze] --- Applying Constraints (Current Map Size: ${this.frozenClusters.size}) ---`, "color: #3b82f6; font-weight: bold;");
+        if (this.frozenClusters.size === 0) return clusters;
 
+        console.log(`%c[Freeze] --- Applying Constraints (Stable Map Size: ${this.frozenClusters.size}) ---`, "color: #3b82f6; font-weight: bold;");
+        
         const newFrozenClusters = new Map();
-        const toUnfreeze = [];
 
         // 1. Process each frozen cluster and find its new best location
         this.frozenClusters.forEach((frozenData, oldIndex) => {
             const { preferredPaths, originalPaths } = frozenData;
-
+            
             // Find best match anywhere in the new sorted list
             let bestMatchIndex = -1;
             let maxMatchCount = 0;
@@ -652,40 +653,49 @@ class App {
                 }
             }
 
-            // AUTO-UNFREEZE CHECK (Consistency with 50% rule)
             const cluster = clusters[bestMatchIndex];
+            let status = "No change";
+
+            // AUTO-UNFREEZE CHECK
             if (bestMatchIndex === -1 || maxMatchCount < 8 || cluster.members.length < 16) {
-                const reason = bestMatchIndex === -1 ? "No matching cluster found"
-                    : maxMatchCount < 8 ? `Drift too high (${maxMatchCount}/16 reps remain)`
-                        : "Target cluster too small (<16 members)";
-                console.log(`[Freeze] ⚠️ Auto-unfreezing Cluster ${oldIndex + 1}: ${reason}`);
+                const reason = bestMatchIndex === -1 ? "Lost matching cluster" 
+                             : maxMatchCount < 8 ? `Drift too high (${maxMatchCount}/16 reps remain)` 
+                             : "Target cluster too small (<16 members)";
+                console.log(`[Freeze] ⚠️ Unfrozen: ${reason} (Previously Cluster ${oldIndex + 1})`);
                 return;
             }
 
-            // POSITIONAL CHANGE LOGGING
-            if (bestMatchIndex !== oldIndex) {
-                console.log(`[Freeze] 🔄 Cluster Moved: Position ${oldIndex + 1} -> ${bestMatchIndex + 1}`);
+            // Track changes for logging
+            const indexChanged = bestMatchIndex !== oldIndex;
+            const stillHere = cluster.members.filter(m => preferredPaths.has(m.path));
+            const repsNeeded = 16 - stillHere.length;
+            const repsChanged = repsNeeded > 0;
+
+            if (indexChanged && repsChanged) {
+                status = `Moved (${oldIndex + 1} -> ${bestMatchIndex + 1}) & Updated (${repsNeeded} new reps)`;
+            } else if (indexChanged) {
+                status = `Moved (${oldIndex + 1} -> ${bestMatchIndex + 1})`;
+            } else if (repsChanged) {
+                status = `Updated (${repsNeeded} new representatives)`;
             }
+
+            console.log(`[Freeze] Cluster ${indexChanged ? (oldIndex + 1) + " -> " + (bestMatchIndex + 1) : (bestMatchIndex + 1)}: ${status}`);
 
             // APPLY FROZEN DATA TO CLUSTER
             cluster.isFrozen = true;
-
-            // Re-identify frozen reps and fill gaps
-            const stillHere = cluster.members.filter(m => preferredPaths.has(m.path));
-            const others = cluster.members.filter(m => !preferredPaths.has(m.path));
-
+            
             // Calculate Cumulative Drift (Originals lost)
             const originalRetainedCount = cluster.members.filter(m => originalPaths.has(m.path)).length;
             cluster.driftCount = originalPaths.size - originalRetainedCount;
 
             const representatives = [...stillHere];
             const fillImages = [];
-            if (representatives.length < 16) {
-                const needed = 16 - representatives.length;
+            if (repsNeeded > 0) {
+                const others = cluster.members.filter(m => !preferredPaths.has(m.path));
                 const dedupedOthers = this.clustering.selectClosestToCentroid(
                     others,
                     cluster.centroid,
-                    needed,
+                    repsNeeded,
                     this.threshold
                 );
                 fillImages.push(...dedupedOthers);
@@ -695,7 +705,7 @@ class App {
             }
 
             cluster.representatives = representatives.slice(0, 16);
-
+            
             // Track in new map
             newFrozenClusters.set(bestMatchIndex, frozenData);
         });
@@ -705,12 +715,11 @@ class App {
 
         // 3. LOG MAP DATA (Summary of current state)
         if (this.frozenClusters.size > 0) {
-            const mapSummary = Array.from(this.frozenClusters.entries())
-                .map(([idx, data]) => `Index ${idx + 1} (paths: ${data.preferredPaths.size})`)
+            const activeIndices = Array.from(this.frozenClusters.keys())
+                .sort((a,b) => a-b)
+                .map(idx => (idx + 1))
                 .join(", ");
-            console.log(`[Freeze] Final Map State: { ${mapSummary} }`);
-        } else {
-            console.log("[Freeze] Map is empty (no active freezes)");
+            console.log(`[Freeze] Active Map (1-indexed): [ ${activeIndices} ]`);
         }
 
         return clusters;
