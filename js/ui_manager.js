@@ -317,6 +317,7 @@ export class UIManager {
 
                     // Direct Link: Cache children immediately
                     cell._img = document.createElement('img');
+                    cell._img.style.opacity = '1'; // Force visible inline
                     cell._btn = document.createElement('button');
                     cell._btn.innerHTML = '×';
                     cell._btn.style.cssText = 'position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; display:none; justify-content:center; align-items:center; line-height:1; z-index:10;';

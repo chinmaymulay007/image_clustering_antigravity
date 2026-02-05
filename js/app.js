@@ -631,7 +631,45 @@ class App {
     }
 
     applyFrozenConstraints(clusters) {
-        // --- PHASE 0: FIND AND SWAP (Pinning) ---
+        // --- PHASE 0: HANDLE REDUCED K (Out of Bounds) ---
+        // If k was reduced, some frozen clusters might be at indices >= clusters.length.
+        // We need to find them and "move" the freeze to their new location.
+        const allFrozenIndices = [...this.frozenClusters.keys()];
+        const outOfBoundsIndices = allFrozenIndices.filter(idx => idx >= clusters.length);
+
+        if (outOfBoundsIndices.length > 0) {
+            console.log(`[Freeze] Found ${outOfBoundsIndices.length} frozen clusters out of bounds (k reduced). Attempting to relocate...`);
+
+            outOfBoundsIndices.forEach(oldIndex => {
+                const frozenData = this.frozenClusters.get(oldIndex);
+                const { preferredPaths } = frozenData;
+                this.frozenClusters.delete(oldIndex); // Always remove old index
+
+                // Scan valid clusters to find where it went
+                let bestMatchIndex = -1;
+                let maxMatchCount = 0;
+
+                for (let i = 0; i < clusters.length; i++) {
+                    if (this.frozenClusters.has(i)) continue; // Don't overwrite existing valid freezes
+
+                    const matchCount = clusters[i].members.filter(m => preferredPaths.has(m.path)).length;
+                    if (matchCount > maxMatchCount) {
+                        maxMatchCount = matchCount;
+                        bestMatchIndex = i;
+                    }
+                }
+
+                // If found with sufficient confidence (>=8 matches)
+                if (bestMatchIndex !== -1 && maxMatchCount >= 8) {
+                    console.log(`[Freeze] 🔄 Relocated Frozen Cluster ${oldIndex} -> ${bestMatchIndex} (k reduced)`);
+                    this.frozenClusters.set(bestMatchIndex, frozenData);
+                } else {
+                    console.log(`[Freeze] ⚠️ Could not relocate Cluster ${oldIndex}. Unfreezing.`);
+                }
+            });
+        }
+
+        // --- PHASE 1: FIND AND SWAP (Pinning) ---
         // Ensure frozen clusters stay at their original indices even if sorting matches differently
         // This handles the case where another cluster becomes larger than the frozen one.
 
