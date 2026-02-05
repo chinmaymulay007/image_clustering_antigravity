@@ -313,9 +313,8 @@ export class UIManager {
             } else {
                 card.classList.remove('frozen');
                 title.classList.remove('frozen-title');
-                // We don't force uncheck here to allow user manual selection of non-frozen clusters
-                // UNLESS this is a fresh render of completely new clusters. 
-                // But `this.cards.get(index)` reuses the card.
+                // Force uncheck if not frozen to maintain sync with engine state (esp. on auto-unfreeze)
+                checkbox.checked = false;
             }
 
             // Wire/Update checkbox behavior
