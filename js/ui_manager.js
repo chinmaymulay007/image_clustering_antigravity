@@ -252,7 +252,7 @@ export class UIManager {
                     ? `<span class="move-count">${cluster.movedFrom + 1}➔${index + 1}</span>`
                     : '';
 
-                const tooltip = `This cluster is frozen. ${driftCount} images left the cluster, replaced with ${driftCount} new from the cluster.`;
+                const tooltip = `This cluster is frozen. Moved from slot ${cluster.movedFrom + 1} in last pass. ${driftCount} original images replaced since initial freeze.`;
                 statusBadge = `<span class="freeze-badge" title="${tooltip}">🔒${moveHtml}${driftIcon}${driftHtml}</span>`;
             }
 
@@ -440,8 +440,8 @@ export class UIManager {
                                         image.classList.add('loaded');
                                         cell.classList.remove('skeleton');
 
-                                        // Show/Hide replacement badge
-                                        if (imgData.isReplacement) {
+                                        // Show/Hide replacement badge (Only if frozen)
+                                        if (cluster.isFrozen && imgData.isReplacement) {
                                             cell._driftIcon.style.display = 'block';
                                         } else {
                                             cell._driftIcon.style.display = 'none';
@@ -471,8 +471,8 @@ export class UIManager {
                             }
                         };
 
-                        // Ensure replacement badge matches current state
-                        if (imgData.isReplacement) {
+                        // Ensure replacement badge matches current state (Only if frozen)
+                        if (cluster.isFrozen && imgData.isReplacement) {
                             cell._driftIcon.style.display = 'block';
                         } else {
                             cell._driftIcon.style.display = 'none';

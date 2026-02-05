@@ -668,8 +668,10 @@ class App {
 
             // APPLY FROZEN DATA TO CLUSTER
             cluster.isFrozen = true;
-            if (bestMatchIndex !== initialIndex) {
-                cluster.movedFrom = initialIndex;
+
+            // Track movement relative to the LAST pass (not initial)
+            if (bestMatchIndex !== oldIndex) {
+                cluster.movedFrom = oldIndex;
             }
 
             // --- RECOVERY & SELECTION LOGIC ---
@@ -731,14 +733,26 @@ class App {
             }
 
             // Track changes for logging
-            const indexChanged = bestMatchIndex !== oldIndex;
-            const incDrift = newRepsAdded; // New substitutes in this pass
+            const movedThisPass = bestMatchIndex !== oldIndex;
+            const lastOriginalsCount = Array.from(preferredPaths).filter(p => originalPaths.has(p)).length;
+            const currentOriginalsCount = originalsPresent.length;
+            const originalsDelta = currentOriginalsCount - lastOriginalsCount;
+
             const statusParts = [];
-            if (indexChanged) statusParts.push(`Moved (${oldIndex + 1} -> ${bestMatchIndex + 1})`);
-            if (newRepsAdded > 0) statusParts.push(`Updated (+${newRepsAdded} new / ${cluster.driftCount} total drift)`);
+            if (movedThisPass) statusParts.push(`Moved (${oldIndex + 1} -> ${bestMatchIndex + 1})`);
+
+            const driftDetails = [];
+            if (newRepsAdded > 0) driftDetails.push(`+${newRepsAdded} substituted`);
+            if (originalsDelta > 0) driftDetails.push(`-${originalsDelta} recovered`);
+
+            if (driftDetails.length > 0 || originalsDelta < 0) {
+                statusParts.push(`Drift: ${cluster.driftCount} cumulative (${driftDetails.join(", ") || "re-lost originals"})`);
+            }
+
             if (statusParts.length === 0) statusParts.push("No change");
 
-            console.log(`[Freeze] Cluster ${indexChanged ? (oldIndex + 1) + " -> " + (bestMatchIndex + 1) : (bestMatchIndex + 1)}: ${statusParts.join(" & ")}`);
+            const logID = movedThisPass ? `${oldIndex + 1}➔${bestMatchIndex + 1}` : (bestMatchIndex + 1);
+            console.log(`[Freeze] Cluster ${logID}: ${statusParts.join(" & ")}`);
 
             cluster.representatives = finalReps;
 
