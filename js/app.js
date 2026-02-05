@@ -751,6 +751,7 @@ class App {
             if (statusParts.length === 0) statusParts.push("No change");
 
             const logID = movedThisPass ? `${oldIndex + 1}➔${bestMatchIndex + 1}` : (bestMatchIndex + 1);
+            console.log(`[Freeze] Cluster ${logID}: ${statusParts.join(" & ")}`);
 
             cluster.representatives = finalReps;
 

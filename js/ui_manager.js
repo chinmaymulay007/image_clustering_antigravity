@@ -252,7 +252,10 @@ export class UIManager {
                     ? `<span class="move-count">${cluster.movedFrom + 1}➔${index + 1}</span>`
                     : '';
 
-                const tooltip = `This cluster is frozen. Moved from slot ${cluster.movedFrom + 1} in last pass. ${driftCount} original images replaced since initial freeze.`;
+                const moveTooltip = cluster.movedFrom !== undefined
+                    ? `Was Cluster ${cluster.movedFrom + 1} previously. `
+                    : '';
+                const tooltip = `${moveTooltip}${driftCount} images replaced.`;
                 statusBadge = `<span class="freeze-badge" title="${tooltip}">🔒${moveHtml}${driftIcon}${driftHtml}</span>`;
             }
 
