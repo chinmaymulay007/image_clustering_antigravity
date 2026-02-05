@@ -513,6 +513,28 @@ header {
 }
 
 /* Progression Indicator and Action Modal Updates */
+.selection-indicator span {
+    font-weight: bold;
+}
+
+/* Drift and Freeze Styles */
+.drift-number {
+    font-weight: bold;
+}
+
+.move-count {
+    font-size: 10px;
+    opacity: 0.8;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0 3px;
+    border-radius: 2px;
+}
+
+.cell-drift-icon {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    font-family: Arial, sans-serif;
+}
+
 .selection-indicator {
     padding: 6px 14px;
     background: rgba(16, 185, 129, 0.1);

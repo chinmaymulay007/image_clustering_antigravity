@@ -596,7 +596,8 @@ class App {
 
         this.frozenClusters.set(clusterIndex, {
             preferredPaths: new Set(cluster.representatives.map(r => r.path)),
-            originalPaths: new Set(cluster.representatives.map(r => r.path)) // Immutable original set
+            originalPaths: new Set(cluster.representatives.map(r => r.path)), // Immutable original set
+            initialIndex: clusterIndex
         });
 
         cluster.isFrozen = true;
@@ -634,13 +635,13 @@ class App {
         if (this.frozenClusters.size === 0) return clusters;
 
         console.log(`%c[Freeze] --- Applying Constraints (Stable Map Size: ${this.frozenClusters.size}) ---`, "color: #3b82f6; font-weight: bold;");
-        
+
         const newFrozenClusters = new Map();
 
         // 1. Process each frozen cluster and find its new best location
         this.frozenClusters.forEach((frozenData, oldIndex) => {
-            const { preferredPaths, originalPaths } = frozenData;
-            
+            const { preferredPaths, originalPaths, initialIndex } = frozenData;
+
             // Find best match anywhere in the new sorted list
             let bestMatchIndex = -1;
             let maxMatchCount = 0;
@@ -658,54 +659,89 @@ class App {
 
             // AUTO-UNFREEZE CHECK
             if (bestMatchIndex === -1 || maxMatchCount < 8 || cluster.members.length < 16) {
-                const reason = bestMatchIndex === -1 ? "Lost matching cluster" 
-                             : maxMatchCount < 8 ? `Drift too high (${maxMatchCount}/16 reps remain)` 
-                             : "Target cluster too small (<16 members)";
+                const reason = bestMatchIndex === -1 ? "Lost matching cluster"
+                    : maxMatchCount < 8 ? `Drift too high (${maxMatchCount}/16 reps remain)`
+                        : "Target cluster too small (<16 members)";
                 console.log(`[Freeze] ⚠️ Unfrozen: ${reason} (Previously Cluster ${oldIndex + 1})`);
                 return;
             }
 
-            // Track changes for logging
-            const indexChanged = bestMatchIndex !== oldIndex;
-            const stillHere = cluster.members.filter(m => preferredPaths.has(m.path));
-            const repsNeeded = 16 - stillHere.length;
-            const repsChanged = repsNeeded > 0;
-
-            if (indexChanged && repsChanged) {
-                status = `Moved (${oldIndex + 1} -> ${bestMatchIndex + 1}) & Updated (${repsNeeded} new reps)`;
-            } else if (indexChanged) {
-                status = `Moved (${oldIndex + 1} -> ${bestMatchIndex + 1})`;
-            } else if (repsChanged) {
-                status = `Updated (${repsNeeded} new representatives)`;
-            }
-
-            console.log(`[Freeze] Cluster ${indexChanged ? (oldIndex + 1) + " -> " + (bestMatchIndex + 1) : (bestMatchIndex + 1)}: ${status}`);
-
             // APPLY FROZEN DATA TO CLUSTER
             cluster.isFrozen = true;
-            
-            // Calculate Cumulative Drift (Originals lost)
-            const originalRetainedCount = cluster.members.filter(m => originalPaths.has(m.path)).length;
-            cluster.driftCount = originalPaths.size - originalRetainedCount;
-
-            const representatives = [...stillHere];
-            const fillImages = [];
-            if (repsNeeded > 0) {
-                const others = cluster.members.filter(m => !preferredPaths.has(m.path));
-                const dedupedOthers = this.clustering.selectClosestToCentroid(
-                    others,
-                    cluster.centroid,
-                    repsNeeded,
-                    this.threshold
-                );
-                fillImages.push(...dedupedOthers);
-                representatives.push(...fillImages);
-                // Add new fillers to preferred set for next iteration
-                fillImages.forEach(img => preferredPaths.add(img.path));
+            if (bestMatchIndex !== initialIndex) {
+                cluster.movedFrom = initialIndex;
             }
 
-            cluster.representatives = representatives.slice(0, 16);
-            
+            // --- RECOVERY & SELECTION LOGIC ---
+            // 1. Originals Present (Recovered or Still Here)
+            const originalsPresent = cluster.members.filter(m => originalPaths.has(m.path));
+
+            // 2. Previous Fillers Present (Stable Replacements)
+            const previousFillersPresent = cluster.members.filter(m =>
+                preferredPaths.has(m.path) && !originalPaths.has(m.path)
+            );
+
+            // Calculate Cumulative Drift (Originals lost)
+            cluster.driftCount = originalPaths.size - originalsPresent.length;
+
+            // 3. Greedy Population (Up to 16)
+            const finalReps = [];
+            const addRep = (member, isReplacement) => {
+                if (finalReps.length < 16) {
+                    member.isReplacement = isReplacement;
+                    finalReps.push(member);
+                    return true;
+                }
+                return false;
+            };
+
+            // Phase A: Originals first (Highest priority)
+            originalsPresent.forEach(m => addRep(m, false));
+
+            // Phase B: Preferred Fillers (closest to centroid)
+            if (finalReps.length < 16) {
+                const sortedFillers = this.clustering.selectClosestToCentroid(
+                    previousFillersPresent,
+                    cluster.centroid,
+                    16 - finalReps.length,
+                    this.threshold
+                );
+                sortedFillers.forEach(m => addRep(m, true));
+            }
+
+            // Phase C: New Fillers (closest to centroid)
+            let newRepsAdded = 0;
+            if (finalReps.length < 16) {
+                const usedPaths = new Set(finalReps.map(r => r.path));
+                const others = cluster.members.filter(m => !usedPaths.has(m.path));
+
+                const newFillers = this.clustering.selectClosestToCentroid(
+                    others,
+                    cluster.centroid,
+                    16 - finalReps.length,
+                    this.threshold
+                );
+                newFillers.forEach(m => {
+                    if (addRep(m, true)) {
+                        newRepsAdded++;
+                        // Add to preferred set for next iteration
+                        preferredPaths.add(m.path);
+                    }
+                });
+            }
+
+            // Track changes for logging
+            const indexChanged = bestMatchIndex !== oldIndex;
+            const incDrift = newRepsAdded; // New substitutes in this pass
+            const statusParts = [];
+            if (indexChanged) statusParts.push(`Moved (${oldIndex + 1} -> ${bestMatchIndex + 1})`);
+            if (newRepsAdded > 0) statusParts.push(`Updated (+${newRepsAdded} new / ${cluster.driftCount} total drift)`);
+            if (statusParts.length === 0) statusParts.push("No change");
+
+            console.log(`[Freeze] Cluster ${indexChanged ? (oldIndex + 1) + " -> " + (bestMatchIndex + 1) : (bestMatchIndex + 1)}: ${statusParts.join(" & ")}`);
+
+            cluster.representatives = finalReps;
+
             // Track in new map
             newFrozenClusters.set(bestMatchIndex, frozenData);
         });
@@ -716,7 +752,7 @@ class App {
         // 3. LOG MAP DATA (Summary of current state)
         if (this.frozenClusters.size > 0) {
             const activeIndices = Array.from(this.frozenClusters.keys())
-                .sort((a,b) => a-b)
+                .sort((a, b) => a - b)
                 .map(idx => (idx + 1))
                 .join(", ");
             console.log(`[Freeze] Active Map (1-indexed): [ ${activeIndices} ]`);

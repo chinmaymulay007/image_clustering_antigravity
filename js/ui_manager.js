@@ -239,14 +239,21 @@ export class UIManager {
             let card = this.cards.get(index);
             const memberCount = cluster.memberCount !== undefined ? cluster.memberCount : cluster.members.length;
 
-            // Drift Indicator (e.g. "🔒 -2")
-            // Polished Header Structure
+            // Drift Indicator (e.g. "🔒 1➔ 🔄 2")
             let statusBadge = '';
             if (cluster.isFrozen) {
-                const driftText = cluster.driftCount > 0
-                    ? `<span class="drift-count">-${cluster.driftCount}</span>`
+                const driftCount = cluster.driftCount || 0;
+                const driftIcon = driftCount > 0 ? '<span class="drift-icon">🔄</span>' : '';
+                const driftHtml = driftCount > 0
+                    ? `<span class="drift-number">${driftCount}</span>`
                     : '';
-                statusBadge = `<span class="freeze-badge" title="Cluster is frozen">🔒${driftText}</span>`;
+
+                const moveHtml = cluster.movedFrom !== undefined
+                    ? `<span class="move-count">${cluster.movedFrom + 1}➔${index + 1}</span>`
+                    : '';
+
+                const tooltip = `This cluster is frozen. ${driftCount} images left the cluster, replaced with ${driftCount} new from the cluster.`;
+                statusBadge = `<span class="freeze-badge" title="${tooltip}">🔒${moveHtml}${driftIcon}${driftHtml}</span>`;
             }
 
             const labelHtml = `<span class="cluster-name">${cluster.label || `Cluster ${index + 1}`}</span>`;
@@ -364,11 +371,19 @@ export class UIManager {
                     // Direct Link: Cache children immediately
                     cell._img = document.createElement('img');
                     cell._img.style.opacity = '1'; // Force visible inline
+
+                    cell._driftIcon = document.createElement('span');
+                    cell._driftIcon.className = 'cell-drift-icon';
+                    cell._driftIcon.innerHTML = '🔄';
+                    cell._driftIcon.title = 'Automatic substitution';
+                    cell._driftIcon.style.cssText = 'position:absolute; bottom:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border-radius:3px; padding: 1px 3px; font-size: 10px; display:none; z-index:11; pointer-events:none;';
+
                     cell._btn = document.createElement('button');
                     cell._btn.innerHTML = '×';
                     cell._btn.style.cssText = 'position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; display:none; justify-content:center; align-items:center; line-height:1; z-index:10;';
 
                     cell.appendChild(cell._img);
+                    cell.appendChild(cell._driftIcon);
                     cell.appendChild(cell._btn);
                 }
 
@@ -424,6 +439,13 @@ export class UIManager {
                                     if (cell.dataset.path === imgData.path) {
                                         image.classList.add('loaded');
                                         cell.classList.remove('skeleton');
+
+                                        // Show/Hide replacement badge
+                                        if (imgData.isReplacement) {
+                                            cell._driftIcon.style.display = 'block';
+                                        } else {
+                                            cell._driftIcon.style.display = 'none';
+                                        }
                                     }
                                 };
 
@@ -448,6 +470,13 @@ export class UIManager {
                                 btnRemove.style.display = 'flex';
                             }
                         };
+
+                        // Ensure replacement badge matches current state
+                        if (imgData.isReplacement) {
+                            cell._driftIcon.style.display = 'block';
+                        } else {
+                            cell._driftIcon.style.display = 'none';
+                        }
                     }
                 } else {
                     // Empty slot
@@ -457,6 +486,7 @@ export class UIManager {
                         cell.classList.remove('skeleton'); // Ensure no shimmer on empty
                         cell.style.cssText = 'background: #1f2937; opacity: 0.3;';
                         if (cell._btn) cell._btn.style.display = 'none';
+                        if (cell._driftIcon) cell._driftIcon.style.display = 'none';
                         cell.onmouseenter = null;
                         cell.onmouseleave = null;
                     }
