@@ -731,7 +731,7 @@ class App {
                     ? `Only ${stillHere.length}/16 frozen reps remain`
                     : `Cluster only has ${cluster.members.length} total members`;
                 console.log(`[Freeze] ⚠️ Auto-unfreezing cluster ${frozenIndex}: ${reason}`);
-                if (missingCount > 0) console.groupEnd();
+                if (cumulativeDrift > 0) console.groupEnd();
                 toUnfreeze.push(frozenIndex);
                 return;
             }
@@ -758,7 +758,7 @@ class App {
                 representatives.push(...fillImages);
             }
 
-            if (missingCount > 0) console.groupEnd();
+            if (cumulativeDrift > 0) console.groupEnd();
 
             // Add fill images to frozen set (so they become frozen too)
             fillImages.forEach(img => preferredPaths.add(img.path));

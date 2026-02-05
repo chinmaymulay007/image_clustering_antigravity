@@ -84,55 +84,22 @@ header {
     aspect-ratio: 1;
 }
 
+/* Transparency/Transitions Removed based on user feedback */
 .img-cell img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 1;
-    /* Default to visible immediately */
-}
-
-/* Transitions: Only active if NOT in low-perf mode */
-body:not([data-low-perf="true"]) .img-cell img {
-    transition: transform 0.2s, opacity 0.4s ease-in;
-    opacity: 0;
-}
-
-body:not([data-low-perf="true"]) .img-cell img.loaded {
-    opacity: 1;
-}
-
-/* Hide broken/empty images during skeleton state */
-.skeleton img {
-    visibility: hidden;
+    opacity: 1 !important;
+    /* Force visible */
 }
 
 .img-cell:hover img {
     transform: scale(1.05);
 }
 
-/* Skeleton: Animation only if NOT in low-perf mode */
 .skeleton {
     background: #1f2937;
-}
-
-body:not([data-low-perf="true"]) .skeleton {
-    background: linear-gradient(90deg,
-            #111827 25%,
-            #1f2937 50%,
-            #111827 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite linear;
-}
-
-@keyframes shimmer {
-    from {
-        background-position: 200% 0;
-    }
-
-    to {
-        background-position: -200% 0;
-    }
+    /* Simple dark background, no shimmer */
 }
 
 .footer {
@@ -478,20 +445,31 @@ body:not([data-low-perf="true"]) .skeleton {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-5px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Frozen Cluster Styling */
 .cluster-card.frozen {
-    border: 2px solid #60a5fa; /* Blue border */
-    box-shadow: 0 0 15px rgba(96, 165, 250, 0.2); /* Soft blue glow */
-    background: #1f2937; /* Ensure background stays dark */
+    border: 2px solid #60a5fa;
+    /* Blue border */
+    box-shadow: 0 0 15px rgba(96, 165, 250, 0.2);
+    /* Soft blue glow */
+    background: #1f2937;
+    /* Ensure background stays dark */
     transition: all 0.3s ease;
 }
 
 .frozen-title {
-    color: #60a5fa; /* Blue text */
+    color: #60a5fa;
+    /* Blue text */
     text-shadow: 0 0 10px rgba(96, 165, 250, 0.4);
     font-weight: 700;
 }
