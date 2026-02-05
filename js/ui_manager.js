@@ -231,7 +231,7 @@ export class UIManager {
         clusters.forEach((cluster, index) => {
             let card = this.cards.get(index);
             const memberCount = cluster.memberCount !== undefined ? cluster.memberCount : cluster.members.length;
-            const titleHtml = `${cluster.label || `Cluster ${index + 1}`} <span style="color:#9ca3af; font-size:0.8em">${memberCount} items</span>`;
+            const titleHtml = `${cluster.isFrozen ? '🔒 ' : ''}${cluster.label || `Cluster ${index + 1}`} <span style="color:#9ca3af; font-size:0.8em">${memberCount} items</span>`;
 
             if (!card) {
                 // Create New
@@ -264,13 +264,37 @@ export class UIManager {
                 card.appendChild(grid);
 
                 this.clusterGrid.appendChild(card);
-            } else {
-                // Update Existing Header (No search)
-                const title = card._titleNode;
-                if (title && title.innerHTML !== titleHtml) {
-                    title.innerHTML = titleHtml;
-                }
             }
+
+            // ALWAYS Update dynamic UI states (frozen, title, styling)
+            const checkbox = card.querySelector('.cluster-checkbox');
+            const title = card._titleNode;
+
+            // Update title content if changed
+            if (title.innerHTML !== titleHtml) {
+                title.innerHTML = titleHtml;
+            }
+
+            // Visual indicators for frozen state
+            if (cluster.isFrozen) {
+                card.classList.add('frozen');
+                checkbox.checked = true;
+                title.classList.add('frozen-title');
+            } else {
+                card.classList.remove('frozen');
+                title.classList.remove('frozen-title');
+                // Only uncheck if we are not the one checking it (to avoid fighting user input? no, state drives UI)
+                checkbox.checked = false;
+            }
+
+            // Wire/Update checkbox behavior (ensure closure captures current index/state)
+            checkbox.onchange = () => {
+                if (checkbox.checked) {
+                    this.callbacks.onFreezeCluster?.(index);
+                } else {
+                    this.callbacks.onUnfreezeCluster?.(index);
+                }
+            };
 
             // 3. Update Image Grid (Representatives)
             const grid = card._gridNode;
@@ -309,8 +333,17 @@ export class UIManager {
                         image.className = '';
                         cell.classList.add('skeleton');
 
-                        cell.onmouseenter = () => btnRemove.style.display = 'flex';
+                        // CONDITIONAL UI: Prevent showing remove button if cluster is frozen
+                        // (Only blocking exclusion of representatives in frozen clusters)
+                        cell.onmouseenter = () => {
+                            if (cluster.isFrozen) {
+                                btnRemove.style.display = 'none';
+                            } else {
+                                btnRemove.style.display = 'flex';
+                            }
+                        };
                         cell.onmouseleave = () => btnRemove.style.display = 'none';
+
                         btnRemove.onclick = (e) => {
                             e.stopPropagation();
                             this.callbacks.onExcludeImage?.(imgData.path);
@@ -349,6 +382,17 @@ export class UIManager {
                         }).catch(() => {
                             cell.classList.remove('skeleton');
                         });
+                    } else {
+                        // Even if image didn't change, we must update the mouseenter handler
+                        // because cluster.isFrozen might have changed
+                        const btnRemove = cell._btn;
+                        cell.onmouseenter = () => {
+                            if (cluster.isFrozen) {
+                                btnRemove.style.display = 'none';
+                            } else {
+                                btnRemove.style.display = 'flex';
+                            }
+                        };
                     }
                 } else {
                     // Empty slot
@@ -357,6 +401,9 @@ export class UIManager {
                         if (cell._img) cell._img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
                         cell.classList.remove('skeleton'); // Ensure no shimmer on empty
                         cell.style.cssText = 'background: #1f2937; opacity: 0.3;';
+                        if (cell._btn) cell._btn.style.display = 'none';
+                        cell.onmouseenter = null;
+                        cell.onmouseleave = null;
                     }
                 }
             }

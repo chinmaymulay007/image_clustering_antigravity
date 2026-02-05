@@ -481,3 +481,17 @@ body:not([data-low-perf="true"]) .skeleton {
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* Frozen Cluster Styling */
+.cluster-card.frozen {
+    border: 2px solid #60a5fa; /* Blue border */
+    box-shadow: 0 0 15px rgba(96, 165, 250, 0.2); /* Soft blue glow */
+    background: #1f2937; /* Ensure background stays dark */
+    transition: all 0.3s ease;
+}
+
+.frozen-title {
+    color: #60a5fa; /* Blue text */
+    text-shadow: 0 0 10px rgba(96, 165, 250, 0.4);
+    font-weight: 700;
+}
