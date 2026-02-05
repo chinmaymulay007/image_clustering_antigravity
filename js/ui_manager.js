@@ -45,6 +45,10 @@ export class UIManager {
         this.btnUploadPassfaces = document.getElementById('btn-upload-passfaces');
         this.uploadErrorMsg = document.getElementById('upload-error-msg');
 
+        // Progression Indicator
+        this.selectionIndicator = document.getElementById('selection-indicator');
+        this.selectionCountSpan = document.getElementById('selection-count');
+
         // State
         this.callbacks = {};
         this.cards = new Map(); // Index -> Card DOM node
@@ -146,9 +150,12 @@ export class UIManager {
         let isValid = true;
 
         if (selectedIndices.length !== 6) {
-            error = `Selected ${selectedIndices.length}/6 groups. 6 groups required.`;
+            error = `Selected ${selectedIndices.length}/6 groups. Exactly 6 groups required for Passfaces.`;
             isValid = false;
         } else if (!username) {
+            // Only show username error if count is correct, to avoid noise? 
+            // Or show it always? 
+            // Better: "Please enter a username."
             error = "Please enter a username.";
             isValid = false;
         } else {
@@ -285,12 +292,15 @@ export class UIManager {
             const checkbox = card.querySelector('.cluster-checkbox');
             const title = card._titleNode;
 
-            // Update title content if changed
-            if (title.innerHTML !== titleHtml) {
-                title.innerHTML = titleHtml;
-            }
-
-            // Visual indicators for frozen state
+            // Ensure checkbox state matches expectation (if we are re-rendering)
+            // Note: If we had an external selection state, we'd use it here.
+            // For now, we rely on the DOM or the `cluster` object if it had a `selected` prop.
+            // But `cluster` object doesn't seem to have `selected`. 
+            // The existing code didn't maintain selection on re-render explicity? 
+            // Actually, `renderClusters` might be destructive. 
+            // If `renderClusters` is called, it usually means new clusters.
+            // However, `isFrozen` implies persistence. 
+            // Let's ensure logic: if frozen, it is auto-selected?
             if (cluster.isFrozen) {
                 card.classList.add('frozen');
                 checkbox.checked = true;
@@ -298,17 +308,41 @@ export class UIManager {
             } else {
                 card.classList.remove('frozen');
                 title.classList.remove('frozen-title');
-                // Only uncheck if we are not the one checking it (to avoid fighting user input? no, state drives UI)
-                checkbox.checked = false;
+                // We don't force uncheck here to allow user manual selection of non-frozen clusters
+                // UNLESS this is a fresh render of completely new clusters. 
+                // But `this.cards.get(index)` reuses the card.
             }
 
-            // Wire/Update checkbox behavior (ensure closure captures current index/state)
+            // Wire/Update checkbox behavior
             checkbox.onchange = () => {
                 if (checkbox.checked) {
-                    this.callbacks.onFreezeCluster?.(index);
+                    if (cluster.isFrozen) {
+                        // already frozen, no action? or maybe we want to allow selecting without freezing?
+                        // The existing logic tied selection to `onFreezeCluster`. 
+                        // "Freeze" implies "Keep this cluster".
+                        // So checking = Freeze. 
+                        this.callbacks.onFreezeCluster?.(index);
+                    } else {
+                        // User selected a non-frozen cluster. 
+                        // Does this freeze it? The original code says:
+                        // if (checkbox.checked) this.callbacks.onFreezeCluster?.(index);
+                        // So yes, selection == freezing in the current app logic?
+                        // Wait, the user request says "selecting 6 clusters".
+                        // If selecting IS freezing, then fine.
+                        // But if selection is just for "saving", we might need to decouple.
+                        // "Implementing Cluster Freezing" conversation suggests freezing is keeping it from changing.
+                        // For the purpose of "Proceed", we just need to know what is "selected".
+                        // If the previous app logic equated Checkbox == Freeze, we should stick to that unless asked otherwise.
+                        // BUT, for "Proceed", we just need to count checked boxes.
+
+                        // Let's assume Checkbox == Freeze for now as per previous logic, 
+                        // OR simply trigger a UI update.
+                        this.callbacks.onFreezeCluster?.(index);
+                    }
                 } else {
                     this.callbacks.onUnfreezeCluster?.(index);
                 }
+                this.updateSelectionIndicator();
             };
 
             // 3. Update Image Grid (Representatives)
@@ -340,6 +374,10 @@ export class UIManager {
                     // Only update if the image changed
                     if (cell.dataset.path !== imgData.path) {
                         cell.dataset.path = imgData.path;
+
+                        // FIX: Reset any styles from "empty" state (like opacity: 0.3)
+                        cell.style.cssText = '';
+                        cell.style.background = '#111827'; // Default background
 
                         const image = cell._img;
                         const btnRemove = cell._btn;
@@ -421,6 +459,8 @@ export class UIManager {
                 }
             }
         });
+
+        this.updateSelectionIndicator();
     }
 
     getSelectedClusterIndices() {
@@ -430,6 +470,27 @@ export class UIManager {
             if (cb.checked) indices.push(index);
         });
         return indices;
+    }
+
+    updateSelectionIndicator() {
+        const selectedCount = this.getSelectedClusterIndices().length;
+        this.selectionCountSpan.textContent = selectedCount;
+
+        if (selectedCount > 0) {
+            this.selectionIndicator.style.display = 'block';
+        } else {
+            // Optional: hide if 0? or show 0/6?
+            this.selectionIndicator.style.display = 'block';
+        }
+
+        // Color coding
+        if (selectedCount === 6) {
+            this.selectionIndicator.style.color = '#10b981'; // Green
+        } else if (selectedCount > 6) {
+            this.selectionIndicator.style.color = '#ef4444'; // Red
+        } else {
+            this.selectionIndicator.style.color = '#f59e0b'; // Orange/Yellow
+        }
     }
 
     showActionChoice() {

@@ -511,3 +511,47 @@ header {
     font-size: 0.85rem;
     white-space: nowrap;
 }
+
+/* Progression Indicator and Action Modal Updates */
+.selection-indicator {
+    padding: 6px 14px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 20px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    transition: all 0.3s ease;
+}
+
+.primary-action-section {
+    border: 1px solid #10b981;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.primary-action-section:hover:not(:has(button:disabled)) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
+}
+
+.backup-options details summary::-webkit-details-marker {
+    display: none;
+}
+
+.backup-options details summary {
+    list-style: none;
+    text-align: center;
+    padding: 10px;
+    background: rgba(75, 85, 99, 0.1);
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.backup-options details summary:hover {
+    background: rgba(75, 85, 99, 0.2);
+    color: #f3f4f6;
+}
+
+.backup-options details[open] summary {
+    margin-bottom: 10px;
+    background: transparent;
+}
