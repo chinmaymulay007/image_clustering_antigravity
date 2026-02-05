@@ -590,6 +590,7 @@ class App {
 
         if (cluster.representatives.length < 16) {
             alert("Cannot freeze: cluster has fewer than 16 images");
+            this.ui.renderClusters(this.currentClusters); // Revert checkbox state
             return;
         }
 
