@@ -580,118 +580,117 @@ class App {
             document.getElementById('btn-proceed').textContent = originalText;
         }
     }
-}
 
-// --- Freeze / Unfreeze Logic ---
+    // --- Freeze / Unfreeze Logic ---
 
-handleFreezeCluster(clusterIndex) {
-    const cluster = this.currentClusters[clusterIndex];
-
-    if (!cluster) return;
-
-    if (cluster.representatives.length < 16) {
-        alert("Cannot freeze: cluster has fewer than 16 images");
-        return;
-    }
-
-    this.frozenClusters.set(clusterIndex, {
-        preferredPaths: new Set(cluster.representatives.map(r => r.path))
-    });
-
-    cluster.isFrozen = true;
-    this.ui.renderClusters(this.currentClusters);
-    console.log(`[App] Frozen cluster ${clusterIndex}`);
-}
-
-handleUnfreezeCluster(clusterIndex) {
-    if (this.frozenClusters.has(clusterIndex)) {
-        this.frozenClusters.delete(clusterIndex);
-
+    handleFreezeCluster(clusterIndex) {
         const cluster = this.currentClusters[clusterIndex];
-        if (cluster) {
-            cluster.isFrozen = false;
 
-            // Re-select representatives immediately using CURRENT members
-            // This updates the view to show "natural" representatives without full recluster
-            if (cluster.members.length > 0) {
-                cluster.representatives = this.clustering.selectClosestToCentroid(
-                    cluster.members,
-                    cluster.centroid,
-                    16,
-                    this.threshold
-                );
-            }
-        }
+        if (!cluster) return;
 
-        this.ui.renderClusters(this.currentClusters);
-        console.log(`[App] Unfrozen cluster ${clusterIndex}`);
-    }
-}
-
-applyFrozenConstraints(clusters) {
-    const toUnfreeze = [];
-
-    this.frozenClusters.forEach((frozenData, frozenIndex) => {
-        const cluster = clusters[frozenIndex];
-
-        // Handle cluster not existing
-        if (!cluster) {
-            toUnfreeze.push(frozenIndex);
+        if (cluster.representatives.length < 16) {
+            alert("Cannot freeze: cluster has fewer than 16 images");
             return;
         }
 
-        const { preferredPaths } = frozenData;
+        this.frozenClusters.set(clusterIndex, {
+            preferredPaths: new Set(cluster.representatives.map(r => r.path))
+        });
 
-        // Separate: frozen reps still in cluster vs others
-        const stillHere = cluster.members.filter(m =>
-            preferredPaths.has(m.path)
-        );
-        const others = cluster.members.filter(m =>
-            !preferredPaths.has(m.path)
-        );
-
-        // AUTO-UNFREEZE CONDITIONS
-        const tooFewFrozenReps = stillHere.length < 8; // Less than 50% of 16
-        const clusterTooSmall = cluster.members.length < 16; // Can't fill 16 slots
-
-        if (tooFewFrozenReps || clusterTooSmall) {
-            const reason = tooFewFrozenReps
-                ? `Only ${stillHere.length}/16 frozen reps remain`
-                : `Cluster only has ${cluster.members.length} total members`;
-            console.log(`[Freeze] Auto-unfreezing cluster ${frozenIndex}: ${reason}`);
-            toUnfreeze.push(frozenIndex);
-            return;
-        }
-
-        // KEEP FROZEN: Show frozen reps + fill gaps
-        const representatives = [...stillHere]; // Frozen reps (no dedup)
-
-        // Fill remaining slots with deduplicated others
-        const fillImages = [];
-        if (representatives.length < 16) {
-            const needed = 16 - representatives.length;
-            const dedupedOthers = this.clustering.selectClosestToCentroid(
-                others,
-                cluster.centroid,
-                needed,
-                this.threshold // Apply dedup to fill images only
-            );
-            fillImages.push(...dedupedOthers);
-            representatives.push(...fillImages);
-        }
-
-        // Add fill images to frozen set (so they become frozen too)
-        fillImages.forEach(img => preferredPaths.add(img.path));
-
-        cluster.representatives = representatives.slice(0, 16);
         cluster.isFrozen = true;
-    });
+        this.ui.renderClusters(this.currentClusters);
+        console.log(`[App] Frozen cluster ${clusterIndex}`);
+    }
 
-    // Clean up auto-unfrozen clusters
-    toUnfreeze.forEach(idx => this.frozenClusters.delete(idx));
+    handleUnfreezeCluster(clusterIndex) {
+        if (this.frozenClusters.has(clusterIndex)) {
+            this.frozenClusters.delete(clusterIndex);
 
-    return clusters;
-}
+            const cluster = this.currentClusters[clusterIndex];
+            if (cluster) {
+                cluster.isFrozen = false;
+
+                // Re-select representatives immediately using CURRENT members
+                // This updates the view to show "natural" representatives without full recluster
+                if (cluster.members.length > 0) {
+                    cluster.representatives = this.clustering.selectClosestToCentroid(
+                        cluster.members,
+                        cluster.centroid,
+                        16,
+                        this.threshold
+                    );
+                }
+            }
+
+            this.ui.renderClusters(this.currentClusters);
+            console.log(`[App] Unfrozen cluster ${clusterIndex}`);
+        }
+    }
+
+    applyFrozenConstraints(clusters) {
+        const toUnfreeze = [];
+
+        this.frozenClusters.forEach((frozenData, frozenIndex) => {
+            const cluster = clusters[frozenIndex];
+
+            // Handle cluster not existing
+            if (!cluster) {
+                toUnfreeze.push(frozenIndex);
+                return;
+            }
+
+            const { preferredPaths } = frozenData;
+
+            // Separate: frozen reps still in cluster vs others
+            const stillHere = cluster.members.filter(m =>
+                preferredPaths.has(m.path)
+            );
+            const others = cluster.members.filter(m =>
+                !preferredPaths.has(m.path)
+            );
+
+            // AUTO-UNFREEZE CONDITIONS
+            const tooFewFrozenReps = stillHere.length < 8; // Less than 50% of 16
+            const clusterTooSmall = cluster.members.length < 16; // Can't fill 16 slots
+
+            if (tooFewFrozenReps || clusterTooSmall) {
+                const reason = tooFewFrozenReps
+                    ? `Only ${stillHere.length}/16 frozen reps remain`
+                    : `Cluster only has ${cluster.members.length} total members`;
+                console.log(`[Freeze] Auto-unfreezing cluster ${frozenIndex}: ${reason}`);
+                toUnfreeze.push(frozenIndex);
+                return;
+            }
+
+            // KEEP FROZEN: Show frozen reps + fill gaps
+            const representatives = [...stillHere]; // Frozen reps (no dedup)
+
+            // Fill remaining slots with deduplicated others
+            const fillImages = [];
+            if (representatives.length < 16) {
+                const needed = 16 - representatives.length;
+                const dedupedOthers = this.clustering.selectClosestToCentroid(
+                    others,
+                    cluster.centroid,
+                    needed,
+                    this.threshold // Apply dedup to fill images only
+                );
+                fillImages.push(...dedupedOthers);
+                representatives.push(...fillImages);
+            }
+
+            // Add fill images to frozen set (so they become frozen too)
+            fillImages.forEach(img => preferredPaths.add(img.path));
+
+            cluster.representatives = representatives.slice(0, 16);
+            cluster.isFrozen = true;
+        });
+
+        // Clean up auto-unfrozen clusters
+        toUnfreeze.forEach(idx => this.frozenClusters.delete(idx));
+
+        return clusters;
+    }
 }
 
 window.app = new App();
