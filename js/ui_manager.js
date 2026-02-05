@@ -127,8 +127,8 @@ export class UIManager {
             this.callbacks.onConfirmSaveLocation?.(true); // different
         });
 
-        this.btnCancelAction.addEventListener('click', () => this.modalActionChoice.classList.add('hidden'));
-        this.btnCloseAction.addEventListener('click', () => this.modalActionChoice.classList.add('hidden'));
+        this.btnCancelAction?.addEventListener('click', () => this.modalActionChoice.classList.add('hidden'));
+        this.btnCloseAction?.addEventListener('click', () => this.modalActionChoice.classList.add('hidden'));
 
         this.passfacesUsername.addEventListener('input', () => this.validateUploadRequirements());
         this.btnUploadPassfaces.addEventListener('click', () => {
@@ -291,6 +291,11 @@ export class UIManager {
             // ALWAYS Update dynamic UI states (frozen, title, styling)
             const checkbox = card.querySelector('.cluster-checkbox');
             const title = card._titleNode;
+
+            // Update title content if changed
+            if (title.innerHTML !== titleHtml) {
+                title.innerHTML = titleHtml;
+            }
 
             // Ensure checkbox state matches expectation (if we are re-rendering)
             // Note: If we had an external selection state, we'd use it here.
