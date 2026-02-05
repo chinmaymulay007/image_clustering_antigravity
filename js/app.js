@@ -726,8 +726,6 @@ class App {
                 newFillers.forEach(m => {
                     if (addRep(m, true)) {
                         newRepsAdded++;
-                        // Add to preferred set for next iteration
-                        preferredPaths.add(m.path);
                     }
                 });
             }
@@ -744,17 +742,20 @@ class App {
             const driftDetails = [];
             if (newRepsAdded > 0) driftDetails.push(`+${newRepsAdded} substituted`);
             if (originalsDelta > 0) driftDetails.push(`-${originalsDelta} recovered`);
+            if (originalsDelta < 0) driftDetails.push(`+${Math.abs(originalsDelta)} lost original`);
 
-            if (driftDetails.length > 0 || originalsDelta < 0) {
-                statusParts.push(`Drift: ${cluster.driftCount} cumulative (${driftDetails.join(", ") || "re-lost originals"})`);
+            if (driftDetails.length > 0) {
+                statusParts.push(`Drift: ${cluster.driftCount} cumulative (${driftDetails.join(", ")})`);
             }
 
             if (statusParts.length === 0) statusParts.push("No change");
 
             const logID = movedThisPass ? `${oldIndex + 1}➔${bestMatchIndex + 1}` : (bestMatchIndex + 1);
-            console.log(`[Freeze] Cluster ${logID}: ${statusParts.join(" & ")}`);
 
             cluster.representatives = finalReps;
+
+            // Sync preferredPaths to currently active 16 reps for next identification pass
+            frozenData.preferredPaths = new Set(finalReps.map(r => r.path));
 
             // Track in new map
             newFrozenClusters.set(bestMatchIndex, frozenData);
