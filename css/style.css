@@ -457,19 +457,57 @@ header {
 }
 
 /* Frozen Cluster Styling */
+/* Frozen Cluster Styling */
 .cluster-card.frozen {
     border: 2px solid #60a5fa;
-    /* Blue border */
     box-shadow: 0 0 15px rgba(96, 165, 250, 0.2);
-    /* Soft blue glow */
     background: #1f2937;
-    /* Ensure background stays dark */
     transition: all 0.3s ease;
 }
 
-.frozen-title {
-    color: #60a5fa;
-    /* Blue text */
-    text-shadow: 0 0 10px rgba(96, 165, 250, 0.4);
+/* Polished Header Components */
+.header-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    flex: 1;
+    overflow: hidden;
+    /* Prevent spill */
+}
+
+.cluster-name {
     font-weight: 700;
+    color: #f3f4f6;
+    white-space: nowrap;
+}
+
+.freeze-badge {
+    background: rgba(37, 99, 235, 0.15);
+    color: #60a5fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    white-space: nowrap;
+}
+
+.drift-count {
+    color: #ef4444;
+    /* Red for loss */
+    font-weight: bold;
+    font-size: 0.85em;
+}
+
+.spacer {
+    color: #4b5563;
+}
+
+.cluster-count {
+    color: #9ca3af;
+    font-size: 0.85rem;
+    white-space: nowrap;
 }

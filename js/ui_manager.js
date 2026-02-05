@@ -233,12 +233,20 @@ export class UIManager {
             const memberCount = cluster.memberCount !== undefined ? cluster.memberCount : cluster.members.length;
 
             // Drift Indicator (e.g. "🔒 -2")
-            let lockLabel = '🔒';
-            if (cluster.isFrozen && cluster.driftCount > 0) {
-                lockLabel += ` <span style="color:#ef4444; font-size:0.8em; margin-left:2px;">-${cluster.driftCount}</span>`;
+            // Polished Header Structure
+            let statusBadge = '';
+            if (cluster.isFrozen) {
+                const driftText = cluster.driftCount > 0
+                    ? `<span class="drift-count">-${cluster.driftCount}</span>`
+                    : '';
+                statusBadge = `<span class="freeze-badge" title="Cluster is frozen">🔒${driftText}</span>`;
             }
 
-            const titleHtml = `${cluster.isFrozen ? lockLabel + ' ' : ''}${cluster.label || `Cluster ${index + 1}`} <span style="color:#9ca3af; font-size:0.8em">${memberCount} items</span>`;
+            const labelHtml = `<span class="cluster-name">${cluster.label || `Cluster ${index + 1}`}</span>`;
+            const countHtml = `<span class="cluster-count">${memberCount} items</span>`;
+
+            // Flex layout handles the spacing
+            const titleHtml = `<div class="header-info">${labelHtml} ${statusBadge} <span class="spacer">•</span> ${countHtml}</div>`;
 
             if (!card) {
                 // Create New
