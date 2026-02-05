@@ -231,7 +231,14 @@ export class UIManager {
         clusters.forEach((cluster, index) => {
             let card = this.cards.get(index);
             const memberCount = cluster.memberCount !== undefined ? cluster.memberCount : cluster.members.length;
-            const titleHtml = `${cluster.isFrozen ? '🔒 ' : ''}${cluster.label || `Cluster ${index + 1}`} <span style="color:#9ca3af; font-size:0.8em">${memberCount} items</span>`;
+
+            // Drift Indicator (e.g. "🔒 -2")
+            let lockLabel = '🔒';
+            if (cluster.isFrozen && cluster.driftCount > 0) {
+                lockLabel += ` <span style="color:#ef4444; font-size:0.8em; margin-left:2px;">-${cluster.driftCount}</span>`;
+            }
+
+            const titleHtml = `${cluster.isFrozen ? lockLabel + ' ' : ''}${cluster.label || `Cluster ${index + 1}`} <span style="color:#9ca3af; font-size:0.8em">${memberCount} items</span>`;
 
             if (!card) {
                 // Create New
@@ -361,22 +368,19 @@ export class UIManager {
                             if (cell.dataset.path === imgData.path) {
                                 image.src = url;
 
-                                if (isLowPerf) {
-                                    // Zero overhead: Remove shimmer and show immediately
-                                    cell.classList.remove('skeleton');
-                                } else {
-                                    // Premium path: Smooth fade-in
-                                    if (image.complete) {
+                                // FIX: Always remove skeleton immediately for visible updates
+                                const onImageReady = () => {
+                                    if (cell.dataset.path === imgData.path) {
                                         image.classList.add('loaded');
                                         cell.classList.remove('skeleton');
-                                    } else {
-                                        image.onload = () => {
-                                            if (cell.dataset.path === imgData.path) {
-                                                image.classList.add('loaded');
-                                                cell.classList.remove('skeleton');
-                                            }
-                                        };
                                     }
+                                };
+
+                                if (image.complete) {
+                                    onImageReady();
+                                } else {
+                                    image.onload = onImageReady;
+                                    image.onerror = () => cell.classList.remove('skeleton'); // Ensure cleanup on error
                                 }
                             }
                         }).catch(() => {
