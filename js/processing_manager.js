@@ -156,8 +156,27 @@ export class ProcessingManager {
             try {
                 const firstName = batchImages[0].path.split('/').pop();
 
-                // Offload entirely to worker
-                const embeddings = await this.processBatch(batchImages);
+                // 1. Prepare batch (Extract actual File objects for mobile compatibility)
+                if (this.onProgress) {
+                    this.onProgress({ currentAction: `📦 Preparing batch of ${batchImages.length} images...` });
+                }
+
+                const batchWithFiles = await Promise.all(batchImages.map(async img => {
+                    try {
+                        const file = await img.handle.getFile();
+                        console.log(`%c[ProcessingManager] Prepared file for worker: ${img.path.split('/').pop()} (${(file.size / 1024).toFixed(1)}KB)`, "color: #3b82f6; font-size: 0.75rem;");
+                        return {
+                            ...img,
+                            file // Pass the actual File object
+                        };
+                    } catch (e) {
+                        console.error(`[ProcessingManager] Failed to get file for ${img.path}:`, e);
+                        return { ...img, file: null }; // Will be handled in worker or skipped
+                    }
+                }));
+
+                // 2. Offload entirely to worker
+                const embeddings = await this.processBatch(batchWithFiles);
 
                 if (!embeddings || embeddings.length === 0) {
                     console.error("[Processing] AI Worker returned empty embeddings or error. Skipping this batch.");

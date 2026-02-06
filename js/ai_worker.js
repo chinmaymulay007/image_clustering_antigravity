@@ -64,10 +64,15 @@ async function processBatch(batch) {
 
         // 1. Load and Decode in Worker (No main-thread hitches!)
         const rawImages = await Promise.all(batch.map(async (item) => {
-            const file = await item.handle.getFile();
-            console.log(`%c[AI Worker] Reading file: ${item.path.split('/').pop()}`, "color: #fb8c00; font-size: 0.8rem;");
+            const file = item.file; // Already retrieved in main thread
 
-            // In a worker, we can use simpler Buffer-based approach or the same Blob approach
+            if (!file) {
+                console.warn(`%c[AI Worker] Missing file for ${item.path}, skipping.`, "color: #ef4444;");
+                return null;
+            }
+
+            console.log(`%c[AI Worker] Decoding file: ${item.path.split('/').pop()} (${(file.size / 1024).toFixed(1)}KB)`, "color: #fb8c00; font-size: 0.8rem;");
+
             const url = URL.createObjectURL(file);
             try {
                 return await RawImage.read(url);
@@ -76,8 +81,12 @@ async function processBatch(batch) {
             }
         }));
 
+        // Filter out any failed reads
+        const validRawImages = rawImages.filter(img => img !== null);
+        if (validRawImages.length === 0) throw new Error("No valid images in batch");
+
         // 2. Preprocess & Inference
-        const inputs = await processor(rawImages);
+        const inputs = await processor(validRawImages);
         const { image_embeds } = await model(inputs);
         const end = performance.now();
         const duration = end - start;
