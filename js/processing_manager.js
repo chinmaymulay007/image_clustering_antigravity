@@ -161,19 +161,27 @@ export class ProcessingManager {
                     this.onProgress({ currentAction: `📦 Preparing batch of ${batchImages.length} images...` });
                 }
 
-                const batchWithFiles = await Promise.all(batchImages.map(async img => {
+                const batchWithFiles = [];
+                for (const img of batchImages) {
                     try {
+                        if (!img.handle) throw new Error("Handle is missing from image metadata");
+
                         const file = await img.handle.getFile();
-                        console.log(`%c[ProcessingManager] Prepared file for worker: ${img.path.split('/').pop()} (${(file.size / 1024).toFixed(1)}KB)`, "color: #3b82f6; font-size: 0.75rem;");
-                        return {
+                        console.log(`%c[ProcessingManager] Prepared file: ${img.path} (${(file.size / 1024).toFixed(1)}KB)`, "color: #3b82f6; font-size: 0.75rem;");
+
+                        batchWithFiles.push({
                             ...img,
                             file // Pass the actual File object
-                        };
+                        });
                     } catch (e) {
-                        console.error(`[ProcessingManager] Failed to get file for ${img.path}:`, e);
-                        return { ...img, file: null }; // Will be handled in worker or skipped
+                        console.error(`%c[ProcessingManager] ❌ Error accessing file: ${img.path}`, "color: #ef4444; font-weight: bold;");
+                        console.error(`Detail: ${e.message}`);
+                        batchWithFiles.push({ ...img, file: null });
+
+                        // Small yield on error to avoid rapid-fire failures
+                        await new Promise(r => setTimeout(r, 100));
                     }
-                }));
+                }
 
                 // 2. Offload entirely to worker
                 const embeddings = await this.processBatch(batchWithFiles);

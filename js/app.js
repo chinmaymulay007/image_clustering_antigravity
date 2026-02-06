@@ -267,6 +267,7 @@ class App {
                     this.imageWorker.postMessage({ file, targetWidth: 300, path });
                 });
             } catch (e) {
+                console.warn(`%c[App] Failed to load thumbnail for ${path}: ${e.message}`, "color: #ff9800;");
                 return null;
             }
         })();
