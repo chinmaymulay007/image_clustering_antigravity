@@ -148,10 +148,16 @@ class App {
     handlePauseResume(shouldPause) {
         if (shouldPause) {
             this.processing.pause();
-            this.ui.updateStats({ currentAction: "⏸️ Processing Paused." });
+            this.ui.updateStats({
+                currentAction: "⏸️ Processing Paused.",
+                lastEvent: "Processing Paused"
+            });
         } else {
             this.processing.resume();
-            this.ui.updateStats({ currentAction: "▶️ Resuming..." });
+            this.ui.updateStats({
+                currentAction: "▶️ Resuming...",
+                lastEvent: "Processing Resumed"
+            });
         }
         this.ui.setPauseState(shouldPause);
     }
@@ -243,7 +249,13 @@ class App {
 
                     // Update UI
                     this.ui.renderClusters(this.currentClusters);
-                    this.ui.updateStats({ currentAction: this.processing.isRunning ? undefined : "✅ Ready." });
+
+                    // Check for pending thumbnails
+                    if (this.thumbnailPromises.size > 0) {
+                        this.ui.updateStats({ currentAction: `🖼️ Loading thumbnails (${this.thumbnailPromises.size})...` });
+                    } else {
+                        this.ui.updateStats({ currentAction: this.processing.isRunning ? "✅ Clusters updated." : "✅ Ready." });
+                    }
 
                     // Immediate Cleanup (RAM), but Delay Logging until thumbnails are ready
                     this.cleanupThumbnails(false); // false = don't log yet
@@ -326,8 +338,12 @@ class App {
 
                     this.thumbnailPromises.delete(resPath);
 
-                    // Check if the current "batch" is complete to log summary
-                    if (this.thumbnailPromises.size === 0) {
+                    // Update UI status during loading
+                    if (this.thumbnailPromises.size > 0) {
+                        this.ui.updateStats({ currentAction: `🖼️ Loading thumbnails (${this.thumbnailPromises.size})...` });
+                    } else {
+                        // Complete
+                        this.ui.updateStats({ currentAction: this.processing.isRunning ? "✅ Clusters updated." : "✅ Ready." });
                         this.logImageSummary();
                     }
                 };

@@ -226,12 +226,20 @@ export class UIManager {
             this.statusBarText.textContent = stats.currentAction;
 
             // Show spinner if activity looks like background work
-            const isActive = stats.currentAction.toLowerCase().includes('ing') ||
+            const isProcessing = stats.currentAction.toLowerCase().includes('ing') ||
                 stats.currentAction.toLowerCase().includes('scan');
-            if (isActive) {
+            const isPaused = stats.currentAction.includes('⏸️');
+
+            if (isProcessing && !isPaused) {
                 this.statusSpinner.classList.remove('hidden');
             } else {
                 this.statusSpinner.classList.add('hidden');
+            }
+
+            // Clear stats if paused
+            if (isPaused) {
+                this.statSpeed.textContent = '-';
+                this.statEta.textContent = '-';
             }
         }
     }

@@ -131,6 +131,13 @@ export class ProcessingManager {
 
         while (this.isRunning && !this.aborted) {
             if (this.isPaused) {
+                if (this.onProgress) {
+                    this.onProgress({
+                        processed: this.processedPaths.size,
+                        total: this.allImages.length,
+                        currentAction: "⏸️ AI Processing Paused."
+                    });
+                }
                 await new Promise(r => setTimeout(r, 500));
                 continue;
             }
@@ -156,9 +163,9 @@ export class ProcessingManager {
             try {
                 const firstName = batchImages[0].path.split('/').pop();
 
-                // 1. Prepare batch (Extract actual File objects for mobile compatibility)
+                // 1. Prepare batch 
                 if (this.onProgress) {
-                    this.onProgress({ currentAction: `📦 Preparing batch of ${batchImages.length} images...` });
+                    this.onProgress({ currentAction: `🧠 AI Analyzing images...` });
                 }
 
                 const batchWithFiles = [];
