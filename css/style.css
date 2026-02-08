@@ -14,19 +14,29 @@ body {
     box-sizing: border-box;
 }
 
-header {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    padding: 10px 0 25px 0;
-    border-bottom: 1px solid #374151;
-}
-
-.header-top {
+.app-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    width: 100%;
+    gap: 60px;
+    /* Generous gap for pill distribution */
+    padding: 12px 35px;
+    margin: 20px auto;
+    width: fit-content;
+    max-width: 95%;
+    background: rgba(17, 24, 39, 0.75);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 60px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.brand-pill-container {
+    display: flex;
+    align-items: center;
+    gap: 25px;
 }
 
 .brand {
@@ -650,11 +660,12 @@ header {
     background: rgba(17, 24, 39, 0.7);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(55, 65, 81, 0.5);
-    border-radius: 12px;
-    padding: 10px 20px;
-    margin: 15px auto;
+    border-radius: 30px;
+    /* More rounded */
+    padding: 8px 25px;
+    margin: 10px auto;
     width: fit-content;
-    min-width: 50%;
+    max-width: 80%;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     display: flex;
     justify-content: center;

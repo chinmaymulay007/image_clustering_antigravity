@@ -41,6 +41,7 @@ export class UIManager {
         this.aiPillStatusText = document.getElementById('ai-pill-status-text');
         this.aiDynamicMetrics = document.getElementById('ai-dynamic-metrics');
         this.aiMetrics = document.getElementById('ai-metrics');
+        this.floatingControls = document.getElementById('floating-controls');
         this.lastSignificantEvent = '';
 
         // Action Selection Modal
@@ -190,6 +191,7 @@ export class UIManager {
 
     hideInitialOverlay() {
         this.overlayInitial.classList.add('hidden');
+        this.floatingControls?.classList.remove('hidden');
     }
 
     updateStats(stats) {

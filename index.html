@@ -64,38 +64,36 @@
 
     <div class="app-container">
         <header class="app-header">
-            <div class="header-top">
-                <div class="brand-pill-container">
-                    <div class="brand">
-                        <h2>ClusterAI</h2>
-                    </div>
-                    <div id="ai-engine-pill" class="ai-engine-pill">
-                        <div class="ai-status-indicator-wrap">
-                            <span id="ai-status-indicator" class="ai-indicator paused">⏸️</span>
-                            <div id="ai-machine-anim" class="ai-machine-anim hidden">
-                                <span class="anim-input">🖼️</span>
-                                <span class="anim-machine">🧠</span>
-                                <span class="anim-output">101</span>
-                            </div>
-                        </div>
-                        <span id="ai-pill-status-text" class="ai-status-text hidden">paused</span>
-                        <div id="ai-metrics" class="ai-metrics">
-                            <span class="metric">Processed: <strong id="stat-processed">0</strong>/<span
-                                    id="stat-total">0</span></span>
-                            <div id="ai-dynamic-metrics" class="ai-dynamic-metrics">
-                                <span class="metric-sep">|</span>
-                                <span class="metric">Speed: <strong id="stat-speed">-</strong></span>
-                                <span class="metric-sep">|</span>
-                                <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
-                            </div>
-                        </div>
-                        <button id="btn-pause-resume" class="btn-pause-tiny">RESUME</button>
-                    </div>
+            <div class="brand-pill-container">
+                <div class="brand">
+                    <h2>ClusterAI</h2>
                 </div>
-                <div class="header-actions">
-                    <button id="btn-view-excluded" class="btn-header-action" title="Excluded Images">🗑️</button>
-                    <button id="btn-settings" class="btn-header-action" title="Settings">⚙️</button>
+                <div id="ai-engine-pill" class="ai-engine-pill">
+                    <div class="ai-status-indicator-wrap">
+                        <span id="ai-status-indicator" class="ai-indicator paused">⏸️</span>
+                        <div id="ai-machine-anim" class="ai-machine-anim hidden">
+                            <span class="anim-input">🖼️</span>
+                            <span class="anim-machine">🧠</span>
+                            <span class="anim-output">101</span>
+                        </div>
+                    </div>
+                    <span id="ai-pill-status-text" class="ai-status-text hidden">PAUSED</span>
+                    <div id="ai-metrics" class="ai-metrics">
+                        <span class="metric">Processed: <strong id="stat-processed">0</strong>/<span
+                                id="stat-total">0</span></span>
+                        <div id="ai-dynamic-metrics" class="ai-dynamic-metrics">
+                            <span class="metric-sep">|</span>
+                            <span class="metric">Speed: <strong id="stat-speed">-</strong></span>
+                            <span class="metric-sep">|</span>
+                            <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
+                        </div>
+                    </div>
+                    <button id="btn-pause-resume" class="btn-pause-tiny">RESUME</button>
                 </div>
+            </div>
+            <div class="header-actions">
+                <button id="btn-view-excluded" class="btn-header-action" title="Excluded Images">🗑️</button>
+                <button id="btn-settings" class="btn-header-action" title="Settings">⚙️</button>
             </div>
         </header>
 
@@ -113,7 +111,7 @@
             <!-- Clusters will be injected here -->
         </main>
 
-        <div class="floating-controls-container">
+        <div id="floating-controls" class="floating-controls-container hidden">
             <div id="selection-indicator" class="selection-indicator-pill hidden">
                 <span id="selection-count">0</span>/6 Selected
             </div>
