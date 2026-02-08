@@ -226,11 +226,29 @@ class App {
             };
         }
 
+        const frozenIndices = Array.from(this.frozenClusters.keys());
+        const frozenRadii = {};
+        const previousCentroids = this.lastCentroids ? this.lastCentroids.map(c => [...c]) : null;
+
+        // If K changed or centroids don't exist, we can't easily warm start with frozen ones 
+        // unless we force the worker to respect the specific indices.
+        // Actually, previousCentroids helps Lloyd's init.
+        if (previousCentroids && previousCentroids.length === this.k) {
+            this.frozenClusters.forEach((data, index) => {
+                if (index < previousCentroids.length) {
+                    previousCentroids[index] = [...data.centroid];
+                    frozenRadii[index] = data.maxRadius;
+                }
+            });
+        }
+
         this.clusterWorker.postMessage({
             embeddings: validEmbeddings,
             k: this.k,
             threshold: this.threshold,
-            previousCentroids: this.lastCentroids
+            previousCentroids: previousCentroids,
+            frozenIndices: frozenIndices,
+            frozenRadii: frozenRadii
         });
     }
 
@@ -595,16 +613,34 @@ class App {
             return;
         }
 
+        // Calculate Radius (Distance from centroid to 16th representative)
+        const reps = cluster.representatives;
+        const centroid = cluster.centroid;
+        let maxRadius = 0;
+        reps.forEach(r => {
+            const d = this.clustering.cosineDistance(r.embedding, centroid);
+            if (d > maxRadius) maxRadius = d;
+        });
+
+        // Count images currently within this radius (Radius Lock Coverage)
+        const inRadiusCount = cluster.members.filter(m =>
+            this.clustering.cosineDistance(m.embedding, centroid) <= maxRadius
+        ).length;
+
         this.frozenClusters.set(clusterIndex, {
-            preferredPaths: new Set(cluster.representatives.map(r => r.path)),
-            originalPaths: new Set(cluster.representatives.map(r => r.path)), // Immutable original set
+            centroid: [...centroid],
+            representatives: JSON.parse(JSON.stringify(reps)), // Pinned set
+            maxRadius: maxRadius,
+            initialCoverage: inRadiusCount,
             initialIndex: clusterIndex
         });
 
         cluster.isFrozen = true;
-        cluster.driftCount = 0; // Initial drift
+        cluster.driftCount = 0;
+
+        console.log(`[App] %cFrozen cluster ${clusterIndex + 1} | Radius: ${maxRadius.toFixed(4)} | Initial Radius Lock Coverage: ${inRadiusCount} images`, "color: #10b981; font-weight: bold;");
+
         this.ui.renderClusters(this.currentClusters);
-        console.log(`[App] Frozen cluster ${clusterIndex + 1}`);
     }
 
     handleUnfreezeCluster(clusterIndex) {
@@ -635,169 +671,36 @@ class App {
     applyFrozenConstraints(clusters) {
         if (this.frozenClusters.size === 0) return clusters;
 
-        console.log(`%c[Freeze] --- Applying Constraints (Greedy Discovery) ---`, "color: #3b82f6; font-weight: bold;");
+        console.log(`%c[Freeze] --- Applying Fixed-Centroid Absorption Constraints ---`, "color: #3b82f6; font-weight: bold;");
 
-        const newFrozenClusters = new Map();
-        const assignedTargetIndices = new Set();
-        const assignments = [];
+        this.frozenClusters.forEach((frozenData, index) => {
+            const cluster = clusters[index];
+            if (!cluster) return;
 
-        // 1. DISCOVERY PHASE: Rank every possible pairing
-        this.frozenClusters.forEach((frozenData, oldIndex) => {
-            const { preferredPaths } = frozenData;
-
-            for (let i = 0; i < clusters.length; i++) {
-                const matchCount = clusters[i].members.filter(m => preferredPaths.has(m.path)).length;
-                if (matchCount >= 8) { // Minimum threshold to even consider it a match
-                    assignments.push({
-                        oldIndex,
-                        targetIndex: i,
-                        matchCount,
-                        frozenData
-                    });
-                }
-            }
-        });
-
-        // Sort by match quality (best matches first)
-        assignments.sort((a, b) => b.matchCount - a.matchCount);
-
-        // 2. ASSIGNMENT PHASE: Greedy claim
-        const resolvedAssignments = new Map(); // oldIndex -> resolved data
-
-        assignments.forEach(assign => {
-            if (resolvedAssignments.has(assign.oldIndex)) return; // Already assigned this frozen cluster
-            if (assignedTargetIndices.has(assign.targetIndex)) {
-                // Potential Collision!
-                console.log(`[Freeze] ⚔️ Collision: Cluster ${assign.oldIndex + 1} also matching Target ${assign.targetIndex + 1}, but it was already claimed.`);
-                return;
-            }
-
-            // Valid claim
-            resolvedAssignments.set(assign.oldIndex, assign);
-            assignedTargetIndices.add(assign.targetIndex);
-        });
-
-        // 3. ENFORCEMENT PHASE: Apply logic to the winners
-        this.frozenClusters.forEach((frozenData, oldIndex) => {
-            const assignment = resolvedAssignments.get(oldIndex);
-
-            if (!assignment) {
-                console.log(`[Freeze] ⚠️ Unfrozen: No unique matching cluster found (Previously Cluster ${oldIndex + 1})`);
-                return;
-            }
-
-            const { targetIndex, matchCount } = assignment;
-            const cluster = clusters[targetIndex];
-            const { originalPaths, preferredPaths, initialIndex } = frozenData;
-
-            // Target cluster too small?
-            if (cluster.members.length < 16) {
-                console.log(`[Freeze] ⚠️ Unfrozen: Target cluster too small (<16) (Previously Cluster ${oldIndex + 1})`);
-                return;
-            }
-
-            // APPLY FROZEN DATA TO CLUSTER
+            // 1. Mark as frozen
             cluster.isFrozen = true;
+            cluster.driftCount = 0; // Visual drift is now 0 by definition
 
-            // Track movement relative to the LAST pass (not initial)
-            if (targetIndex !== oldIndex) {
-                cluster.movedFrom = oldIndex;
-            }
+            // 2. VISUAL OVERRIDE: Restore Pinned Representatives
+            // We use the exact 16 images stored at freeze time.
+            cluster.representatives = JSON.parse(JSON.stringify(frozenData.representatives));
 
-            // --- RECOVERY & SELECTION LOGIC ---
-            const originalsPresent = cluster.members.filter(m => originalPaths.has(m.path));
-            const previousFillersPresent = cluster.members.filter(m =>
-                preferredPaths.has(m.path) && !originalPaths.has(m.path)
-            );
+            // 3. DETAILED LOGGING (Radius Lock Stats)
+            const currentInRadius = cluster.members.filter(m =>
+                this.clustering.cosineDistance(m.embedding, frozenData.centroid) <= frozenData.maxRadius
+            ).length;
 
-            cluster.driftCount = originalPaths.size - originalsPresent.length;
+            const absorptionCount = cluster.members.length - currentInRadius;
 
-            const finalReps = [];
-            const addRep = (member, isReplacement) => {
-                if (finalReps.length < 16) {
-                    member.isReplacement = isReplacement;
-                    finalReps.push(member);
-                    return true;
-                }
-                return false;
-            };
-
-            // Phase A: Originals first
-            originalsPresent.forEach(m => addRep(m, false));
-
-            // Phase B: Preferred Fillers
-            if (finalReps.length < 16) {
-                const sortedFillers = this.clustering.selectClosestToCentroid(
-                    previousFillersPresent,
-                    cluster.centroid,
-                    16 - finalReps.length,
-                    this.threshold
-                );
-                sortedFillers.forEach(m => addRep(m, true));
-            }
-
-            // Phase C: New Fillers
-            let newRepsAdded = 0;
-            if (finalReps.length < 16) {
-                const usedPaths = new Set(finalReps.map(r => r.path));
-                const others = cluster.members.filter(m => !usedPaths.has(m.path));
-
-                const newFillers = this.clustering.selectClosestToCentroid(
-                    others,
-                    cluster.centroid,
-                    16 - finalReps.length,
-                    this.threshold
-                );
-                newFillers.forEach(m => {
-                    if (addRep(m, true)) {
-                        newRepsAdded++;
-                    }
-                });
-            }
-
-            // Track changes for logging
-            const movedThisPass = targetIndex !== oldIndex;
-            const lastOriginalsCount = Array.from(preferredPaths).filter(p => originalPaths.has(p)).length;
-            const currentOriginalsCount = originalsPresent.length;
-            const originalsDelta = currentOriginalsCount - lastOriginalsCount;
-
-            const statusParts = [];
-            if (movedThisPass) statusParts.push(`Moved (${oldIndex + 1} -> ${targetIndex + 1})`);
-
-            const driftDetails = [];
-            if (newRepsAdded > 0) driftDetails.push(`+${newRepsAdded} substituted`);
-            if (originalsDelta > 0) driftDetails.push(`-${originalsDelta} recovered`);
-            if (originalsDelta < 0) driftDetails.push(`+${Math.abs(originalsDelta)} lost original`);
-
-            if (driftDetails.length > 0) {
-                statusParts.push(`Drift: ${cluster.driftCount} cumulative (${driftDetails.join(", ")})`);
-            }
-
-            if (statusParts.length === 0) statusParts.push("No change");
-
-            const logID = movedThisPass ? `${oldIndex + 1}➔${targetIndex + 1}` : (targetIndex + 1);
-            console.log(`[Freeze] Cluster ${logID}: ${statusParts.join(" & ")}`);
-
-            cluster.representatives = finalReps;
-
-            // Sync preferredPaths to currently active 16 reps for next identification pass
-            frozenData.preferredPaths = new Set(finalReps.map(r => r.path));
-
-            // Track in new map
-            newFrozenClusters.set(targetIndex, frozenData);
+            console.log(`%c[Freeze] Cluster ${index + 1}:`, "font-weight: bold;");
+            console.log(`  - Stability: 0.0% Visual Drift (Pinnned 16 representatives)`);
+            console.log(`  - Radius Lock: ${currentInRadius} images are forced-locked (Initial: ${frozenData.initialCoverage})`);
+            console.log(`  - Absorption: ${absorptionCount} new images claimed via proximity`);
+            console.log(`  - Total logical size: ${cluster.members.length}`);
         });
 
-        // 2. Refresh the app's frozen map
-        this.frozenClusters = newFrozenClusters;
-
-        // 3. LOG MAP DATA (Summary of current state)
-        if (this.frozenClusters.size > 0) {
-            const activeIndices = Array.from(this.frozenClusters.keys())
-                .sort((a, b) => a - b)
-                .map(idx => (idx + 1))
-                .join(", ");
-            console.log(`[Freeze] Active Map (1-indexed): [ ${activeIndices} ]`);
-        }
+        // Sync frozenClusters map if indices shifted (though sorting is disabled, safety first)
+        // Actually, with sorting disabled in engine, indices are stable.
 
         return clusters;
     }

@@ -10,7 +10,7 @@ export class ClusteringEngine {
      * @param {number} dedupThreshold - Uniqueness threshold (default 0.15)
      * @returns {Array} - Array of formatted cluster objects
      */
-    updateClusters(allEmbeddings, k = 6, dedupThreshold = 0.15, previousCentroids = null) {
+    updateClusters(allEmbeddings, k = 6, dedupThreshold = 0.15, previousCentroids = null, frozenIndices = [], frozenRadii = {}) {
         // Safety: Filter out any corrupted records (e.g. from previous worker crashes)
         allEmbeddings = allEmbeddings.filter(e => e && e.embedding && Array.isArray(e.embedding));
 
@@ -18,7 +18,7 @@ export class ClusteringEngine {
         if (allEmbeddings.length < k) k = allEmbeddings.length;
 
         // 1. Run K-Means (Warm Start if possible)
-        const { centroids, assignments } = this.kMeans(allEmbeddings, k, previousCentroids);
+        const { centroids, assignments } = this.kMeans(allEmbeddings, k, previousCentroids, frozenIndices, frozenRadii);
 
         // 2. Group by Assignment
         const clusters = centroids.map((centroid, index) => ({
@@ -34,19 +34,21 @@ export class ClusteringEngine {
         });
 
         // 3. Select Representatives
-        clusters.forEach(cluster => {
+        clusters.forEach((cluster, index) => {
+            // Note: If cluster is frozen, the representatives selection might be overridden in app.js
+            // but we still do a "natural" selection here for consistency if needed.
             cluster.representatives = this.selectClosestToCentroid(cluster.members, cluster.centroid, 16, dedupThreshold);
         });
 
-        // 4. Sort by Size (Largest first)
-        // Note: This changes the index order relative to centroids!
-        // We must stick to the result format for stability.
-        clusters.sort((a, b) => b.members.length - a.members.length);
-
-        // 5. Re-label for consistency
-        clusters.forEach((c, i) => {
-            c.label = `Cluster ${i + 1}`;
-        });
+        // 4. Sort by Size (Largest first) - DISABLING for stability if any are frozen
+        // If there are frozen ones, we SHOULD NOT Sort, as indices are hard-coded to frozen state.
+        if (frozenIndices.length === 0) {
+            clusters.sort((a, b) => b.members.length - a.members.length);
+            // Re-label for consistency only if sorted
+            clusters.forEach((c, i) => {
+                c.label = `Cluster ${i + 1}`;
+            });
+        }
 
         // Return clusters AND the raw centroids (for next warm start)
         return { clusters, centroids };
@@ -55,16 +57,14 @@ export class ClusteringEngine {
 
     /**
      * Standard K-Means (Lloyd's Algorithm) with K-Means++ initialization.
+     * Modified to support Fixed Anchors and Radius Locks.
      */
-    kMeans(embeddings, k, previousCentroids) {
+    kMeans(embeddings, k, previousCentroids, frozenIndices = [], frozenRadii = {}) {
         // A. Init Centroids
         let centroids;
 
         // Warm Start Logic
-        // Check if previousCentroids exist AND dimensions fit (embeddings are 512d)
-        // And importantly, if k matches.
         if (previousCentroids && previousCentroids.length === k) {
-            // Deep copy to ensure we don't mutate state passed in if it matters
             centroids = previousCentroids.map(c => [...c]);
         } else {
             // Cold Start
@@ -74,7 +74,7 @@ export class ClusteringEngine {
         let assignments = new Array(embeddings.length).fill(-1);
         let changed = true;
         let p = 0;
-        const maxIter = 20; // Fast convergence usually
+        const maxIter = 20;
 
         while (changed && p < maxIter) {
             changed = false;
@@ -84,13 +84,32 @@ export class ClusteringEngine {
             for (let i = 0; i < embeddings.length; i++) {
                 let minDist = Infinity;
                 let bestC = -1;
-                for (let c = 0; c < k; c++) {
-                    const d = this.cosineDistance(embeddings[i].embedding, centroids[c]);
-                    if (d < minDist) {
+
+                // 1. CHECK RADIUS LOCKS (Inner Boundary)
+                // If an image is within the "frozen radius", it MUST stay in that cluster.
+                for (const idx of frozenIndices) {
+                    const radius = frozenRadii[idx];
+                    if (radius === undefined || radius === null || !centroids[idx]) continue;
+
+                    const d = this.cosineDistance(embeddings[i].embedding, centroids[idx]);
+                    if (d <= radius) {
+                        bestC = idx;
                         minDist = d;
-                        bestC = c;
+                        break; // Hard Lock Found
                     }
                 }
+
+                // 2. STANDARD CLOSEST SEARCH (for non-locked images)
+                if (bestC === -1) {
+                    for (let c = 0; c < k; c++) {
+                        const d = this.cosineDistance(embeddings[i].embedding, centroids[c]);
+                        if (d < minDist) {
+                            minDist = d;
+                            bestC = c;
+                        }
+                    }
+                }
+
                 if (assignments[i] !== bestC) {
                     assignments[i] = bestC;
                     changed = true;
@@ -112,15 +131,15 @@ export class ClusteringEngine {
                 }
 
                 for (let c = 0; c < k; c++) {
+                    // ANCHOR: If this cluster is frozen, skip moving its centroid!
+                    if (frozenIndices.includes(c)) continue;
+
                     if (counts[c] > 0) {
                         for (let j = 0; j < 512; j++) {
                             centroids[c][j] = sums[c][j] / counts[c];
                         }
                     } else {
-                        // Orphan centroid policy: 
-                        // If warm start leads to empty cluster, it might be fine to re-init it,
-                        // or just leave it alone (it effectively dies or moves next iter).
-                        // Let's re-init randomly to keep K clusters alive.
+                        // Orphan centroid policy (only for non-frozen)
                         const randIdx = Math.floor(Math.random() * embeddings.length);
                         centroids[c] = [...embeddings[randIdx].embedding];
                     }
