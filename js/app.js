@@ -28,6 +28,10 @@ class App {
         this.thumbnailPromises = new Map(); // Path -> Promise
         this.frozenClusters = new Map(); // Index -> { preferredPaths }
 
+        // Logging & Memory Stats
+        this.thumbnailsCreatedSinceLastLog = 0;
+        this.thumbnailsDestroyedSinceLastLog = 0;
+
         console.log("ClusterAI Orchestrator Initialized");
         this.init();
     }
@@ -160,6 +164,7 @@ class App {
 
         // Immediate UI Refresh
         this.ui.updateStats({ currentAction: `🚫 Excluding: ${path.split('/').pop()}` });
+        this.thumbnailCache.delete(path); // Optimization: Remove from cache if excluded
         this.refreshClusters();
     }
 
@@ -214,6 +219,7 @@ class App {
 
                     // Update UI
                     this.ui.renderClusters(this.currentClusters);
+                    this.cleanupThumbnails();
 
                     // If a re-cluster was requested while we were busy, do it now
                     if (this.pendingRecluster) {
@@ -269,6 +275,7 @@ class App {
                         const url = URL.createObjectURL(blob);
                         // Store both URL and blob for reuse during upload
                         this.thumbnailCache.set(resPath, { url, blob });
+                        this.thumbnailsCreatedSinceLastLog++;
                         if (resolver) resolver(url);
                     } else {
                         console.warn("ImageWorker failed:", error);
@@ -704,6 +711,34 @@ class App {
         // Actually, with sorting disabled in engine, indices are stable.
 
         return clusters;
+    }
+
+    cleanupThumbnails() {
+        if (!this.currentClusters || this.currentClusters.length === 0) return;
+
+        // 1. Get all paths currently being displayed
+        const activePaths = new Set();
+        this.currentClusters.forEach(cluster => {
+            cluster.representatives.forEach(rep => activePaths.add(rep.path));
+        });
+
+        // 2. Clear cache for paths NOT in the active set
+        let destroyed = 0;
+        for (const [path, data] of this.thumbnailCache.entries()) {
+            if (!activePaths.has(path)) {
+                URL.revokeObjectURL(data.url);
+                this.thumbnailCache.delete(path);
+                destroyed++;
+            }
+        }
+        this.thumbnailsDestroyedSinceLastLog += destroyed;
+
+        // 3. Log Summary
+        console.log(`%c[Images] Summary: ${this.thumbnailsCreatedSinceLastLog} Created | ${this.thumbnailsDestroyedSinceLastLog} Destroyed | ${this.thumbnailCache.size} in Cache. Files: Scanned Total ${this.currentEmbeddings.length}`, "color: #00bcd4; font-weight: bold;");
+
+        // Reset pass counters
+        this.thumbnailsCreatedSinceLastLog = 0;
+        this.thumbnailsDestroyedSinceLastLog = 0;
     }
 }
 

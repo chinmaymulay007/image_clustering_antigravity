@@ -29,8 +29,8 @@ self.onmessage = async (e) => {
         // 4. Send back the Blob (Transferrable)
         self.postMessage({ status: 'success', blob, path });
 
-        // Continuous Logging (Cyan)
-        console.log(`%c[Image Worker] Generated thumbnail for ${path.split('/').pop()}`, "color: #00bcd4;");
+        // Continuous Logging (Silenced for noise reduction)
+        // console.log(`%c[Image Worker] Generated thumbnail for ${path.split('/').pop()}`, "color: #00bcd4;");
     } catch (err) {
         self.postMessage({ status: 'error', error: err.message, path });
     }

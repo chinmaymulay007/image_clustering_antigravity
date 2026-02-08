@@ -145,10 +145,6 @@ export class FileSystemManager {
                     if (validExtensions.includes(ext)) {
                         const fullPath = relativePath ? `${relativePath}/${name}` : name;
                         images.push({ path: fullPath, handle: handle });
-                        // Log occasional file access
-                        if (images.length % 50 === 0) {
-                            console.log(`%c[FileSystem] Scanned ${images.length} files...`, "color: #fb8c00; font-size: 0.8rem;");
-                        }
                     }
                 } else if (handle.kind === 'directory') {
                     // Skip hidden folders, metadata folder, or previous output folders

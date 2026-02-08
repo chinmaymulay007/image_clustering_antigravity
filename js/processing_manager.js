@@ -167,7 +167,7 @@ export class ProcessingManager {
                         if (!img.handle) throw new Error("Handle is missing from image metadata");
 
                         const file = await img.handle.getFile();
-                        console.log(`%c[ProcessingManager] Prepared file: ${img.path} (${(file.size / 1024).toFixed(1)}KB)`, "color: #3b82f6; font-size: 0.75rem;");
+                        // console.log(`%c[ProcessingManager] Prepared file: ${img.path} (${(file.size / 1024).toFixed(1)}KB)`, "color: #3b82f6; font-size: 0.75rem;");
 
                         batchWithFiles.push({
                             ...img,
