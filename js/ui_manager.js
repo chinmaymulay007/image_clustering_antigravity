@@ -38,6 +38,8 @@ export class UIManager {
         this.statusSpinner = document.getElementById('status-spinner');
         this.aiStatusIndicator = document.getElementById('ai-status-indicator');
         this.aiMachineAnim = document.getElementById('ai-machine-anim');
+        this.aiPillStatusText = document.getElementById('ai-pill-status-text');
+        this.aiDynamicMetrics = document.getElementById('ai-dynamic-metrics');
         this.aiMetrics = document.getElementById('ai-metrics');
         this.lastSignificantEvent = '';
 
@@ -203,8 +205,9 @@ export class UIManager {
         // ETA
         if (stats.eta !== undefined && stats.eta !== null) {
             this.statEta.textContent = this.formatTime(stats.eta);
+        } else if (stats.currentAction && stats.currentAction.includes('▶️')) {
+            this.statEta.textContent = 'Calculating...';
         }
-        // DELETED: Resetting to '-' here was causing the flicker
 
         // Last Event (Right side)
         if (stats.lastEvent) {
@@ -244,13 +247,18 @@ export class UIManager {
                     this.aiStatusIndicator.textContent = isPaused ? '⏸️' : '🧠';
                 }
 
+                // brain is hidden when running by css (.running { display: none })
                 this.aiStatusIndicator.className = `ai-indicator ${(isPaused || isResuming) ? 'paused' : 'running'}`;
 
                 if (this.aiMachineAnim) {
                     const shouldShowAnim = !isPaused && (stats.currentAction.includes('🧠') || stats.currentAction.includes('▶️') || stats.currentAction.toLowerCase().includes('initializ'));
                     this.aiMachineAnim.classList.toggle('hidden', !shouldShowAnim);
-                    // Also toggle metrics visibility
-                    this.aiMetrics.classList.toggle('paused', isPaused);
+
+                    // Toggle Status Text
+                    this.aiPillStatusText.classList.toggle('hidden', !isPaused);
+
+                    // Toggle dynamic metrics
+                    this.aiDynamicMetrics.classList.toggle('paused', isPaused);
                 }
 
                 this.btnPauseResume.textContent = isPaused ? 'RESUME' : 'PAUSE';
@@ -270,11 +278,16 @@ export class UIManager {
                 }
             }
 
-            // Clear stats if paused
+            // Clear dynamic stats if paused
             if (stats.currentAction.includes('⏸️')) {
                 this.statSpeed.textContent = '-';
                 this.statEta.textContent = '-';
-                this.aiMetrics.classList.add('paused');
+                this.aiDynamicMetrics.classList.add('paused');
+            } else if (stats.currentAction.includes('▶️')) {
+                // Show calculating if resuming
+                this.statSpeed.textContent = 'Calculating...';
+                this.statEta.textContent = 'Calculating...';
+                this.aiDynamicMetrics.classList.remove('paused');
             }
         }
     }

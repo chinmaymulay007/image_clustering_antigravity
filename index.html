@@ -63,10 +63,40 @@
     </div>
 
     <div class="app-container">
-        <header>
-            <div class="header-actions">
-                <button id="btn-view-excluded" class="btn-header-action" title="Excluded Images">🗑️</button>
-                <button id="btn-settings" class="btn-header-action" title="Settings">⚙️</button>
+        <header style="display: flex; flex-direction: column; gap: 15px;">
+            <div class="header-top"
+                style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div class="brand-pill-container" style="display:flex; align-items:center; gap:20px;">
+                    <div class="brand">
+                        <h2>ClusterAI</h2>
+                    </div>
+                    <div id="ai-engine-pill" class="ai-engine-pill">
+                        <div class="ai-status-indicator-wrap">
+                            <span id="ai-status-indicator" class="ai-indicator paused">⏸️</span>
+                            <div id="ai-machine-anim" class="ai-machine-anim hidden">
+                                <span class="anim-input">🖼️</span>
+                                <span class="anim-machine">🎛️</span>
+                                <span class="anim-output">101</span>
+                            </div>
+                        </div>
+                        <span id="ai-pill-status-text" class="ai-status-text hidden">AI processing paused</span>
+                        <div id="ai-metrics" class="ai-metrics">
+                            <span class="metric">Processed: <strong id="stat-processed">0</strong>/<span
+                                    id="stat-total">0</span></span>
+                            <div id="ai-dynamic-metrics" class="ai-dynamic-metrics">
+                                <span class="metric-sep">|</span>
+                                <span class="metric">Speed: <strong id="stat-speed">-</strong></span>
+                                <span class="metric-sep">|</span>
+                                <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
+                            </div>
+                        </div>
+                        <button id="btn-pause-resume" class="btn-pause-tiny">RESUME</button>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-view-excluded" class="btn-header-action" title="Excluded Images">🗑️</button>
+                    <button id="btn-settings" class="btn-header-action" title="Settings">⚙️</button>
+                </div>
             </div>
         </header>
 
@@ -76,30 +106,6 @@
                 <span id="status-current-text">Ready to start...</span>
             </span>
             <span id="status-event"></span>
-        </div>
-
-        <div class="brand-pill-container" style="display:flex; align-items:center; gap:20px; margin-bottom: 10px;">
-            <div class="brand">
-                <h2>ClusterAI</h2>
-            </div>
-            <div id="ai-engine-pill" class="ai-engine-pill">
-                <div class="ai-status-indicator-wrap">
-                    <span id="ai-status-indicator" class="ai-indicator paused">⏸️</span>
-                    <div id="ai-machine-anim" class="ai-machine-anim hidden">
-                        <span class="anim-input">🖼️</span>
-                        <span class="anim-machine">⚙️</span>
-                        <span class="anim-output">101</span>
-                    </div>
-                </div>
-                <div id="ai-metrics" class="ai-metrics">
-                    <span class="metric"><strong id="stat-processed">0</strong>/<span id="stat-total">0</span></span>
-                    <span class="metric-sep">|</span>
-                    <span class="metric"><strong id="stat-speed">-</strong></span>
-                    <span class="metric-sep">|</span>
-                    <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
-                </div>
-                <button id="btn-pause-resume" class="btn-pause-tiny">RESUME</button>
-            </div>
         </div>
 
         <main class="cluster-grid" id="cluster-grid-container">

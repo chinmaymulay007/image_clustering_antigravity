@@ -16,10 +16,17 @@ body {
 
 header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 15px;
     padding: 10px 0 25px 0;
     border-bottom: 1px solid #374151;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
 }
 
 .brand {
@@ -689,12 +696,21 @@ header {
     transition: all 0.3s ease;
 }
 
-.ai-indicator.running {
-    color: #10b981;
-}
-
 .ai-indicator.paused {
     color: #f59e0b;
+}
+
+.ai-indicator.running {
+    display: none;
+    /* Hide brain when running as requested */
+}
+
+.ai-status-text {
+    color: #f59e0b;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 /* AI Machine Animation */
@@ -777,14 +793,19 @@ header {
     border-left: 1px solid rgba(49, 46, 129, 0.5);
     border-right: 1px solid rgba(49, 46, 129, 0.5);
     padding: 0 12px;
+}
+
+.ai-dynamic-metrics {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.ai-metrics.paused {
+.ai-dynamic-metrics.paused {
     opacity: 0;
     pointer-events: none;
     transform: translateX(10px);
-    /* Subtle slide out */
 }
 
 .metric-sep {
