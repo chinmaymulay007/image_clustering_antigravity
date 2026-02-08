@@ -54,6 +54,11 @@ class App {
     }
 
     handleApplySettings(settings) {
+        if (settings.k < this.frozenClusters.size) {
+            alert(`⚠️ Cannot reduce K to ${settings.k}.\n\nYou have ${this.frozenClusters.size} clusters frozen. Unfreeze some clusters first.`);
+            return;
+        }
+
         console.log("[App] Applying user settings:", settings);
         this.refreshInterval = settings.refreshInterval;
         this.k = settings.k;
