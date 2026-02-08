@@ -64,15 +64,27 @@
 
     <div class="app-container">
         <header>
-            <div class="brand" style="display:flex; align-items:center; gap:10px;">
-                <div class="header-actions">
-                    <button id="btn-settings"
-                        style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #374151; background: #1f2937; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s;"
-                        title="Settings">⚙️</button>
-                    <button id="btn-view-excluded"
-                        style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #374151; background: #1f2937; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s;"
-                        title="Excluded Images">🗑️</button>
+            <div class="brand">
+                <h2>ClusterAI</h2>
+                <div id="ai-engine-pill" class="ai-engine-pill">
+                    <span id="ai-status-indicator" class="ai-indicator paused">⏸️</span>
+                    <div class="ai-metrics">
+                        <span class="metric"><strong id="stat-processed">0</strong>/<span
+                                id="stat-total">0</span></span>
+                        <span class="metric"><strong id="stat-speed">-</strong></span>
+                        <span class="metric"><strong id="stat-eta">-</strong></span>
+                    </div>
+                    <button id="btn-pause-resume" class="btn-pause-tiny">RESUME</button>
                 </div>
+            </div>
+            <div class="header-actions">
+                <button id="btn-settings"
+                    style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #374151; background: #1f2937; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s;"
+                    title="Settings">⚙️</button>
+                <button id="btn-view-excluded"
+                    style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #374151; background: #1f2937; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s;"
+                    title="Excluded Images">🗑️</button>
+            </div>
         </header>
 
         <div id="status-bar" class="status-bar">
@@ -81,21 +93,6 @@
                 <span id="status-current-text">Ready to start...</span>
             </span>
             <span id="status-event"></span>
-        </div>
-
-        <div id="ai-engine-bar" class="ai-engine-bar">
-            <div class="ai-status">
-                <span id="ai-status-indicator" class="ai-indicator paused">⏸️ AI Engine Paused</span>
-                <div class="ai-metrics">
-                    <span class="metric">Processed: <strong id="stat-processed">0</strong>/<span
-                            id="stat-total">0</span></span>
-                    <span class="metric">Speed: <strong id="stat-speed">-</strong></span>
-                    <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
-                </div>
-            </div>
-            <div class="ai-controls">
-                <button id="btn-pause-resume" class="btn-pause">RESUME</button>
-            </div>
         </div>
 
         <main class="cluster-grid" id="cluster-grid-container">

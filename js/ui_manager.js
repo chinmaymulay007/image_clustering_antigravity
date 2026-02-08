@@ -230,18 +230,13 @@ export class UIManager {
             const isAIAction = stats.currentAction.includes('🧠') || stats.currentAction.includes('⏸️');
 
             if (isAIAction) {
-                // Route to AI Engine Bar
-                this.aiStatusIndicator.textContent = stats.currentAction.replace("AI Processing Paused.", "AI Engine Paused");
+                // Route to AI Engine Pill
+                const isPaused = stats.currentAction.includes('⏸️');
+                this.aiStatusIndicator.textContent = isPaused ? '⏸️' : '🧠';
+                this.aiStatusIndicator.className = `ai-indicator ${isPaused ? 'paused' : 'running'}`;
 
-                if (stats.currentAction.includes('⏸️')) {
-                    this.aiStatusIndicator.className = "ai-indicator paused";
-                    this.btnPauseResume.textContent = "RESUME";
-                    this.btnPauseResume.classList.remove('active');
-                } else {
-                    this.aiStatusIndicator.className = "ai-indicator running";
-                    this.btnPauseResume.textContent = "PAUSE";
-                    this.btnPauseResume.classList.add('active');
-                }
+                this.btnPauseResume.textContent = isPaused ? 'RESUME' : 'PAUSE';
+                this.btnPauseResume.classList.toggle('active', !isPaused);
             } else {
                 // Route to Global Status Bar
                 this.statusBarText.textContent = stats.currentAction;
