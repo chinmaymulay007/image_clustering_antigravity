@@ -577,3 +577,51 @@ header {
     margin-bottom: 10px;
     background: transparent;
 }
+
+/* Lock Toggle UI */
+.lock-toggle {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #374151;
+}
+
+.lock-toggle:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #4b5563;
+}
+
+.lock-toggle input {
+    display: none;
+}
+
+.lock-icon {
+    font-size: 1.3rem;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    filter: grayscale(1) opacity(0.4);
+    user-select: none;
+}
+
+.lock-toggle:hover .lock-icon {
+    filter: grayscale(0) opacity(0.8);
+}
+
+.lock-toggle.active {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(96, 165, 250, 0.4);
+}
+
+.lock-toggle.active .lock-icon {
+    filter: grayscale(0) opacity(1);
+    transform: scale(1.1);
+}
+
+.frozen .lock-icon {
+    color: #60a5fa;
+}

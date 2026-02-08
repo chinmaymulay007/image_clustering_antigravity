@@ -256,7 +256,7 @@ export class UIManager {
                     ? `Was Cluster ${cluster.movedFrom + 1} previously. `
                     : '';
                 const tooltip = `${moveTooltip}${driftCount} images replaced.`;
-                statusBadge = `<span class="freeze-badge" title="${tooltip}">🔒${moveHtml}${driftIcon}${driftHtml}</span>`;
+                statusBadge = `<span class="freeze-badge" title="${tooltip}">${moveHtml}${driftIcon}${driftHtml}</span>`;
             }
 
             const labelHtml = `<span class="cluster-name">${cluster.label || `Cluster ${index + 1}`}</span>`;
@@ -276,17 +276,28 @@ export class UIManager {
                 header.className = 'card-header';
                 header.style.cssText = 'display:flex; align-items:center; gap:10px; padding: 5px;';
 
+                const lockToggle = document.createElement('label');
+                lockToggle.className = 'lock-toggle';
+
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.className = 'cluster-checkbox';
-                checkbox.style.cssText = 'cursor:pointer; width:18px; height:18px;';
+
+                const lockIcon = document.createElement('span');
+                lockIcon.className = 'lock-icon';
+                lockIcon.innerHTML = '🔓';
+                card._lockIconNode = lockIcon; // Link
+
+                lockToggle.appendChild(checkbox);
+                lockToggle.appendChild(lockIcon);
+                card._lockToggleNode = lockToggle; // Link
 
                 const title = document.createElement('span');
                 title.className = 'cluster-title';
                 title.innerHTML = titleHtml;
                 card._titleNode = title; // Link
 
-                header.appendChild(checkbox);
+                header.appendChild(lockToggle);
                 header.appendChild(title);
                 card.appendChild(header);
 
@@ -301,6 +312,12 @@ export class UIManager {
             // ALWAYS Update dynamic UI states (frozen, title, styling)
             const checkbox = card.querySelector('.cluster-checkbox');
             const title = card._titleNode;
+
+            // Safety Link (in case card was reused from a previous version without links)
+            if (!card._lockToggleNode) {
+                card._lockToggleNode = card.querySelector('.lock-toggle');
+                card._lockIconNode = card.querySelector('.lock-icon');
+            }
 
             // Update title content if changed
             if (title.innerHTML !== titleHtml) {
@@ -320,9 +337,13 @@ export class UIManager {
                 card.classList.add('frozen');
                 checkbox.checked = true;
                 title.classList.add('frozen-title');
+                card._lockToggleNode.classList.add('active');
+                card._lockIconNode.innerHTML = '🔒';
             } else {
                 card.classList.remove('frozen');
                 title.classList.remove('frozen-title');
+                card._lockToggleNode.classList.remove('active');
+                card._lockIconNode.innerHTML = '🔓';
                 // Force uncheck if not frozen to maintain sync with engine state (esp. on auto-unfreeze)
                 checkbox.checked = false;
             }
@@ -330,29 +351,7 @@ export class UIManager {
             // Wire/Update checkbox behavior
             checkbox.onchange = () => {
                 if (checkbox.checked) {
-                    if (cluster.isFrozen) {
-                        // already frozen, no action? or maybe we want to allow selecting without freezing?
-                        // The existing logic tied selection to `onFreezeCluster`. 
-                        // "Freeze" implies "Keep this cluster".
-                        // So checking = Freeze. 
-                        this.callbacks.onFreezeCluster?.(index);
-                    } else {
-                        // User selected a non-frozen cluster. 
-                        // Does this freeze it? The original code says:
-                        // if (checkbox.checked) this.callbacks.onFreezeCluster?.(index);
-                        // So yes, selection == freezing in the current app logic?
-                        // Wait, the user request says "selecting 6 clusters".
-                        // If selecting IS freezing, then fine.
-                        // But if selection is just for "saving", we might need to decouple.
-                        // "Implementing Cluster Freezing" conversation suggests freezing is keeping it from changing.
-                        // For the purpose of "Proceed", we just need to know what is "selected".
-                        // If the previous app logic equated Checkbox == Freeze, we should stick to that unless asked otherwise.
-                        // BUT, for "Proceed", we just need to count checked boxes.
-
-                        // Let's assume Checkbox == Freeze for now as per previous logic, 
-                        // OR simply trigger a UI update.
-                        this.callbacks.onFreezeCluster?.(index);
-                    }
+                    this.callbacks.onFreezeCluster?.(index);
                 } else {
                     this.callbacks.onUnfreezeCluster?.(index);
                 }

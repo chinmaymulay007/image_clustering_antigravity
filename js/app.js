@@ -54,9 +54,20 @@ class App {
     }
 
     handleApplySettings(settings) {
-        if (settings.k < this.frozenClusters.size) {
-            alert(`⚠️ Cannot reduce K to ${settings.k}.\n\nYou have ${this.frozenClusters.size} clusters frozen. Unfreeze some clusters first.`);
+        const currentFrozenCount = this.frozenClusters.size;
+
+        if (settings.k < currentFrozenCount) {
+            alert(`⚠️ Cannot reduce K to ${settings.k}.\n\nYou have ${currentFrozenCount} clusters frozen. Unfreeze some clusters first.`);
             return;
+        }
+
+        // Check if any frozen clusters need to be "slid" down into the new range
+        const frozenIndices = Array.from(this.frozenClusters.keys());
+        const maxFrozenIndex = frozenIndices.length > 0 ? Math.max(...frozenIndices) : -1;
+
+        if (settings.k <= maxFrozenIndex) {
+            console.log(`[App] Defragmenting frozen clusters to fit into new K=${settings.k}`);
+            this.compactFrozenClusters(settings.k);
         }
 
         console.log("[App] Applying user settings:", settings);
@@ -705,6 +716,41 @@ class App {
         }
     }
 
+    compactFrozenClusters(newK) {
+        // Sort existing by index to preserve relative order where possible
+        const sortedFrozen = Array.from(this.frozenClusters.entries())
+            .sort((a, b) => a[0] - b[0]);
+
+        const newMap = new Map();
+        const takenIndices = new Set();
+
+        // Pass 1: Keep clusters that already fit in the new range
+        for (const [index, data] of sortedFrozen) {
+            if (index < newK) {
+                newMap.set(index, data);
+                takenIndices.add(index);
+            }
+        }
+
+        // Pass 2: Move clusters that were in "lost" slots into the first available holes
+        let nextAvailable = 0;
+        for (const [index, data] of sortedFrozen) {
+            if (index >= newK) {
+                while (takenIndices.has(nextAvailable)) {
+                    nextAvailable++;
+                }
+                if (nextAvailable < newK) {
+                    data.relocatedFrom = index; // Store movement for UI
+                    newMap.set(nextAvailable, data);
+                    takenIndices.add(nextAvailable);
+                    console.log(`%c[App] Relocating frozen cluster from slot ${index + 1} to ${nextAvailable + 1}`, "color: #f59e0b; font-weight: bold;");
+                }
+            }
+        }
+
+        this.frozenClusters = newMap;
+    }
+
     applyFrozenConstraints(clusters) {
         if (this.frozenClusters.size === 0) return clusters;
 
@@ -714,9 +760,12 @@ class App {
             const cluster = clusters[index];
             if (!cluster) return;
 
-            // 1. Mark as frozen
+            // 1. Mark as frozen and track movement
             cluster.isFrozen = true;
             cluster.driftCount = 0; // Visual drift is now 0 by definition
+            if (frozenData.relocatedFrom !== undefined) {
+                cluster.movedFrom = frozenData.relocatedFrom;
+            }
 
             // 2. VISUAL OVERRIDE: Restore Pinned Representatives
             // We use the exact 16 images stored at freeze time.
