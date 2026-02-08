@@ -663,6 +663,7 @@ class App {
             maxRadius: maxRadius,
             initialCoverage: inRadiusCount,
             initialTotalSize: cluster.members.length,
+            initialMembership: new Set(cluster.members.map(m => m.path)),
             initialIndex: clusterIndex
         });
 
@@ -716,18 +717,36 @@ class App {
             // We use the exact 16 images stored at freeze time.
             cluster.representatives = JSON.parse(JSON.stringify(frozenData.representatives));
 
-            // 3. DETAILED LOGGING (Radius Lock Stats)
-            const currentInRadius = cluster.members.filter(m =>
-                this.clustering.cosineDistance(m.embedding, frozenData.centroid) <= frozenData.maxRadius
-            ).length;
+            // 3. DETAILED LOGGING (Membership Churn)
+            const currentMembers = cluster.members;
+            const initialPaths = frozenData.initialMembership;
 
-            const absorptionCount = cluster.members.length - currentInRadius;
+            let coreRetained = 0;
+            let coreAbsorbed = 0;
+            let proximityRetained = 0;
+            let proximityAbsorbed = 0;
+
+            currentMembers.forEach(m => {
+                const isInRadius = this.clustering.cosineDistance(m.embedding, frozenData.centroid) <= frozenData.maxRadius;
+                const isInitial = initialPaths.has(m.path);
+
+                if (isInRadius) {
+                    if (isInitial) coreRetained++;
+                    else coreAbsorbed++;
+                } else {
+                    if (isInitial) proximityRetained++;
+                    else proximityAbsorbed++;
+                }
+            });
+
+            const currentPaths = new Set(currentMembers.map(m => m.path));
+            const departedCount = Array.from(initialPaths).filter(path => !currentPaths.has(path)).length;
 
             console.log(`%c[Freeze] Cluster ${index + 1}:`, "font-weight: bold;");
-            console.log(`  - Stability: 0.0% Visual Drift (Pinnned 16 representatives)`);
-            console.log(`  - Radius Lock: ${currentInRadius} images are forced-locked (Initial: ${frozenData.initialCoverage})`);
-            console.log(`  - Absorption: ${absorptionCount} new images claimed via proximity`);
-            console.log(`  - Total logical size: ${cluster.members.length} (Initial: ${frozenData.initialTotalSize})`);
+            console.log(`  - Core Lock: ${coreRetained + coreAbsorbed} images (${coreRetained} retained | ${coreAbsorbed} absorbed) | Forced`);
+            console.log(`  - Proximity: ${proximityRetained + proximityAbsorbed} total (${proximityRetained} retained | ${proximityAbsorbed} absorbed)`);
+            console.log(`  - Departures: ${departedCount} images left for other clusters`);
+            console.log(`  - Cluster Size: ${currentMembers.length} (Initial: ${frozenData.initialTotalSize})`);
         });
 
         // Sync frozenClusters map if indices shifted (though sorting is disabled, safety first)
