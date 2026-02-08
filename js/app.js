@@ -219,7 +219,14 @@ class App {
 
                     // Update UI
                     this.ui.renderClusters(this.currentClusters);
-                    this.cleanupThumbnails();
+
+                    // Immediate Cleanup (RAM), but Delay Logging until thumbnails are ready
+                    this.cleanupThumbnails(false); // false = don't log yet
+
+                    // If everything was already in cache, log immediately
+                    if (this.thumbnailPromises.size === 0) {
+                        this.logImageSummary();
+                    }
 
                     // If a re-cluster was requested while we were busy, do it now
                     if (this.pendingRecluster) {
@@ -234,16 +241,25 @@ class App {
 
         const frozenIndices = Array.from(this.frozenClusters.keys());
         const frozenRadii = {};
+        const frozenCentroids = {};
+
+        if (this.frozenClusters.size > 0) {
+            this.frozenClusters.forEach((data, index) => {
+                frozenRadii[index] = data.maxRadius;
+                frozenCentroids[index] = data.centroid;
+            });
+        }
+
         const previousCentroids = this.lastCentroids ? this.lastCentroids.map(c => [...c]) : null;
 
         // If K changed or centroids don't exist, we can't easily warm start with frozen ones 
         // unless we force the worker to respect the specific indices.
         // Actually, previousCentroids helps Lloyd's init.
         if (previousCentroids && previousCentroids.length === this.k) {
+            // ... (Optional: we already have frozenCentroids handling the anchors, but keeping consistency)
             this.frozenClusters.forEach((data, index) => {
                 if (index < previousCentroids.length) {
                     previousCentroids[index] = [...data.centroid];
-                    frozenRadii[index] = data.maxRadius;
                 }
             });
         }
@@ -254,7 +270,8 @@ class App {
             threshold: this.threshold,
             previousCentroids: previousCentroids,
             frozenIndices: frozenIndices,
-            frozenRadii: frozenRadii
+            frozenRadii: frozenRadii,
+            frozenCentroids: frozenCentroids
         });
     }
 
@@ -281,7 +298,13 @@ class App {
                         console.warn("ImageWorker failed:", error);
                         if (resolver) resolver(null);
                     }
+
                     this.thumbnailPromises.delete(resPath);
+
+                    // Check if the current "batch" is complete to log summary
+                    if (this.thumbnailPromises.size === 0) {
+                        this.logImageSummary();
+                    }
                 };
             }
 
@@ -713,7 +736,7 @@ class App {
         return clusters;
     }
 
-    cleanupThumbnails() {
+    cleanupThumbnails(shouldLog = true) {
         if (!this.currentClusters || this.currentClusters.length === 0) return;
 
         // 1. Get all paths currently being displayed
@@ -733,7 +756,14 @@ class App {
         }
         this.thumbnailsDestroyedSinceLastLog += destroyed;
 
-        // 3. Log Summary
+        if (shouldLog) {
+            this.logImageSummary();
+        }
+    }
+
+    logImageSummary() {
+        if (this.thumbnailsCreatedSinceLastLog === 0 && this.thumbnailsDestroyedSinceLastLog === 0) return;
+
         console.log(`%c[Images] Summary: ${this.thumbnailsCreatedSinceLastLog} Created | ${this.thumbnailsDestroyedSinceLastLog} Destroyed | ${this.thumbnailCache.size} in Cache. Files: Scanned Total ${this.currentEmbeddings.length}`, "color: #00bcd4; font-weight: bold;");
 
         // Reset pass counters
