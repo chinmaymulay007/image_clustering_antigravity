@@ -37,7 +37,8 @@ export class UIManager {
         this.statusEvent = document.getElementById('status-event');
         this.statusSpinner = document.getElementById('status-spinner');
         this.aiStatusIndicator = document.getElementById('ai-status-indicator');
-        this.aiPillSpinner = document.getElementById('ai-pill-spinner');
+        this.aiMachineAnim = document.getElementById('ai-machine-anim');
+        this.aiMetrics = document.getElementById('ai-metrics');
         this.lastSignificantEvent = '';
 
         // Action Selection Modal
@@ -202,9 +203,8 @@ export class UIManager {
         // ETA
         if (stats.eta !== undefined && stats.eta !== null) {
             this.statEta.textContent = this.formatTime(stats.eta);
-        } else if (!stats.currentAction || !stats.currentAction.includes('⏸️')) {
-            this.statEta.textContent = '-';
         }
+        // DELETED: Resetting to '-' here was causing the flicker
 
         // Last Event (Right side)
         if (stats.lastEvent) {
@@ -246,9 +246,11 @@ export class UIManager {
 
                 this.aiStatusIndicator.className = `ai-indicator ${(isPaused || isResuming) ? 'paused' : 'running'}`;
 
-                if (this.aiPillSpinner) {
-                    const shouldShowSpinner = !isPaused && (stats.currentAction.includes('🧠') || stats.currentAction.includes('▶️') || stats.currentAction.toLowerCase().includes('initializ'));
-                    this.aiPillSpinner.classList.toggle('hidden', !shouldShowSpinner);
+                if (this.aiMachineAnim) {
+                    const shouldShowAnim = !isPaused && (stats.currentAction.includes('🧠') || stats.currentAction.includes('▶️') || stats.currentAction.toLowerCase().includes('initializ'));
+                    this.aiMachineAnim.classList.toggle('hidden', !shouldShowAnim);
+                    // Also toggle metrics visibility
+                    this.aiMetrics.classList.toggle('paused', isPaused);
                 }
 
                 this.btnPauseResume.textContent = isPaused ? 'RESUME' : 'PAUSE';
@@ -272,6 +274,7 @@ export class UIManager {
             if (stats.currentAction.includes('⏸️')) {
                 this.statSpeed.textContent = '-';
                 this.statEta.textContent = '-';
+                this.aiMetrics.classList.add('paused');
             }
         }
     }
