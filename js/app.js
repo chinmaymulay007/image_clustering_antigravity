@@ -136,12 +136,12 @@ class App {
     }
 
     async handleExclude(path) {
-        // Check if this path is a CURRENT frozen representative
+        // Check if this path belongs to ANY frozen cluster
         for (const cluster of this.currentClusters) {
             if (cluster.isFrozen) {
-                const isFrozenRep = cluster.representatives.some(r => r.path === path);
-                if (isFrozenRep) {
-                    alert("⚠️ Cannot exclude: This image is a frozen representative.\n\nUnfreeze the cluster first.");
+                const isMember = cluster.members.some(m => m.path === path);
+                if (isMember) {
+                    alert("⚠️ Cannot exclude: This image belongs to a frozen cluster.\n\nUnfreeze the cluster first.");
                     return;
                 }
             }
@@ -632,13 +632,14 @@ class App {
             representatives: JSON.parse(JSON.stringify(reps)), // Pinned set
             maxRadius: maxRadius,
             initialCoverage: inRadiusCount,
+            initialTotalSize: cluster.members.length,
             initialIndex: clusterIndex
         });
 
         cluster.isFrozen = true;
         cluster.driftCount = 0;
 
-        console.log(`[App] %cFrozen cluster ${clusterIndex + 1} | Radius: ${maxRadius.toFixed(4)} | Initial Radius Lock Coverage: ${inRadiusCount} images`, "color: #10b981; font-weight: bold;");
+        console.log(`[App] %cFrozen cluster ${clusterIndex + 1} | Radius: ${maxRadius.toFixed(4)} | Initial Radius Lock Coverage: ${inRadiusCount} images | Initial Total Size: ${cluster.members.length}`, "color: #10b981; font-weight: bold;");
 
         this.ui.renderClusters(this.currentClusters);
     }
@@ -696,7 +697,7 @@ class App {
             console.log(`  - Stability: 0.0% Visual Drift (Pinnned 16 representatives)`);
             console.log(`  - Radius Lock: ${currentInRadius} images are forced-locked (Initial: ${frozenData.initialCoverage})`);
             console.log(`  - Absorption: ${absorptionCount} new images claimed via proximity`);
-            console.log(`  - Total logical size: ${cluster.members.length}`);
+            console.log(`  - Total logical size: ${cluster.members.length} (Initial: ${frozenData.initialTotalSize})`);
         });
 
         // Sync frozenClusters map if indices shifted (though sorting is disabled, safety first)
