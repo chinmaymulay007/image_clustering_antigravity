@@ -37,6 +37,7 @@ export class UIManager {
         this.statusEvent = document.getElementById('status-event');
         this.statusSpinner = document.getElementById('status-spinner');
         this.aiStatusIndicator = document.getElementById('ai-status-indicator');
+        this.aiPillSpinner = document.getElementById('ai-pill-spinner');
         this.lastSignificantEvent = '';
 
         // Action Selection Modal
@@ -199,9 +200,9 @@ export class UIManager {
         }
 
         // ETA
-        if (stats.eta) {
+        if (stats.eta !== undefined && stats.eta !== null) {
             this.statEta.textContent = this.formatTime(stats.eta);
-        } else {
+        } else if (!stats.currentAction || !stats.currentAction.includes('⏸️')) {
             this.statEta.textContent = '-';
         }
 
@@ -227,13 +228,28 @@ export class UIManager {
             this.aiStatusIndicator.textContent = "✅ AI Engine Complete";
             this.aiStatusIndicator.className = "ai-indicator running";
         } else if (stats.currentAction) {
-            const isAIAction = stats.currentAction.includes('🧠') || stats.currentAction.includes('⏸️');
+            const isAIAction = stats.currentAction.includes('🧠') ||
+                stats.currentAction.includes('⏸️') ||
+                stats.currentAction.includes('▶️') ||
+                stats.currentAction.toLowerCase().includes('ai worker');
 
             if (isAIAction) {
                 // Route to AI Engine Pill
                 const isPaused = stats.currentAction.includes('⏸️');
-                this.aiStatusIndicator.textContent = isPaused ? '⏸️' : '🧠';
-                this.aiStatusIndicator.className = `ai-indicator ${isPaused ? 'paused' : 'running'}`;
+                const isResuming = stats.currentAction.includes('▶️');
+
+                if (isResuming) {
+                    this.aiStatusIndicator.textContent = '▶️';
+                } else {
+                    this.aiStatusIndicator.textContent = isPaused ? '⏸️' : '🧠';
+                }
+
+                this.aiStatusIndicator.className = `ai-indicator ${(isPaused || isResuming) ? 'paused' : 'running'}`;
+
+                if (this.aiPillSpinner) {
+                    const shouldShowSpinner = !isPaused && (stats.currentAction.includes('🧠') || stats.currentAction.includes('▶️') || stats.currentAction.toLowerCase().includes('initializ'));
+                    this.aiPillSpinner.classList.toggle('hidden', !shouldShowSpinner);
+                }
 
                 this.btnPauseResume.textContent = isPaused ? 'RESUME' : 'PAUSE';
                 this.btnPauseResume.classList.toggle('active', !isPaused);

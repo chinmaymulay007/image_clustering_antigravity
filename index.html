@@ -67,12 +67,17 @@
             <div class="brand">
                 <h2>ClusterAI</h2>
                 <div id="ai-engine-pill" class="ai-engine-pill">
-                    <span id="ai-status-indicator" class="ai-indicator paused">⏸️</span>
+                    <div class="ai-status-indicator-wrap">
+                        <span id="ai-status-indicator" class="ai-indicator paused">⏸️</span>
+                        <span id="ai-pill-spinner" class="spinner-tiny hidden"></span>
+                    </div>
                     <div class="ai-metrics">
                         <span class="metric"><strong id="stat-processed">0</strong>/<span
                                 id="stat-total">0</span></span>
+                        <span class="metric-sep">|</span>
                         <span class="metric"><strong id="stat-speed">-</strong></span>
-                        <span class="metric"><strong id="stat-eta">-</strong></span>
+                        <span class="metric-sep">|</span>
+                        <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
                     </div>
                     <button id="btn-pause-resume" class="btn-pause-tiny">RESUME</button>
                 </div>

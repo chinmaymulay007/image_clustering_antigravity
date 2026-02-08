@@ -32,7 +32,7 @@ export class ProcessingManager {
     async loadModel() {
         if (this.worker) return;
 
-        if (this.onProgress) this.onProgress({ currentAction: "⚡ Initializing AI Worker..." });
+        if (this.onProgress) this.onProgress({ currentAction: "🧠 Initializing AI Worker..." });
         console.log("%c[ProcessingManager] Initializing AI Worker...", "color: #3f51b5; font-weight: bold;");
         this.worker = new Worker('js/ai_worker.js', { type: 'module' });
 
