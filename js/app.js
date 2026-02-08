@@ -254,7 +254,12 @@ class App {
                     if (this.thumbnailPromises.size > 0) {
                         this.ui.updateStats({ currentAction: `🖼️ Loading thumbnails (${this.thumbnailPromises.size})...` });
                     } else {
-                        this.ui.updateStats({ currentAction: this.processing.isRunning ? "✅ Clusters updated." : "✅ Ready." });
+                        const processedCount = this.processing.processedPaths.size;
+                        const msg = `✅ Clusters updated based on available ${processedCount} images data.`;
+                        this.ui.updateStats({
+                            currentAction: this.processing.isRunning ? msg : "✅ Ready.",
+                            lastEvent: msg // Also show in last event area for persistence
+                        });
                     }
 
                     // Immediate Cleanup (RAM), but Delay Logging until thumbnails are ready

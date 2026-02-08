@@ -645,31 +645,50 @@ header {
 }
 
 
-/* Status Bar (Global Activities) */
-.status-bar {
-    background: #111827;
-    /* Darker than before */
-    padding: 12px 20px;
-    font-size: 0.95rem;
-    border-bottom: 1px solid #374151;
+/* Modern Sleek Status Bar */
+.status-bar-modern {
+    background: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(55, 65, 81, 0.5);
+    border-radius: 12px;
+    padding: 10px 20px;
+    margin: 15px auto;
+    width: fit-content;
+    min-width: 50%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
+    transition: all 0.3s ease;
+}
+
+.status-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 0.9rem;
     color: #9ca3af;
-    margin-bottom: 10px;
 }
 
 #status-current {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: #e5e7eb;
+    gap: 10px;
+    color: #f3f4f6;
+}
+
+#status-current-text {
+    max-width: 400px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #status-event {
-    font-style: italic;
     color: #60a5fa;
     font-weight: 500;
+    padding-left: 15px;
+    border-left: 1px solid rgba(55, 65, 81, 0.8);
 }
 
 /* AI Engine Pill (Compact) */
@@ -702,22 +721,23 @@ header {
 
 .ai-indicator.running {
     display: none;
-    /* Hide brain when running as requested */
+    /* Hide brain emoji when running */
 }
 
 .ai-status-text {
     color: #f59e0b;
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-weight: 400;
+    /* Not bold */
+    font-size: 0.8rem;
+    text-transform: lowercase;
+    opacity: 0.8;
 }
 
 /* AI Machine Animation */
 .ai-machine-anim {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-size: 0.9rem;
     position: relative;
     overflow: hidden;
@@ -729,13 +749,29 @@ header {
 }
 
 .anim-machine {
-    animation: spin 3s infinite linear;
-    z-index: 2;
+    display: inline-block;
+    filter: drop-shadow(0 0 5px rgba(139, 92, 246, 0.5));
+    animation: brain-pulse 2s infinite ease-in-out;
+}
+
+@keyframes brain-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.3));
+    }
+
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.6));
+    }
 }
 
 .anim-output {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
+    /* Smaller */
     color: #10b981;
     animation: output-flow 1.5s infinite linear;
     opacity: 0;
@@ -799,13 +835,12 @@ header {
     display: flex;
     align-items: center;
     gap: 10px;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .ai-dynamic-metrics.paused {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(10px);
+    display: none;
+    /* remove gap when paused */
 }
 
 .metric-sep {
@@ -848,6 +883,55 @@ header {
 
 .btn-pause-tiny.active {
     color: #10b981;
+}
+
+/* Floating Controls (Modern Pill) */
+.floating-controls-container {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: rgba(17, 24, 39, 0.85);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    padding: 10px 25px;
+    border-radius: 40px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.selection-indicator-pill {
+    color: #10b981;
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding-right: 15px;
+    border-right: 1px solid rgba(55, 65, 81, 1);
+}
+
+.btn-primary-pill {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+
+.btn-primary-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    filter: brightness(1.1);
+}
+
+.btn-primary-pill:active {
+    transform: scale(0.95);
 }
 
 /* Status Bar Info */

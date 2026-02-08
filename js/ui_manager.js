@@ -254,10 +254,10 @@ export class UIManager {
                     const shouldShowAnim = !isPaused && (stats.currentAction.includes('🧠') || stats.currentAction.includes('▶️') || stats.currentAction.toLowerCase().includes('initializ'));
                     this.aiMachineAnim.classList.toggle('hidden', !shouldShowAnim);
 
-                    // Toggle Status Text
+                    // Toggle "paused" text
                     this.aiPillStatusText.classList.toggle('hidden', !isPaused);
 
-                    // Toggle dynamic metrics
+                    // Toggle dynamic metrics (Speed/ETA) - use display:none via class
                     this.aiDynamicMetrics.classList.toggle('paused', isPaused);
                 }
 
@@ -282,11 +282,10 @@ export class UIManager {
             if (stats.currentAction.includes('⏸️')) {
                 this.statSpeed.textContent = '-';
                 this.statEta.textContent = '-';
-                this.aiDynamicMetrics.classList.add('paused');
             } else if (stats.currentAction.includes('▶️')) {
-                // Show calculating if resuming
-                this.statSpeed.textContent = 'Calculating...';
-                this.statEta.textContent = 'Calculating...';
+                // Show calculating if resuming - smaller text
+                this.statSpeed.textContent = '...';
+                this.statEta.textContent = '...';
                 this.aiDynamicMetrics.classList.remove('paused');
             }
         }

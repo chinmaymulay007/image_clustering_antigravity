@@ -63,10 +63,9 @@
     </div>
 
     <div class="app-container">
-        <header style="display: flex; flex-direction: column; gap: 15px;">
-            <div class="header-top"
-                style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div class="brand-pill-container" style="display:flex; align-items:center; gap:20px;">
+        <header class="app-header">
+            <div class="header-top">
+                <div class="brand-pill-container">
                     <div class="brand">
                         <h2>ClusterAI</h2>
                     </div>
@@ -75,11 +74,11 @@
                             <span id="ai-status-indicator" class="ai-indicator paused">⏸️</span>
                             <div id="ai-machine-anim" class="ai-machine-anim hidden">
                                 <span class="anim-input">🖼️</span>
-                                <span class="anim-machine">🎛️</span>
+                                <span class="anim-machine">🧠</span>
                                 <span class="anim-output">101</span>
                             </div>
                         </div>
-                        <span id="ai-pill-status-text" class="ai-status-text hidden">AI processing paused</span>
+                        <span id="ai-pill-status-text" class="ai-status-text hidden">paused</span>
                         <div id="ai-metrics" class="ai-metrics">
                             <span class="metric">Processed: <strong id="stat-processed">0</strong>/<span
                                     id="stat-total">0</span></span>
@@ -100,25 +99,26 @@
             </div>
         </header>
 
-        <div id="status-bar" class="status-bar">
-            <span id="status-current">
-                <span id="status-spinner" class="spinner hidden"></span>
-                <span id="status-current-text">Ready to start...</span>
-            </span>
-            <span id="status-event"></span>
+        <div id="status-bar" class="status-bar-modern">
+            <div class="status-content">
+                <span id="status-current">
+                    <span id="status-spinner" class="spinner hidden"></span>
+                    <span id="status-current-text">Ready to start...</span>
+                </span>
+                <span id="status-event"></span>
+            </div>
         </div>
 
         <main class="cluster-grid" id="cluster-grid-container">
             <!-- Clusters will be injected here -->
         </main>
 
-        <footer class="footer" style="display: flex; align-items: center; justify-content: center; gap: 20px;">
-            <div id="selection-indicator" class="selection-indicator"
-                style="font-weight: 600; color: #10b981; font-size: 1.1rem; display: none;">
+        <div class="floating-controls-container">
+            <div id="selection-indicator" class="selection-indicator-pill hidden">
                 <span id="selection-count">0</span>/6 Selected
             </div>
-            <button id="btn-proceed" class="btn-primary">🚀 PROCEED</button>
-        </footer>
+            <button id="btn-proceed" class="btn-primary-pill">🚀 PROCEED</button>
+        </div>
 
         <!-- Settings Modal -->
         <div id="modal-settings" class="modal hidden">
@@ -157,15 +157,16 @@
                         </div>
                     </div>
                     <div class="setting-group">
-                        <label>Cluster Refresh Rate (Images)</label>
+                        <label>Auto-Cluster Trigger (Batch Size)</label>
                         <div class="option-group" id="batch-options">
                             <button class="opt-btn active" data-value="20">20</button>
                             <button class="opt-btn" data-value="40">40</button>
                             <button class="opt-btn" data-value="100">100</button>
                             <input type="hidden" id="setting-refresh" value="20">
                         </div>
-                        <small style="color:#9ca3af; display:block; margin-top:5px;">How often the UI updates during
-                            scan.</small>
+                        <small style="color:#9ca3af; display:block; margin-top:5px;">
+                            Clustering updates automatically every time this many new images are processed.
+                        </small>
                     </div>
                 </div>
                 <div class="modal-footer">
