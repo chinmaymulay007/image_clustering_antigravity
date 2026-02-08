@@ -36,6 +36,7 @@ export class UIManager {
         this.statusBarText = document.getElementById('status-current-text');
         this.statusEvent = document.getElementById('status-event');
         this.statusSpinner = document.getElementById('status-spinner');
+        this.aiStatusIndicator = document.getElementById('ai-status-indicator');
         this.lastSignificantEvent = '';
 
         // Action Selection Modal
@@ -216,28 +217,48 @@ export class UIManager {
             this.statusEvent.textContent = this.lastSignificantEvent;
         }
 
-        // Current Activity (Left side)
+        // Current Activity (Global Status Bar & AI Engine Indicator)
         if (stats.completed) {
             this.btnPauseResume.textContent = "COMPLETE";
             this.btnPauseResume.disabled = true;
             this.statusBarText.textContent = "✅ Processing Complete. Ready to save.";
             this.statusSpinner.classList.add('hidden');
+
+            this.aiStatusIndicator.textContent = "✅ AI Engine Complete";
+            this.aiStatusIndicator.className = "ai-indicator running";
         } else if (stats.currentAction) {
-            this.statusBarText.textContent = stats.currentAction;
+            const isAIAction = stats.currentAction.includes('🧠') || stats.currentAction.includes('⏸️');
 
-            // Show spinner if activity looks like background work
-            const isProcessing = stats.currentAction.toLowerCase().includes('ing') ||
-                stats.currentAction.toLowerCase().includes('scan');
-            const isPaused = stats.currentAction.includes('⏸️');
+            if (isAIAction) {
+                // Route to AI Engine Bar
+                this.aiStatusIndicator.textContent = stats.currentAction.replace("AI Processing Paused.", "AI Engine Paused");
 
-            if (isProcessing && !isPaused) {
-                this.statusSpinner.classList.remove('hidden');
+                if (stats.currentAction.includes('⏸️')) {
+                    this.aiStatusIndicator.className = "ai-indicator paused";
+                    this.btnPauseResume.textContent = "RESUME";
+                    this.btnPauseResume.classList.remove('active');
+                } else {
+                    this.aiStatusIndicator.className = "ai-indicator running";
+                    this.btnPauseResume.textContent = "PAUSE";
+                    this.btnPauseResume.classList.add('active');
+                }
             } else {
-                this.statusSpinner.classList.add('hidden');
+                // Route to Global Status Bar
+                this.statusBarText.textContent = stats.currentAction;
+
+                // Show spinner if activity looks like background work (excluding AI)
+                const isWork = stats.currentAction.toLowerCase().includes('ing') ||
+                    stats.currentAction.toLowerCase().includes('scan');
+
+                if (isWork) {
+                    this.statusSpinner.classList.remove('hidden');
+                } else {
+                    this.statusSpinner.classList.add('hidden');
+                }
             }
 
             // Clear stats if paused
-            if (isPaused) {
+            if (stats.currentAction.includes('⏸️')) {
                 this.statSpeed.textContent = '-';
                 this.statEta.textContent = '-';
             }
@@ -246,8 +267,7 @@ export class UIManager {
 
     setPauseState(isPaused) {
         this.btnPauseResume.textContent = isPaused ? 'RESUME' : 'PAUSE';
-        this.btnPauseResume.classList.toggle('btn-primary', isPaused);
-        this.btnPauseResume.classList.toggle('btn-secondary', !isPaused);
+        this.btnPauseResume.classList.toggle('active', !isPaused);
     }
 
     renderClusters(clusters) {

@@ -123,7 +123,7 @@ class App {
                     this.ui.updateStats({ currentAction: "⏸️ Database loaded. Ready to resume." });
                     this.ui.setPauseState(true); // Ensure button says "RESUME"
                 } else {
-                    this.ui.updateStats({ currentAction: "✅ Scan complete. Starting AI analysis..." });
+                    this.ui.updateStats({ currentAction: "🧠 Scan complete. Starting AI analysis..." });
                     this.ui.setPauseState(false);
                 }
 

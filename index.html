@@ -65,31 +65,37 @@
     <div class="app-container">
         <header>
             <div class="brand" style="display:flex; align-items:center; gap:10px;">
-                <button id="btn-settings"
-                    style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #374151; background: #1f2937; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s;"
-                    title="Settings">⚙️</button>
-                <button id="btn-view-excluded"
-                    style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #374151; background: #1f2937; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s;"
-                    title="Excluded Images">🗑️</button>
-                <h2>ClusterAI</h2>
-            </div>
-            <div class="stats-bar" id="stats-bar">
-                <span>Processed: <strong id="stat-processed">0</strong>/<span id="stat-total">0</span></span>
-                <span>Speed: <strong id="stat-speed">-</strong></span>
-                <span>ETA: <strong id="stat-eta">-</strong></span>
-            </div>
-            <div class="controls">
-                <button id="btn-pause-resume" class="btn-secondary">PAUSE</button>
-            </div>
+                <div class="header-actions">
+                    <button id="btn-settings"
+                        style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #374151; background: #1f2937; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s;"
+                        title="Settings">⚙️</button>
+                    <button id="btn-view-excluded"
+                        style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #374151; background: #1f2937; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s;"
+                        title="Excluded Images">🗑️</button>
+                </div>
         </header>
 
-        <div id="status-bar"
-            style="background: #1f2937; padding: 6px 12px; font-size: 0.82rem; border-bottom: 1px solid #374151; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <span id="status-current" style="color: #d1d5db; display: flex; align-items: center; gap: 6px;">
+        <div id="status-bar" class="status-bar">
+            <span id="status-current">
                 <span id="status-spinner" class="spinner hidden"></span>
                 <span id="status-current-text">Ready to start...</span>
             </span>
-            <span id="status-event" style="color: #9ca3af; font-style: italic;"></span>
+            <span id="status-event"></span>
+        </div>
+
+        <div id="ai-engine-bar" class="ai-engine-bar">
+            <div class="ai-status">
+                <span id="ai-status-indicator" class="ai-indicator paused">⏸️ AI Engine Paused</span>
+                <div class="ai-metrics">
+                    <span class="metric">Processed: <strong id="stat-processed">0</strong>/<span
+                            id="stat-total">0</span></span>
+                    <span class="metric">Speed: <strong id="stat-speed">-</strong></span>
+                    <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
+                </div>
+            </div>
+            <div class="ai-controls">
+                <button id="btn-pause-resume" class="btn-pause">RESUME</button>
+            </div>
         </div>
 
         <main class="cluster-grid" id="cluster-grid-container">
@@ -97,7 +103,8 @@
         </main>
 
         <footer class="footer" style="display: flex; align-items: center; justify-content: center; gap: 20px;">
-            <div id="selection-indicator" class="selection-indicator" style="font-weight: 600; color: #10b981; font-size: 1.1rem; display: none;">
+            <div id="selection-indicator" class="selection-indicator"
+                style="font-weight: 600; color: #10b981; font-size: 1.1rem; display: none;">
                 <span id="selection-count">0</span>/6 Selected
             </div>
             <button id="btn-proceed" class="btn-primary">🚀 PROCEED</button>
@@ -204,25 +211,31 @@
                 <button id="btn-close-action" class="btn-close">×</button>
             </div>
             <div class="modal-body">
-                
+
                 <!-- Primary Action: Upload -->
-                <div class="action-section primary-action-section" style="margin-bottom: 20px; border-color: #10b981; background: rgba(16, 185, 129, 0.05);">
-                    <h4 style="margin-top: 0; color: #10b981; display: flex; align-items: center; gap: 8px; font-size: 1.1rem;">
+                <div class="action-section primary-action-section"
+                    style="margin-bottom: 20px; border-color: #10b981; background: rgba(16, 185, 129, 0.05);">
+                    <h4
+                        style="margin-top: 0; color: #10b981; display: flex; align-items: center; gap: 8px; font-size: 1.1rem;">
                         🌍 Upload to Passfaces
                     </h4>
                     <p style="font-size: 0.9rem; color: #cbd5e1; margin-bottom: 15px;">
-                        Initialize your Passfaces setup. <br><span style="font-size: 0.8rem; color:#9ca3af;">(Requires exactly 6 clusters of 16 images)</span>
+                        Initialize your Passfaces setup. <br><span style="font-size: 0.8rem; color:#9ca3af;">(Requires
+                            exactly 6 clusters of 16 images)</span>
                     </p>
-                    
+
                     <div id="passfaces-upload-container">
                         <div class="input-group" style="margin-bottom: 12px;">
-                            <input type="text" id="passfaces-username" placeholder="Enter Username" 
+                            <input type="text" id="passfaces-username" placeholder="Enter Username"
                                 style="width: 100%; padding: 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; box-sizing: border-box;">
                         </div>
-                        <button id="btn-upload-passfaces" class="btn-primary" disabled style="width: 100%; background: #10b981; font-weight: bold; padding: 14px;">
+                        <button id="btn-upload-passfaces" class="btn-primary" disabled
+                            style="width: 100%; background: #10b981; font-weight: bold; padding: 14px;">
                             📤 UPLOAD TO PASSFACES
                         </button>
-                        <p id="upload-error-msg" style="color: #ef4444; font-size: 0.8rem; margin-top: 8px; display: none; background: rgba(239, 68, 68, 0.1); padding: 8px; border-radius: 4px;"></p>
+                        <p id="upload-error-msg"
+                            style="color: #ef4444; font-size: 0.8rem; margin-top: 8px; display: none; background: rgba(239, 68, 68, 0.1); padding: 8px; border-radius: 4px;">
+                        </p>
                     </div>
                 </div>
 
@@ -230,25 +243,29 @@
                 <div class="backup-options" style="border-top: 1px solid #374151; padding-top: 15px;">
                     <details>
                         <summary style="font-size: 0.85rem; color: #9ca3af; cursor: pointer; user-select: none;">
-                             Or save locally (Backup Option)
+                            Or save locally (Backup Option)
                         </summary>
-                        <div class="action-section" style="margin-top: 10px; padding: 15px; border: 1px dashed #4b5563; background: transparent;">
-                            <h4 style="margin-top: 0; color: #60a5fa; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
+                        <div class="action-section"
+                            style="margin-top: 10px; padding: 15px; border: 1px dashed #4b5563; background: transparent;">
+                            <h4
+                                style="margin-top: 0; color: #60a5fa; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
                                 📁 Save to Device
                             </h4>
                             <p style="font-size: 0.8rem; color: #9ca3af; margin-bottom: 12px;">
                                 Save selected clusters as folders on your local machine.
                             </p>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                <button id="btn-save-same" class="btn-secondary" style="font-size: 0.8rem; padding: 8px;">Source Folder</button>
-                                <button id="btn-save-diff" class="btn-secondary" style="font-size: 0.8rem; padding: 8px;">Pick Location...</button>
+                                <button id="btn-save-same" class="btn-secondary"
+                                    style="font-size: 0.8rem; padding: 8px;">Source Folder</button>
+                                <button id="btn-save-diff" class="btn-secondary"
+                                    style="font-size: 0.8rem; padding: 8px;">Pick Location...</button>
                             </div>
                         </div>
                     </details>
                 </div>
 
             </div>
-            
+
         </div>
     </div>
     <script src="//cdn.jsdelivr.net/npm/eruda"></script>
