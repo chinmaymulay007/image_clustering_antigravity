@@ -239,24 +239,28 @@ export class UIManager {
             let card = this.cards.get(index);
             const memberCount = cluster.memberCount !== undefined ? cluster.memberCount : cluster.members.length;
 
-            // Drift Indicator (e.g. "🔒 1➔ 🔄 2")
+            // Drift Indicator (e.g. "1➔ 🔄 2")
             let statusBadge = '';
             if (cluster.isFrozen) {
                 const driftCount = cluster.driftCount || 0;
-                const driftIcon = driftCount > 0 ? '<span class="drift-icon">🔄</span>' : '';
-                const driftHtml = driftCount > 0
-                    ? `<span class="drift-number">${driftCount}</span>`
-                    : '';
+                const relocated = cluster.movedFrom !== undefined;
 
-                const moveHtml = cluster.movedFrom !== undefined
-                    ? `<span class="move-count">${cluster.movedFrom + 1}➔${index + 1}</span>`
-                    : '';
+                if (driftCount > 0 || relocated) {
+                    const driftIcon = driftCount > 0 ? '<span class="drift-icon">🔄</span>' : '';
+                    const driftHtml = driftCount > 0
+                        ? `<span class="drift-number">${driftCount}</span>`
+                        : '';
 
-                const moveTooltip = cluster.movedFrom !== undefined
-                    ? `Was Cluster ${cluster.movedFrom + 1} previously. `
-                    : '';
-                const tooltip = `${moveTooltip}${driftCount} images replaced.`;
-                statusBadge = `<span class="freeze-badge" title="${tooltip}">${moveHtml}${driftIcon}${driftHtml}</span>`;
+                    const moveHtml = relocated
+                        ? `<span class="move-count">${cluster.movedFrom + 1}➔${index + 1}</span>`
+                        : '';
+
+                    const moveTooltip = relocated
+                        ? `Was Cluster ${cluster.movedFrom + 1} previously. `
+                        : '';
+                    const tooltip = `${moveTooltip}${driftCount} images replaced.`;
+                    statusBadge = `<span class="freeze-badge" title="${tooltip}">${moveHtml}${driftIcon}${driftHtml}</span>`;
+                }
             }
 
             const labelHtml = `<span class="cluster-name">${cluster.label || `Cluster ${index + 1}`}</span>`;
