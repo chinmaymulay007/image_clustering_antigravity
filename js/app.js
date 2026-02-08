@@ -80,6 +80,7 @@ class App {
 
         // Immediate Re-cluster
         console.log("[App] Triggering immediate re-cluster due to settings change.");
+        this.ui.updateStats({ lastEvent: `Settings: K=${this.k}, Threshold=${this.threshold}` });
         this.refreshClusters();
     }
 
@@ -179,7 +180,10 @@ class App {
         });
 
         // Immediate UI Refresh
-        this.ui.updateStats({ currentAction: `🚫 Excluding: ${path.split('/').pop()}` });
+        this.ui.updateStats({
+            currentAction: `🚫 Excluding: ${path.split('/').pop()}`,
+            lastEvent: `Excluded 1 image`
+        });
         this.thumbnailCache.delete(path); // Optimization: Remove from cache if excluded
         this.refreshClusters();
     }
@@ -200,7 +204,10 @@ class App {
         console.log(`[App] Restored ${path}. Exclusions persisted to DB.`);
 
         // Immediate UI Refresh
-        this.ui.updateStats({ currentAction: `♻️ Restoring: ${path.split('/').pop()}` });
+        this.ui.updateStats({
+            currentAction: `♻️ Restoring: ${path.split('/').pop()}`,
+            lastEvent: `Restored 1 image`
+        });
         this.refreshClusters();
     }
 
@@ -215,6 +222,7 @@ class App {
 
         console.log(`[App] Offloading clustering of ${validEmbeddings.length} items to Worker...`);
         this.isClustering = true;
+        this.ui.updateStats({ currentAction: "♻️ Refreshing clusters..." });
 
         if (!this.clusterWorker) {
             this.clusterWorker = new Worker('js/clustering_worker.js', { type: 'module' });
@@ -235,6 +243,7 @@ class App {
 
                     // Update UI
                     this.ui.renderClusters(this.currentClusters);
+                    this.ui.updateStats({ currentAction: this.processing.isRunning ? undefined : "✅ Ready." });
 
                     // Immediate Cleanup (RAM), but Delay Logging until thumbnails are ready
                     this.cleanupThumbnails(false); // false = don't log yet
@@ -689,6 +698,7 @@ class App {
         console.log(`[App] %cFrozen cluster ${clusterIndex + 1} | Radius: ${maxRadius.toFixed(4)} | Initial Radius Lock Coverage: ${inRadiusCount} images | Initial Total Size: ${cluster.members.length}`, "color: #10b981; font-weight: bold;");
 
         this.ui.renderClusters(this.currentClusters);
+        this.ui.updateStats({ lastEvent: `Locked Cluster ${clusterIndex + 1}` });
     }
 
     handleUnfreezeCluster(clusterIndex) {
@@ -712,6 +722,7 @@ class App {
             }
 
             this.ui.renderClusters(this.currentClusters);
+            this.ui.updateStats({ lastEvent: `Unlocked Cluster ${clusterIndex + 1}` });
             console.log(`[App] Unfrozen cluster ${clusterIndex + 1}`);
         }
     }
@@ -734,6 +745,9 @@ class App {
 
         // Pass 2: Move clusters that were in "lost" slots into the first available holes
         let nextAvailable = 0;
+        let movedCount = 0;
+        let lastFrom = -1, lastTo = -1;
+
         for (const [index, data] of sortedFrozen) {
             if (index >= newK) {
                 while (takenIndices.has(nextAvailable)) {
@@ -743,9 +757,18 @@ class App {
                     data.relocatedFrom = index; // Store movement for UI
                     newMap.set(nextAvailable, data);
                     takenIndices.add(nextAvailable);
+
+                    movedCount++;
+                    lastFrom = index; lastTo = nextAvailable;
                     console.log(`%c[App] Relocating frozen cluster from slot ${index + 1} to ${nextAvailable + 1}`, "color: #f59e0b; font-weight: bold;");
                 }
             }
+        }
+
+        if (movedCount === 1) {
+            this.ui.updateStats({ lastEvent: `Relocated Cluster ${lastFrom + 1} ➔ ${lastTo + 1}` });
+        } else if (movedCount > 1) {
+            this.ui.updateStats({ lastEvent: `Relocated ${movedCount} clusters` });
         }
 
         this.frozenClusters = newMap;

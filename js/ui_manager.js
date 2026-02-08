@@ -33,7 +33,10 @@ export class UIManager {
 
         this.clusterGrid = document.getElementById('cluster-grid-container');
         this.btnProceed = document.getElementById('btn-proceed');
-        this.statusBarText = document.getElementById('status-bar-text');
+        this.statusBarText = document.getElementById('status-current-text');
+        this.statusEvent = document.getElementById('status-event');
+        this.statusSpinner = document.getElementById('status-spinner');
+        this.lastSignificantEvent = '';
 
         // Action Selection Modal
         this.modalActionChoice = document.getElementById('modal-action-choice');
@@ -201,12 +204,35 @@ export class UIManager {
             this.statEta.textContent = '-';
         }
 
+        // Last Event (Right side)
+        if (stats.lastEvent) {
+            this.lastSignificantEvent = stats.lastEvent;
+            this.statusEvent.textContent = stats.lastEvent;
+            // Trigger animation
+            this.statusEvent.style.animation = 'none';
+            this.statusEvent.offsetHeight; // trigger reflow
+            this.statusEvent.style.animation = 'fadeSlideIn 0.3s ease-out';
+        } else if (this.lastSignificantEvent) {
+            this.statusEvent.textContent = this.lastSignificantEvent;
+        }
+
+        // Current Activity (Left side)
         if (stats.completed) {
             this.btnPauseResume.textContent = "COMPLETE";
             this.btnPauseResume.disabled = true;
-            this.statusBarText.textContent = "Processing Complete. Ready to save.";
+            this.statusBarText.textContent = "✅ Processing Complete. Ready to save.";
+            this.statusSpinner.classList.add('hidden');
         } else if (stats.currentAction) {
             this.statusBarText.textContent = stats.currentAction;
+
+            // Show spinner if activity looks like background work
+            const isActive = stats.currentAction.toLowerCase().includes('ing') ||
+                stats.currentAction.toLowerCase().includes('scan');
+            if (isActive) {
+                this.statusSpinner.classList.remove('hidden');
+            } else {
+                this.statusSpinner.classList.add('hidden');
+            }
         }
     }
 

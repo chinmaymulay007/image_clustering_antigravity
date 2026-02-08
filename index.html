@@ -84,8 +84,12 @@
         </header>
 
         <div id="status-bar"
-            style="background: #1f2937; padding: 5px 10px; font-size: 0.8rem; color: #9ca3af; border-bottom: 1px solid #374151; margin-bottom: 10px;">
-            <span id="status-bar-text">Ready to start...</span>
+            style="background: #1f2937; padding: 6px 12px; font-size: 0.82rem; border-bottom: 1px solid #374151; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <span id="status-current" style="color: #d1d5db; display: flex; align-items: center; gap: 6px;">
+                <span id="status-spinner" class="spinner hidden"></span>
+                <span id="status-current-text">Ready to start...</span>
+            </span>
+            <span id="status-event" style="color: #9ca3af; font-style: italic;"></span>
         </div>
 
         <main class="cluster-grid" id="cluster-grid-container">
