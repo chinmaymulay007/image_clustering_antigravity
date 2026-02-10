@@ -44,7 +44,10 @@ export class UIManager {
         this.aiPillStatusText = document.getElementById('ai-pill-status-text');
         this.aiDynamicMetrics = document.getElementById('ai-dynamic-metrics');
         this.aiMetrics = document.getElementById('ai-metrics');
+        this.aiMetrics = document.getElementById('ai-metrics');
         this.floatingControls = document.getElementById('floating-controls');
+        this.appHeader = document.querySelector('.app-header');
+        this.statusBarContainer = document.getElementById('status-bar-container');
         this.lastSignificantEvent = '';
 
         // Action Selection Modal
@@ -195,6 +198,8 @@ export class UIManager {
     hideInitialOverlay() {
         this.overlayInitial.classList.add('hidden');
         this.floatingControls?.classList.remove('hidden');
+        this.appHeader?.classList.remove('hidden');
+        this.statusBarContainer?.classList.remove('hidden');
     }
 
     updateStats(stats) {
@@ -615,95 +620,93 @@ export class UIManager {
         // Always show the indicator (0/6 selected is useful info)
         this.selectionIndicator.classList.remove('hidden');
         this.selectionIndicator.style.display = ''; // Clear any inline conflicts
+        // Color coding
+        if (selectedCount === 6) {
+            this.selectionIndicator.style.color = '#10b981'; // Green
+        } else if (selectedCount > 6) {
+            this.selectionIndicator.style.color = '#ef4444'; // Red
+        } else {
+            this.selectionIndicator.style.color = '#f59e0b'; // Orange/Yellow
+        }
     }
 
-    // Color coding
-    if(selectedCount === 6) {
-    this.selectionIndicator.style.color = '#10b981'; // Green
-} else if (selectedCount > 6) {
-    this.selectionIndicator.style.color = '#ef4444'; // Red
-} else {
-    this.selectionIndicator.style.color = '#f59e0b'; // Orange/Yellow
-}
+    showActionChoice() {
+        this.modalActionChoice.classList.remove('hidden');
+        this.validateUploadRequirements();
     }
 
-showActionChoice() {
-    this.modalActionChoice.classList.remove('hidden');
-    this.validateUploadRequirements();
-}
-
-showProgress(title) {
-    const modal = document.getElementById('modal-progress');
-    const titleEl = document.getElementById('progress-title');
-    titleEl.textContent = title;
-    modal.classList.remove('hidden');
-}
-
-updateProgress(current, total, text) {
-    const fill = document.getElementById('progress-bar-fill');
-    const textEl = document.getElementById('progress-text');
-
-    const pct = Math.min(100, Math.max(0, (current / total) * 100));
-    fill.style.width = `${pct}%`;
-    textEl.textContent = text || `${current} / ${total}`;
-}
-
-hideProgress() {
-    document.getElementById('modal-progress').classList.add('hidden');
-}
-
-renderExcludedImages(excludedSet) {
-    this.excludedGrid.innerHTML = '';
-    if (excludedSet.size === 0) {
-        this.excludedEmptyMessage.style.display = 'block';
-        return;
+    showProgress(title) {
+        const modal = document.getElementById('modal-progress');
+        const titleEl = document.getElementById('progress-title');
+        titleEl.textContent = title;
+        modal.classList.remove('hidden');
     }
-    this.excludedEmptyMessage.style.display = 'none';
 
-    excludedSet.forEach(path => {
-        const cell = document.createElement('div');
-        cell.className = 'img-cell';
-        cell.style.aspectRatio = "1";
-        cell.style.position = "relative";
+    updateProgress(current, total, text) {
+        const fill = document.getElementById('progress-bar-fill');
+        const textEl = document.getElementById('progress-text');
 
-        const image = document.createElement('img');
-        image.style.width = "100%";
-        image.style.height = "100%";
-        image.style.objectFit = "cover";
+        const pct = Math.min(100, Math.max(0, (current / total) * 100));
+        fill.style.width = `${pct}%`;
+        textEl.textContent = text || `${current} / ${total}`;
+    }
 
-        // Add Restore Button Overlay
-        const overlay = document.createElement('div');
-        overlay.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; opacity:0; transition:opacity 0.2s; cursor:pointer;";
-        overlay.innerHTML = '<span style="font-size:2rem;">↩️</span>'; // Undo icon
+    hideProgress() {
+        document.getElementById('modal-progress').classList.add('hidden');
+    }
 
-        cell.onmouseenter = () => overlay.style.opacity = '1';
-        cell.onmouseleave = () => overlay.style.opacity = '0';
+    renderExcludedImages(excludedSet) {
+        this.excludedGrid.innerHTML = '';
+        if (excludedSet.size === 0) {
+            this.excludedEmptyMessage.style.display = 'block';
+            return;
+        }
+        this.excludedEmptyMessage.style.display = 'none';
 
-        overlay.onclick = () => {
-            this.callbacks.onRestoreImage?.(path);
-            // Optimistic UI update: remove from this grid immediately
-            cell.remove();
-            if (this.excludedGrid.children.length === 0) {
-                this.excludedEmptyMessage.style.display = 'block';
-            }
-        };
+        excludedSet.forEach(path => {
+            const cell = document.createElement('div');
+            cell.className = 'img-cell';
+            cell.style.aspectRatio = "1";
+            cell.style.position = "relative";
 
-        cell.appendChild(image);
-        cell.appendChild(overlay);
-        this.excludedGrid.appendChild(cell);
+            const image = document.createElement('img');
+            image.style.width = "100%";
+            image.style.height = "100%";
+            image.style.objectFit = "cover";
 
-        // Trigger load (Thumbnail)
-        this.callbacks.onLoadThumbnail?.(path).then(url => {
-            if (url) image.src = url;
+            // Add Restore Button Overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; opacity:0; transition:opacity 0.2s; cursor:pointer;";
+            overlay.innerHTML = '<span style="font-size:2rem;">↩️</span>'; // Undo icon
+
+            cell.onmouseenter = () => overlay.style.opacity = '1';
+            cell.onmouseleave = () => overlay.style.opacity = '0';
+
+            overlay.onclick = () => {
+                this.callbacks.onRestoreImage?.(path);
+                // Optimistic UI update: remove from this grid immediately
+                cell.remove();
+                if (this.excludedGrid.children.length === 0) {
+                    this.excludedEmptyMessage.style.display = 'block';
+                }
+            };
+
+            cell.appendChild(image);
+            cell.appendChild(overlay);
+            this.excludedGrid.appendChild(cell);
+
+            // Trigger load (Thumbnail)
+            this.callbacks.onLoadThumbnail?.(path).then(url => {
+                if (url) image.src = url;
+            });
         });
-    });
-}
+    }
 
-formatTime(ms) {
-    if (!isFinite(ms) || ms < 0) return '-';
-    const seconds = Math.floor(ms / 1000);
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}m ${s}s`;
-}
+    formatTime(ms) {
+        if (!isFinite(ms) || ms < 0) return '-';
+        const seconds = Math.floor(ms / 1000);
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}m ${s}s`;
+    }
 }

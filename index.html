@@ -63,7 +63,7 @@
     </div>
 
     <div class="app-container">
-        <header class="app-header">
+        <header class="app-header hidden">
             <div class="brand-pill-container">
                 <div class="brand">
                     <h2>ClusterAI</h2>
@@ -97,12 +97,12 @@
             </div>
         </header>
 
-        <div id="status-bar" class="status-bar-modern">
-            <div class="status-content">
-                <span id="status-current">
-                    <span id="status-spinner" class="spinner hidden"></span>
-                    <span id="status-current-text">Ready to start...</span>
-                </span>
+        <div id="status-bar-container" class="status-bar-container hidden">
+            <div id="status-bar-left" class="status-pill status-pill-left">
+                <span id="status-spinner" class="spinner hidden"></span>
+                <span id="status-current-text">Ready to start...</span>
+            </div>
+            <div id="status-bar-right" class="status-pill status-pill-right hidden">
                 <span id="status-event"></span>
             </div>
         </div>
