@@ -465,6 +465,7 @@ class App {
 
             // ============ STEP 1: START SESSION ============
             this.ui.showProgress("Starting session...");
+            this.ui.updateProgress(0, 100, "Connecting...");
             const startResponse = await fetch(`${API_BASE}/api/external/start-session`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -476,10 +477,10 @@ class App {
                 throw new Error(err.error || "Session start failed");
             }
 
-            // ============ STEP 2: UPLOAD GROUPS ============
             for (let i = 0; i < 6; i++) {
                 const cluster = reorderedClusters[i];
                 this.ui.showProgress(`Uploading Group # ${i + 1}`, cluster);
+                this.ui.updateProgress(i, 6, `Uploaded ${i}/6 groups`);
 
                 const groupImages = compressedImages.slice(i * 16, (i + 1) * 16);
                 const formData = new FormData();
