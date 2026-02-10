@@ -256,8 +256,13 @@ class App {
                     } else {
                         const processedCount = this.processing.processedPaths.size;
                         const msg = `✅ Clusters updated based on available ${processedCount} images data.`;
+                        // Only show "Clusters updated" if NOT paused, otherwise it clears the PAUSED indicator
+                        if (!this.processing.isPaused) {
+                            this.ui.updateStats({
+                                currentAction: msg
+                            });
+                        }
                         this.ui.updateStats({
-                            currentAction: this.processing.isRunning ? msg : "✅ Ready.",
                             lastEvent: msg // Also show in last event area for persistence
                         });
                     }

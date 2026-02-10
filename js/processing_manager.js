@@ -99,7 +99,7 @@ export class ProcessingManager {
         // If we have NO data (fresh run), we AUTO-START.
         if (hasData) {
             this.isPaused = true;
-            console.log("[Processing] Existing database found. Pausing for user review.");
+            console.log("%c[Processing] Existing database found. PAUSED (Automatic) for user review.", "color: #f59e0b; font-weight: bold;");
             if (this.onProgress) {
                 this.onProgress({
                     processed: this.processedPaths.size,
@@ -109,7 +109,7 @@ export class ProcessingManager {
             }
         } else {
             this.isPaused = false;
-            console.log("[Processing] Fresh run detected. Auto-starting...");
+            console.log("%c[Processing] Fresh run detected. RESUMED (Auto-Start)...", "color: #3b82f6; font-weight: bold;");
             // Load immediately for fresh runs
             if (!this.workerReady) await this.loadModel();
         }
@@ -271,7 +271,17 @@ export class ProcessingManager {
         });
     }
 
-    pause() { this.isPaused = true; }
-    resume() { this.isPaused = false; }
-    stop() { this.isRunning = false; this.aborted = true; }
+    pause() {
+        this.isPaused = true;
+        console.log("%c[Processing] PAUSED (Manual)", "color: #f59e0b; font-weight: bold;");
+    }
+    resume() {
+        this.isPaused = false;
+        console.log("%c[Processing] RESUMED (Manual)", "color: #3b82f6; font-weight: bold;");
+    }
+    stop() {
+        this.isRunning = false;
+        this.aborted = true;
+        console.log("%c[Processing] STOPPED", "color: #ef4444; font-weight: bold;");
+    }
 }

@@ -205,6 +205,21 @@ export class UIManager {
 
     updateStats(stats) {
         if (!stats) return;
+
+        // PROTECT PAUSE STATE: If engine is manually paused, prevent secondary messages 
+        // from reverting the visual state to "running".
+        const currentPillText = this.aiPillStatusText.textContent;
+        const isCurrentlyPaused = this.btnPauseResume.textContent === 'RESUME' || currentPillText === 'PAUSED';
+
+        // Check if the message contains run-indicators (emojis that usually trigger running state)
+        const isRunMessage = stats.currentAction && (stats.currentAction.includes('🧠') || stats.currentAction.includes('💾') || stats.currentAction.includes('🧩'));
+
+        if (isCurrentlyPaused && isRunMessage) {
+            // Silently update internal tracking but keep visual "PAUSED" state
+            // (Wait until the engine actually resumes to show work status)
+            return;
+        }
+
         if (stats.processed !== undefined) this.statProcessed.textContent = stats.processed;
         if (stats.total !== undefined) this.statTotal.textContent = stats.total;
 
@@ -364,9 +379,13 @@ export class UIManager {
                         : '';
 
                     const moveTooltip = relocated
-                        ? `Was Cluster ${cluster.movedFrom + 1} previously. `
+                        ? `Was Cluster ${cluster.movedFrom + 1} previously.`
                         : '';
-                    const tooltip = `${moveTooltip}${driftCount} images replaced.`;
+                    const driftTooltip = driftCount > 0
+                        ? ` ${driftCount} images replaced.`
+                        : '';
+                    const tooltip = `${moveTooltip}${driftTooltip}`.trim();
+
                     statusBadge = `<span class="lock-badge" title="${tooltip}">${moveHtml}${driftIcon}${driftHtml}</span>`;
                 }
             }
