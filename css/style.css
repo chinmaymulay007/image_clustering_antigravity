@@ -86,6 +86,7 @@ body {
     flex: 1;
     margin-top: 0;
     padding-top: 140px;
+    padding-bottom: 120px;
     /* Header (80px) + Status (40px) + Gaps */
     overflow-y: auto;
 }
