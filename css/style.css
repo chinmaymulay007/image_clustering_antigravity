@@ -729,13 +729,11 @@ body {
     visibility: hidden;
 }
 
-text-overflow: ellipsis;
-}
 
 
 /* AI Engine Pill (Compact) */
 .ai-engine-pill {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 15px;
     background: rgba(30, 27, 75, 0.4);
@@ -745,12 +743,8 @@ text-overflow: ellipsis;
     font-size: 0.95rem;
     backdrop-filter: blur(4px);
     white-space: nowrap;
-    display: flex;
-    /* Force flex */
     flex-wrap: nowrap;
-    /* Prevent wrap */
     min-width: max-content;
-    /* Prevent squashing */
 }
 
 .ai-status-indicator-wrap {
