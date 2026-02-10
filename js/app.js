@@ -443,7 +443,7 @@ class App {
                 cluster.index = i;
                 cluster.originalOrder = i;
 
-                this.ui.showProgress(`Preparing Cluster ${i + 1}...`, cluster);
+                this.ui.showProgress(`Preparing Group # ${i + 1}`, cluster);
 
                 for (let j = 0; j < 16; j++) {
                     const imgData = cluster.representatives[j];
@@ -479,7 +479,7 @@ class App {
             // ============ STEP 2: UPLOAD GROUPS ============
             for (let i = 0; i < 6; i++) {
                 const cluster = reorderedClusters[i];
-                this.ui.showProgress(`Uploading Cluster ${i + 1}...`, cluster);
+                this.ui.showProgress(`Uploading Group # ${i + 1}`, cluster);
 
                 const groupImages = compressedImages.slice(i * 16, (i + 1) * 16);
                 const formData = new FormData();

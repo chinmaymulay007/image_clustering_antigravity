@@ -792,11 +792,6 @@ export class UIManager {
             const miniCard = this.createMiniClusterCard(activeCluster, activeCluster.originalOrder || 0, true);
             this.activeClusterPreview.appendChild(miniCard);
 
-            const label = document.createElement('div');
-            label.className = 'cluster-label';
-            label.textContent = `Processing Cluster ${activeCluster.index + 1}`;
-            this.activeClusterPreview.appendChild(label);
-
             this.activeClusterPreview.classList.remove('hidden');
         } else {
             this.activeClusterPreview.classList.add('hidden');
