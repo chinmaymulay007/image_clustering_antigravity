@@ -693,22 +693,34 @@ export class UIManager {
     renderReorderGrid() {
         this.reorderGrid.innerHTML = '';
         this.reorderClusters.forEach((cluster, index) => {
-            const card = this.createMiniClusterCard(cluster, index);
-            this.reorderGrid.appendChild(card);
+            const item = document.createElement('div');
+            item.className = 'reorder-item';
+            item.draggable = true;
+            item.dataset.index = index;
+
+            const badge = document.createElement('div');
+            badge.className = 'position-badge';
+            badge.textContent = index + 1;
+            item.appendChild(badge);
+
+            const card = this.createMiniClusterCard(cluster, index, false);
+            item.appendChild(card);
+
+            this.reorderGrid.appendChild(item);
+            this.addDragEventListeners(item);
         });
     }
 
     createMiniClusterCard(cluster, index, isPreview = false) {
         const card = document.createElement('div');
         card.className = `mini-cluster-card ${isPreview ? 'preview-mode' : ''}`;
-        if (!isPreview) {
-            card.draggable = true;
-            card.dataset.index = index;
-        }
+
+        // Show Cluster Label (Cluster 1, etc.)
+        const labelText = cluster.originalLabel || `Cluster ${cluster.index + 1}`;
 
         const header = document.createElement('div');
         header.className = 'mini-header';
-        header.innerHTML = `<span>Pos ${index + 1}</span> <span>${cluster.memberCount || cluster.members.length} imgs</span>`;
+        header.innerHTML = `<span>${labelText}</span>`; // Removed image count as per request
         card.appendChild(header);
 
         const grid = document.createElement('div');
@@ -728,37 +740,33 @@ export class UIManager {
         }
         card.appendChild(grid);
 
-        if (!isPreview) {
-            this.addDragEventListeners(card);
-        }
-
         return card;
     }
 
-    addDragEventListeners(card) {
-        card.addEventListener('dragstart', (e) => {
-            card.classList.add('dragging');
-            e.dataTransfer.setData('text/plain', card.dataset.index);
+    addDragEventListeners(item) {
+        item.addEventListener('dragstart', (e) => {
+            item.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', item.dataset.index);
         });
 
-        card.addEventListener('dragend', () => {
-            card.classList.remove('dragging');
-            this.reorderGrid.querySelectorAll('.mini-cluster-card').forEach(c => c.classList.remove('drop-target'));
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+            this.reorderGrid.querySelectorAll('.reorder-item').forEach(i => i.classList.remove('drop-target'));
         });
 
-        card.addEventListener('dragover', (e) => {
+        item.addEventListener('dragover', (e) => {
             e.preventDefault();
-            card.classList.add('drop-target');
+            item.classList.add('drop-target');
         });
 
-        card.addEventListener('dragleave', () => {
-            card.classList.remove('drop-target');
+        item.addEventListener('dragleave', () => {
+            item.classList.remove('drop-target');
         });
 
-        card.addEventListener('drop', (e) => {
+        item.addEventListener('drop', (e) => {
             e.preventDefault();
             const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-            const toIndex = parseInt(card.dataset.index);
+            const toIndex = parseInt(item.dataset.index);
 
             if (fromIndex !== toIndex) {
                 const movedItem = this.reorderClusters.splice(fromIndex, 1)[0];

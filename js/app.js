@@ -403,8 +403,18 @@ class App {
                 return;
             }
 
+            // Mapping clusters to include their original user-facing label (Cluster 1, etc.)
+            const clustersWithMetadata = clustersToUpload.map((c, i) => {
+                // Find the index of this cluster in the original array to get the "Cluster N" label
+                const originalIndex = this.currentClusters.indexOf(c);
+                return {
+                    ...c,
+                    originalLabel: `Cluster ${originalIndex + 1}`
+                };
+            });
+
             // Show reorder modal first
-            this.ui.showReorderModal(clustersToUpload, (reorderedClusters) => {
+            this.ui.showReorderModal(clustersWithMetadata, (reorderedClusters) => {
                 this.executePassfacesUpload(username, reorderedClusters);
             });
 

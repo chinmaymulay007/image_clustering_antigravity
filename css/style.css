@@ -811,14 +811,54 @@ body {
     }
 }
 
-/* Cluster Reordering Modal Styles */
+/* Cluster Reordering Modal Styles Refined */
 .reorder-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: 15px;
-    margin-bottom: 20px;
-    min-height: 200px;
+    gap: 20px;
+    margin-top: 25px;
+    margin-bottom: 25px;
+    min-height: 250px;
+}
+
+.reorder-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    cursor: grab;
+    transition: transform 0.2s;
+}
+
+.reorder-item:active {
+    cursor: grabbing;
+}
+
+.reorder-item.dragging {
+    opacity: 0.4;
+    transform: scale(0.9);
+}
+
+.reorder-item.drop-target .mini-cluster-card {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.position-badge {
+    width: 30px;
+    height: 30px;
+    background: #3b82f6;
+    color: white;
+    font-weight: 800;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    border: 2px solid #1e293b;
+    z-index: 10;
 }
 
 .mini-cluster-card {
@@ -826,25 +866,10 @@ body {
     border: 1px solid #374151;
     border-radius: 8px;
     padding: 8px;
-    cursor: grab;
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
     user-select: none;
     position: relative;
-}
-
-.mini-cluster-card:active {
-    cursor: grabbing;
-}
-
-.mini-cluster-card.dragging {
-    opacity: 0.4;
-    transform: scale(0.95);
-    border: 1px dashed #3b82f6;
-}
-
-.mini-cluster-card.drop-target {
-    border: 2px solid #3b82f6;
-    background: rgba(59, 130, 246, 0.1);
 }
 
 .mini-cluster-card .mini-header {
@@ -907,17 +932,7 @@ body {
     }
 }
 
-0%,
-100% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.3));
-}
 
-50% {
-    transform: scale(1.1);
-    filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.6));
-}
-}
 
 .anim-output {
     font-family: 'JetBrains Mono', monospace;
