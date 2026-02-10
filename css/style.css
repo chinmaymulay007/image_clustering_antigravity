@@ -811,85 +811,86 @@ body {
     }
 }
 
-/* Cluster Reordering Modal Styles Refined */
+/* Cluster Reordering Modal Styles Compact & Fixed Badges */
 .reorder-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    margin-top: 25px;
-    margin-bottom: 25px;
-    min-height: 250px;
+    gap: 12px;
+    /* Reduced from 20 */
+    margin-top: 15px;
+    margin-bottom: 15px;
+    min-height: 200px;
 }
 
 .reorder-item {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    /* Horizontal layout: Badge next to Card */
     align-items: center;
-    gap: 10px;
-    position: relative;
-    cursor: grab;
-    transition: transform 0.2s;
+    gap: 8px;
+    background: rgba(31, 41, 55, 0.4);
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid transparent;
 }
 
-.reorder-item:active {
-    cursor: grabbing;
-}
-
-.reorder-item.dragging {
-    opacity: 0.4;
-    transform: scale(0.9);
-}
-
-.reorder-item.drop-target .mini-cluster-card {
+.reorder-item.drop-target {
     border-color: #3b82f6;
     background: rgba(59, 130, 246, 0.1);
 }
 
 .position-badge {
-    width: 30px;
-    height: 30px;
-    background: #3b82f6;
+    width: 24px;
+    height: 24px;
+    background: #4b5563;
+    /* Neutral color, not active primary yet */
     color: white;
-    font-weight: 800;
-    font-size: 1rem;
+    font-weight: 700;
+    font-size: 0.8rem;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    border: 2px solid #1e293b;
-    z-index: 10;
+    flex-shrink: 0;
 }
 
 .mini-cluster-card {
     background: #111827;
     border: 1px solid #374151;
-    border-radius: 8px;
-    padding: 8px;
+    border-radius: 6px;
+    padding: 5px;
     width: 100%;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    cursor: grab;
+    transition: transform 0.2s, border-color 0.2s;
     user-select: none;
     position: relative;
 }
 
+.mini-cluster-card:active {
+    cursor: grabbing;
+}
+
+.mini-cluster-card.dragging {
+    opacity: 0.4;
+    transform: scale(0.9);
+}
+
 .mini-cluster-card .mini-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
-    font-size: 0.75rem;
+    justify-content: center;
+    margin-bottom: 3px;
+    font-size: 0.7rem;
     font-weight: 600;
 }
 
 .mini-cluster-card .mini-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 2px;
-    border-radius: 4px;
+    gap: 1px;
+    border-radius: 3px;
     overflow: hidden;
     background: #000;
     pointer-events: none;
-    /* Let drag events pass to card */
 }
 
 .mini-cluster-card .mini-img {
@@ -930,6 +931,21 @@ body {
     .reorder-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+}
+
+#reorder-grid {
+    max-height: 50vh;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+#reorder-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+#reorder-grid::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 10px;
 }
 
 

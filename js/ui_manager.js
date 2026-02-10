@@ -695,7 +695,6 @@ export class UIManager {
         this.reorderClusters.forEach((cluster, index) => {
             const item = document.createElement('div');
             item.className = 'reorder-item';
-            item.draggable = true;
             item.dataset.index = index;
 
             const badge = document.createElement('div');
@@ -707,7 +706,9 @@ export class UIManager {
             item.appendChild(card);
 
             this.reorderGrid.appendChild(item);
-            this.addDragEventListeners(item);
+
+            // Listeners on the slot (item) for drop, and the card for drag
+            this.addReorderListeners(item, card);
         });
     }
 
@@ -715,12 +716,17 @@ export class UIManager {
         const card = document.createElement('div');
         card.className = `mini-cluster-card ${isPreview ? 'preview-mode' : ''}`;
 
+        if (!isPreview) {
+            card.draggable = true;
+            card.dataset.index = index;
+        }
+
         // Show Cluster Label (Cluster 1, etc.)
         const labelText = cluster.originalLabel || `Cluster ${cluster.index + 1}`;
 
         const header = document.createElement('div');
         header.className = 'mini-header';
-        header.innerHTML = `<span>${labelText}</span>`; // Removed image count as per request
+        header.innerHTML = `<span>${labelText}</span>`;
         card.appendChild(header);
 
         const grid = document.createElement('div');
@@ -743,30 +749,30 @@ export class UIManager {
         return card;
     }
 
-    addDragEventListeners(item) {
-        item.addEventListener('dragstart', (e) => {
-            item.classList.add('dragging');
-            e.dataTransfer.setData('text/plain', item.dataset.index);
+    addReorderListeners(slot, card) {
+        card.addEventListener('dragstart', (e) => {
+            card.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', card.dataset.index);
         });
 
-        item.addEventListener('dragend', () => {
-            item.classList.remove('dragging');
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
             this.reorderGrid.querySelectorAll('.reorder-item').forEach(i => i.classList.remove('drop-target'));
         });
 
-        item.addEventListener('dragover', (e) => {
+        slot.addEventListener('dragover', (e) => {
             e.preventDefault();
-            item.classList.add('drop-target');
+            slot.classList.add('drop-target');
         });
 
-        item.addEventListener('dragleave', () => {
-            item.classList.remove('drop-target');
+        slot.addEventListener('dragleave', () => {
+            slot.classList.remove('drop-target');
         });
 
-        item.addEventListener('drop', (e) => {
+        slot.addEventListener('drop', (e) => {
             e.preventDefault();
             const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-            const toIndex = parseInt(item.dataset.index);
+            const toIndex = parseInt(slot.dataset.index);
 
             if (fromIndex !== toIndex) {
                 const movedItem = this.reorderClusters.splice(fromIndex, 1)[0];
