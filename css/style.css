@@ -880,12 +880,19 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    transition: all 0.3s ease;
+    max-width: 300px;
+    opacity: 1;
+    overflow: hidden;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ai-dynamic-metrics.paused {
-    display: none;
-    /* remove gap when paused */
+    max-width: 0;
+    opacity: 0;
+    margin: 0;
+    padding: 0;
+    gap: 0;
+    /* Remove gap to fully collapse */
 }
 
 .metric-sep {

@@ -209,7 +209,7 @@ export class ProcessingManager {
                 }
 
                 if (pendingEmbeddings.length >= this.refreshInterval || unprocessed.length === 0) {
-                    if (this.onProgress) {
+                    if (this.onProgress && !this.isPaused) {
                         this.onProgress({
                             processed: this.processedPaths.size,
                             total: this.allImages.length,
@@ -229,7 +229,7 @@ export class ProcessingManager {
                         excludedImages: Array.from(this.excludedPaths)
                     });
 
-                    if (this.onClusterUpdate) {
+                    if (this.onClusterUpdate && !this.isPaused) {
                         if (this.onProgress) this.onProgress({ currentAction: "🧩 Re-calculating clusters..." });
                         await this.onClusterUpdate(this.memoryEmbeddings);
                     }
@@ -237,7 +237,7 @@ export class ProcessingManager {
                 }
 
                 const now = Date.now();
-                if (this.onProgress && (now - this.lastUiUpdate > 800 || unprocessed.length === 0)) {
+                if (this.onProgress && !this.isPaused && (now - this.lastUiUpdate > 800 || unprocessed.length === 0)) {
                     const sessionElapsed = now - this.sessionStartTime;
                     const speedSec = (sessionElapsed / sessionProcessedCount) / 1000;
                     const eta = (speedSec * 1000) * unprocessed.length;
