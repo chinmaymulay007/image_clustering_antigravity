@@ -20,7 +20,7 @@ body {
     align-items: center;
     gap: 40px;
     padding: 15px 35px;
-    margin: 15px 15px;
+    margin: 0;
     width: calc(100% - 30px);
     max-width: none;
     background: rgba(17, 24, 39, 0.95);
@@ -35,6 +35,10 @@ body {
     z-index: 1000;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box;
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .brand-pill-container {
@@ -79,7 +83,10 @@ body {
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
     flex: 1;
-    margin-top: 20px;
+    flex: 1;
+    margin-top: 0;
+    padding-top: 140px;
+    /* Header (80px) + Status (40px) + Gaps */
     overflow-y: auto;
 }
 
@@ -667,13 +674,15 @@ body {
     align-items: flex-start;
     width: calc(100% - 30px);
     /* Match header width */
-    margin: 0 auto;
     /* Centered relative to screen, matches header margins essentially */
     padding: 0 15px;
     /* Alignment fix */
     box-sizing: border-box;
-    position: relative;
-    top: -10px;
+    position: fixed;
+    top: 95px;
+    /* Just below header */
+    left: 50%;
+    transform: translateX(-50%);
     /* Pull up slightly */
     z-index: 900;
     pointer-events: none;
@@ -735,6 +744,8 @@ text-overflow: ellipsis;
     border-radius: 25px;
     font-size: 0.95rem;
     backdrop-filter: blur(4px);
+    white-space: nowrap;
+    flex-wrap: nowrap;
 }
 
 .ai-status-indicator-wrap {
