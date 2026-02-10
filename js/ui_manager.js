@@ -55,14 +55,23 @@ export class UIManager {
         this.btnCloseAction = document.getElementById('btn-close-action');
         this.btnSaveSame = document.getElementById('btn-save-same');
         this.btnSaveDiff = document.getElementById('btn-save-diff');
-        this.btnCancelAction = document.getElementById('btn-cancel-action');
-        this.passfacesUsername = document.getElementById('passfaces-username');
-        this.btnUploadPassfaces = document.getElementById('btn-upload-passfaces');
         this.uploadErrorMsg = document.getElementById('upload-error-msg');
+        this.btnCancelAction = document.getElementById('btn-cancel-action');
+
+        // Reorder Modal
+        this.modalReorder = document.getElementById('modal-reorder');
+        this.reorderGrid = document.getElementById('reorder-grid');
+        this.btnCloseReorder = document.getElementById('btn-close-reorder');
+        this.btnCancelReorder = document.getElementById('btn-cancel-reorder');
+        this.btnStartUpload = document.getElementById('btn-start-upload');
 
         // Progression Indicator
         this.selectionIndicator = document.getElementById('selection-indicator');
         this.selectionCountSpan = document.getElementById('selection-count');
+
+        // Progress Modal refinement
+        this.modalProgress = document.getElementById('modal-progress');
+        this.activeClusterPreview = document.getElementById('active-cluster-preview');
 
         // State
         this.callbacks = {};
@@ -149,8 +158,16 @@ export class UIManager {
         this.btnUploadPassfaces.addEventListener('click', () => {
             const username = this.passfacesUsername.value.trim();
             this.modalActionChoice.classList.add('hidden');
-            this.callbacks.onLockCluster?.(username); // Using the same placeholder for consistency if updated
             this.callbacks.onUploadPassfaces?.(username);
+        });
+
+        // Reorder Modal Listeners
+        const closeReorder = () => this.modalReorder.classList.add('hidden');
+        this.btnCloseReorder?.addEventListener('click', closeReorder);
+        this.btnCancelReorder?.addEventListener('click', closeReorder);
+        this.btnStartUpload?.addEventListener('click', () => {
+            this.modalReorder.classList.add('hidden');
+            this.onReorderConfirm?.(this.reorderClusters);
         });
     }
 
@@ -664,10 +681,111 @@ export class UIManager {
         this.validateUploadRequirements();
     }
 
-    showProgress(title) {
+    showReorderModal(clusters, onConfirm) {
+        this.reorderClusters = [...clusters];
+        this.onReorderConfirm = onConfirm;
+        this.renderReorderGrid();
+        this.modalReorder.classList.remove('hidden');
+    }
+
+    renderReorderGrid() {
+        this.reorderGrid.innerHTML = '';
+        this.reorderClusters.forEach((cluster, index) => {
+            const card = this.createMiniClusterCard(cluster, index);
+            this.reorderGrid.appendChild(card);
+        });
+    }
+
+    createMiniClusterCard(cluster, index, isPreview = false) {
+        const card = document.createElement('div');
+        card.className = `mini-cluster-card ${isPreview ? 'preview-mode' : ''}`;
+        if (!isPreview) {
+            card.draggable = true;
+            card.dataset.index = index;
+        }
+
+        const header = document.createElement('div');
+        header.className = 'mini-header';
+        header.innerHTML = `<span>Pos ${index + 1}</span> <span>${cluster.memberCount || cluster.members.length} imgs</span>`;
+        card.appendChild(header);
+
+        const grid = document.createElement('div');
+        grid.className = 'mini-grid';
+
+        // Show up to 16 thumbnails (4x4)
+        for (let i = 0; i < 16; i++) {
+            const img = document.createElement('img');
+            img.className = 'mini-img';
+            if (i < cluster.representatives.length) {
+                const path = cluster.representatives[i].path;
+                this.callbacks.onLoadThumbnail?.(path).then(url => {
+                    if (url) img.src = url;
+                });
+            }
+            grid.appendChild(img);
+        }
+        card.appendChild(grid);
+
+        if (!isPreview) {
+            this.addDragEventListeners(card);
+        }
+
+        return card;
+    }
+
+    addDragEventListeners(card) {
+        card.addEventListener('dragstart', (e) => {
+            card.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', card.dataset.index);
+        });
+
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            this.reorderGrid.querySelectorAll('.mini-cluster-card').forEach(c => c.classList.remove('drop-target'));
+        });
+
+        card.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            card.classList.add('drop-target');
+        });
+
+        card.addEventListener('dragleave', () => {
+            card.classList.remove('drop-target');
+        });
+
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            const toIndex = parseInt(card.dataset.index);
+
+            if (fromIndex !== toIndex) {
+                const movedItem = this.reorderClusters.splice(fromIndex, 1)[0];
+                this.reorderClusters.splice(toIndex, 0, movedItem);
+                this.renderReorderGrid();
+            }
+        });
+    }
+
+    showProgress(title, activeCluster = null) {
         const modal = document.getElementById('modal-progress');
         const titleEl = document.getElementById('progress-title');
         titleEl.textContent = title;
+
+        if (activeCluster) {
+            this.activeClusterPreview.innerHTML = '';
+            const miniCard = this.createMiniClusterCard(activeCluster, activeCluster.originalOrder || 0, true);
+            this.activeClusterPreview.appendChild(miniCard);
+
+            const label = document.createElement('div');
+            label.className = 'cluster-label';
+            label.textContent = `Processing Cluster ${activeCluster.index + 1}`;
+            this.activeClusterPreview.appendChild(label);
+
+            this.activeClusterPreview.classList.remove('hidden');
+        } else {
+            this.activeClusterPreview.classList.add('hidden');
+        }
+
         modal.classList.remove('hidden');
     }
 

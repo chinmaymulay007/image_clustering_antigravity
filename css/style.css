@@ -802,13 +802,121 @@ body {
     0%,
     100% {
         transform: scale(1);
-        filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.3));
+        opacity: 0.8;
     }
 
     50% {
         transform: scale(1.1);
-        filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.6));
+        opacity: 1;
     }
+}
+
+/* Cluster Reordering Modal Styles */
+.reorder-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    min-height: 200px;
+}
+
+.mini-cluster-card {
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 8px;
+    cursor: grab;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    user-select: none;
+    position: relative;
+}
+
+.mini-cluster-card:active {
+    cursor: grabbing;
+}
+
+.mini-cluster-card.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+    border: 1px dashed #3b82f6;
+}
+
+.mini-cluster-card.drop-target {
+    border: 2px solid #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.mini-cluster-card .mini-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.mini-cluster-card .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #000;
+    pointer-events: none;
+    /* Let drag events pass to card */
+}
+
+.mini-cluster-card .mini-img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: #1f2937;
+}
+
+/* Progress Highlighting */
+.mini-cluster-card.active-upload {
+    border: 2px solid #10b981;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.active-cluster-preview {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.active-cluster-preview .mini-cluster-card {
+    width: 150px;
+    cursor: default;
+}
+
+.active-cluster-preview .cluster-label {
+    font-size: 0.9rem;
+    color: #10b981;
+    font-weight: bold;
+}
+
+/* Mobile adjustments for reorder modal */
+@media (max-width: 600px) {
+    .reorder-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+0%,
+100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.3));
+}
+
+50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.6));
+}
 }
 
 .anim-output {

@@ -200,14 +200,40 @@
 
     <!-- Progress Modal -->
     <div id="modal-progress" class="modal hidden" style="z-index: 3000;">
-        <div class="modal-content" style="text-align: center; padding: 40px;">
+        <div class="modal-content" style="text-align: center; padding: 40px; max-width: 500px;">
+            <div id="active-cluster-preview" class="active-cluster-preview hidden">
+                <!-- Highlighted cluster shown here -->
+            </div>
             <h3 id="progress-title" style="margin-bottom: 20px;">Saving Clusters...</h3>
             <div
-                style="width: 100%; background: #374151; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 10px;">
+                style="width: 100%; background: #374151; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 20px;">
                 <div id="progress-bar-fill"
                     style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s;"></div>
             </div>
-            <p id="progress-text" style="color: #9ca3af;">0 / 0</p>
+            <p id="progress-text" style="color: #9ca3af; font-weight: 500;">0 / 0</p>
+        </div>
+    </div>
+
+    <!-- Reorder Modal -->
+    <div id="modal-reorder" class="modal hidden" style="z-index: 2500;">
+        <div class="modal-content" style="max-width: 700px; width: 90%;">
+            <div class="modal-header">
+                <h3>Finalize Cluster Order</h3>
+                <button id="btn-close-reorder" class="btn-close">×</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p style="color: #9ca3af; font-size: 0.9rem; margin-bottom: 15px;">
+                    Drag and drop to set the order (1 to 6) for your Passfaces setup.
+                </p>
+                <div id="reorder-grid" class="reorder-grid">
+                    <!-- Mini clusters will be injected here -->
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 10px;">
+                <button id="btn-cancel-reorder" class="btn-secondary" style="flex: 1;">Cancel</button>
+                <button id="btn-start-upload" class="btn-primary" style="flex: 2; background: #10b981;">🚀 START
+                    UPLOAD</button>
+            </div>
         </div>
     </div>
 
