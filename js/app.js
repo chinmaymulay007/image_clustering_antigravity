@@ -26,7 +26,7 @@ class App {
         this.clusterWorker = null;
         this.imageWorker = null;
         this.thumbnailPromises = new Map(); // Path -> Promise
-        this.frozenClusters = new Map(); // Index -> { preferredPaths }
+        this.lockedClusters = new Map(); // Index -> { preferredPaths }
 
         // Logging & Memory Stats
         this.thumbnailsCreatedSinceLastLog = 0;
@@ -48,26 +48,26 @@ class App {
             onGetExcludedPaths: () => this.excludedPaths,
             onRestoreImage: (path) => this.handleRestore(path),
             onConfirmSaveLocation: (isDifferent) => this.handleConfirmSaveLocation(isDifferent),
-            onFreezeCluster: (index) => this.handleFreezeCluster(index),
-            onUnfreezeCluster: (index) => this.handleUnfreezeCluster(index)
+            onLockCluster: (index) => this.handleLockCluster(index),
+            onUnlockCluster: (index) => this.handleUnlockCluster(index)
         });
     }
 
     handleApplySettings(settings) {
-        const currentFrozenCount = this.frozenClusters.size;
+        const currentLockedCount = this.lockedClusters.size;
 
-        if (settings.k < currentFrozenCount) {
-            alert(`⚠️ Cannot reduce K to ${settings.k}.\n\nYou have ${currentFrozenCount} clusters frozen. Unfreeze some clusters first.`);
+        if (settings.k < currentLockedCount) {
+            alert(`⚠️ Action Required: Cannot reduce total clusters to ${settings.k}.\n\nYou currently have ${currentLockedCount} clusters locked. Please unlock some clusters before decreasing the total count.`);
             return;
         }
 
-        // Check if any frozen clusters need to be "slid" down into the new range
-        const frozenIndices = Array.from(this.frozenClusters.keys());
-        const maxFrozenIndex = frozenIndices.length > 0 ? Math.max(...frozenIndices) : -1;
+        // Check if any locked clusters need to be "slid" down into the new range
+        const lockedIndices = Array.from(this.lockedClusters.keys());
+        const maxLockedIndex = lockedIndices.length > 0 ? Math.max(...lockedIndices) : -1;
 
-        if (settings.k <= maxFrozenIndex) {
-            console.log(`[App] Defragmenting frozen clusters to fit into new K=${settings.k}`);
-            this.compactFrozenClusters(settings.k);
+        if (settings.k <= maxLockedIndex) {
+            console.log(`[App] Defragmenting locked clusters to fit into new K=${settings.k}`);
+            this.compactLockedClusters(settings.k);
         }
 
         console.log("[App] Applying user settings:", settings);
@@ -132,7 +132,7 @@ class App {
 
         } catch (error) {
             console.error("Initialization failed:", error);
-            alert("Failed to access folder. See console.");
+            alert("❌ Folder Access Failed: We couldn't open the selected folder. Please ensure the app has permission and try again.");
         }
     }
 
@@ -163,12 +163,12 @@ class App {
     }
 
     async handleExclude(path) {
-        // Check if this path belongs to ANY frozen cluster
+        // Check if this path belongs to ANY locked cluster
         for (const cluster of this.currentClusters) {
-            if (cluster.isFrozen) {
+            if (cluster.isLocked) {
                 const isMember = cluster.members.some(m => m.path === path);
                 if (isMember) {
-                    alert("⚠️ Cannot exclude: This image belongs to a frozen cluster.\n\nUnfreeze the cluster first.");
+                    alert("⚠️ Image Locked: This image is part of a locked cluster. To exclude it, please unlock the cluster first.");
                     return;
                 }
             }
@@ -239,9 +239,9 @@ class App {
                 if (status === 'success') {
                     let clusters = result.clusters;
 
-                    // POST-PROCESSING: Apply frozen constraints
-                    if (this.frozenClusters.size > 0) {
-                        clusters = this.applyFrozenConstraints(clusters);
+                    // POST-PROCESSING: Apply locked constraints
+                    if (this.lockedClusters.size > 0) {
+                        clusters = this.applyLockedConstraints(clusters);
                     }
 
                     this.currentClusters = clusters;
@@ -281,25 +281,25 @@ class App {
             };
         }
 
-        const frozenIndices = Array.from(this.frozenClusters.keys());
-        const frozenRadii = {};
-        const frozenCentroids = {};
+        const lockedIndices = Array.from(this.lockedClusters.keys());
+        const lockedRadii = {};
+        const lockedCentroids = {};
 
-        if (this.frozenClusters.size > 0) {
-            this.frozenClusters.forEach((data, index) => {
-                frozenRadii[index] = data.maxRadius;
-                frozenCentroids[index] = data.centroid;
+        if (this.lockedClusters.size > 0) {
+            this.lockedClusters.forEach((data, index) => {
+                lockedRadii[index] = data.maxRadius;
+                lockedCentroids[index] = data.centroid;
             });
         }
 
         const previousCentroids = this.lastCentroids ? this.lastCentroids.map(c => [...c]) : null;
 
-        // If K changed or centroids don't exist, we can't easily warm start with frozen ones 
+        // If K changed or centroids don't exist, we can't easily warm start with locked ones 
         // unless we force the worker to respect the specific indices.
         // Actually, previousCentroids helps Lloyd's init.
         if (previousCentroids && previousCentroids.length === this.k) {
-            // ... (Optional: we already have frozenCentroids handling the anchors, but keeping consistency)
-            this.frozenClusters.forEach((data, index) => {
+            // ... (Optional: we already have lockedCentroids handling the anchors, but keeping consistency)
+            this.lockedClusters.forEach((data, index) => {
                 if (index < previousCentroids.length) {
                     previousCentroids[index] = [...data.centroid];
                 }
@@ -311,9 +311,9 @@ class App {
             k: this.k,
             threshold: this.threshold,
             previousCentroids: previousCentroids,
-            frozenIndices: frozenIndices,
-            frozenRadii: frozenRadii,
-            frozenCentroids: frozenCentroids
+            lockedIndices: lockedIndices,
+            lockedRadii: lockedRadii,
+            lockedCentroids: lockedCentroids
         });
     }
 
@@ -377,7 +377,7 @@ class App {
     async handleProceed() {
         try {
             if (this.currentEmbeddings.length === 0) {
-                alert("No clusters to process yet. Process some images first.");
+                alert("⚠️ No Data: Please wait for the AI to analyze more images before proceeding.");
                 return;
             }
 
@@ -398,7 +398,7 @@ class App {
             const clustersToUpload = this.currentClusters.filter((c, i) => selectedIndices.includes(i));
 
             if (clustersToUpload.length !== 6) {
-                alert("Please select exactly 6 clusters for Passfaces upload.");
+                alert("⚠️ Selection Required: Please lock exactly 6 clusters to initialize your Passfaces setup.");
                 return;
             }
 
@@ -558,9 +558,9 @@ class App {
                 const errorData = await completeResponse.json();
                 console.error(`%c[STEP 3] ✗ Validation failed:`, "color: #f44336; font-weight: bold;", errorData);
 
-                let errorMsg = `Validation failed. All uploaded data has been deleted.\n\n`;
+                let errorMsg = `❌ Passfaces Validation Failed: Your upload didn't meet the requirements. The data was removed for security.\n\n`;
                 if (errorData.details && Array.isArray(errorData.details)) {
-                    errorMsg += `Issues found:\n${errorData.details.join('\n')}`;
+                    errorMsg += `Found:\n${errorData.details.join('\n')}`;
                 } else {
                     errorMsg += errorData.error || 'Unknown validation error';
                 }
@@ -575,7 +575,7 @@ class App {
         } catch (e) {
             console.error(`%c[UPLOAD] ✗ Upload failed:`, "color: #f44336; font-weight: bold;", e);
             console.error('[UPLOAD] Stack trace:', e.stack);
-            alert(`Upload Error: ${e.message}`);
+            alert(`❌ Upload Failed: ${e.message}. Please check your connection and try again.`);
             this.ui.hideProgress();
         }
     }
@@ -652,7 +652,7 @@ class App {
             const clustersToSave = this.currentClusters.filter((c, i) => selectedIndices.includes(i));
 
             if (clustersToSave.length === 0) {
-                alert("Error: Selection mismatch."); // Should not happen
+                alert("❌ System Error: A selection mismatch occurred. Please try selecting the clusters again."); // Should not happen
                 btn.disabled = false;
                 btn.textContent = originalText;
                 return;
@@ -667,28 +667,28 @@ class App {
             }, targetHandle);
 
             this.ui.hideProgress();
-            alert(`Curated clusters saved successfully to folder: ${folderName}`);
+            alert(`✅ Success: Your curated clusters have been saved to "${folderName}".`);
 
             btn.textContent = originalText;
             btn.disabled = false;
         } catch (e) {
             console.error("Save failed:", e);
-            alert("Failed to save clusters. Check console for details.");
+            alert("❌ Save Error: We encountered a problem saving your selection. Please try again or pick a different location.");
             this.ui.hideProgress();
             document.getElementById('btn-proceed').disabled = false;
             document.getElementById('btn-proceed').textContent = originalText;
         }
     }
 
-    // --- Freeze / Unfreeze Logic ---
+    // --- Lock / Unlock Logic ---
 
-    handleFreezeCluster(clusterIndex) {
+    handleLockCluster(clusterIndex) {
         const cluster = this.currentClusters[clusterIndex];
 
         if (!cluster) return;
 
         if (cluster.representatives.length < 16) {
-            alert("Cannot freeze: cluster has fewer than 16 images");
+            alert("⚠️ Cluster Too Small: Only clusters with 16 or more images can be locked for Passfaces.");
             this.ui.renderClusters(this.currentClusters); // Revert checkbox state
             return;
         }
@@ -707,7 +707,7 @@ class App {
             this.clustering.cosineDistance(m.embedding, centroid) <= maxRadius
         ).length;
 
-        this.frozenClusters.set(clusterIndex, {
+        this.lockedClusters.set(clusterIndex, {
             centroid: [...centroid],
             representatives: JSON.parse(JSON.stringify(reps)), // Pinned set
             maxRadius: maxRadius,
@@ -717,22 +717,22 @@ class App {
             initialIndex: clusterIndex
         });
 
-        cluster.isFrozen = true;
+        cluster.isLocked = true;
         cluster.driftCount = 0;
 
-        console.log(`[App] %cFrozen cluster ${clusterIndex + 1} | Radius: ${maxRadius.toFixed(4)} | Initial Radius Lock Coverage: ${inRadiusCount} images | Initial Total Size: ${cluster.members.length}`, "color: #10b981; font-weight: bold;");
+        console.log(`[App] %cLocked cluster ${clusterIndex + 1} | Radius: ${maxRadius.toFixed(4)} | Initial Radius Lock Coverage: ${inRadiusCount} images | Initial Total Size: ${cluster.members.length}`, "color: #10b981; font-weight: bold;");
 
         this.ui.renderClusters(this.currentClusters);
         this.ui.updateStats({ lastEvent: `Locked Cluster ${clusterIndex + 1}` });
     }
 
-    handleUnfreezeCluster(clusterIndex) {
-        if (this.frozenClusters.has(clusterIndex)) {
-            this.frozenClusters.delete(clusterIndex);
+    handleUnlockCluster(clusterIndex) {
+        if (this.lockedClusters.has(clusterIndex)) {
+            this.lockedClusters.delete(clusterIndex);
 
             const cluster = this.currentClusters[clusterIndex];
             if (cluster) {
-                cluster.isFrozen = false;
+                cluster.isLocked = false;
 
                 // Re-select representatives immediately using CURRENT members
                 // This updates the view to show "natural" representatives without full recluster
@@ -748,20 +748,20 @@ class App {
 
             this.ui.renderClusters(this.currentClusters);
             this.ui.updateStats({ lastEvent: `Unlocked Cluster ${clusterIndex + 1}` });
-            console.log(`[App] Unfrozen cluster ${clusterIndex + 1}`);
+            console.log(`[App] Unlocked cluster ${clusterIndex + 1}`);
         }
     }
 
-    compactFrozenClusters(newK) {
+    compactLockedClusters(newK) {
         // Sort existing by index to preserve relative order where possible
-        const sortedFrozen = Array.from(this.frozenClusters.entries())
+        const sortedLocked = Array.from(this.lockedClusters.entries())
             .sort((a, b) => a[0] - b[0]);
 
         const newMap = new Map();
         const takenIndices = new Set();
 
         // Pass 1: Keep clusters that already fit in the new range
-        for (const [index, data] of sortedFrozen) {
+        for (const [index, data] of sortedLocked) {
             if (index < newK) {
                 newMap.set(index, data);
                 takenIndices.add(index);
@@ -773,7 +773,7 @@ class App {
         let movedCount = 0;
         let lastFrom = -1, lastTo = -1;
 
-        for (const [index, data] of sortedFrozen) {
+        for (const [index, data] of sortedLocked) {
             if (index >= newK) {
                 while (takenIndices.has(nextAvailable)) {
                     nextAvailable++;
@@ -785,7 +785,7 @@ class App {
 
                     movedCount++;
                     lastFrom = index; lastTo = nextAvailable;
-                    console.log(`%c[App] Relocating frozen cluster from slot ${index + 1} to ${nextAvailable + 1}`, "color: #f59e0b; font-weight: bold;");
+                    console.log(`%c[App] Relocating locked cluster from slot ${index + 1} to ${nextAvailable + 1}`, "color: #f59e0b; font-weight: bold;");
                 }
             }
         }
@@ -796,32 +796,32 @@ class App {
             this.ui.updateStats({ lastEvent: `Relocated ${movedCount} clusters` });
         }
 
-        this.frozenClusters = newMap;
+        this.lockedClusters = newMap;
     }
 
-    applyFrozenConstraints(clusters) {
-        if (this.frozenClusters.size === 0) return clusters;
+    applyLockedConstraints(clusters) {
+        if (this.lockedClusters.size === 0) return clusters;
 
-        console.log(`%c[Freeze] --- Applying Fixed-Centroid Absorption Constraints ---`, "color: #3b82f6; font-weight: bold;");
+        console.log(`%c[Lock] --- Applying Fixed-Centroid Absorption Constraints ---`, "color: #3b82f6; font-weight: bold;");
 
-        this.frozenClusters.forEach((frozenData, index) => {
+        this.lockedClusters.forEach((lockedData, index) => {
             const cluster = clusters[index];
             if (!cluster) return;
 
-            // 1. Mark as frozen and track movement
-            cluster.isFrozen = true;
+            // 1. Mark as locked and track movement
+            cluster.isLocked = true;
             cluster.driftCount = 0; // Visual drift is now 0 by definition
-            if (frozenData.relocatedFrom !== undefined) {
-                cluster.movedFrom = frozenData.relocatedFrom;
+            if (lockedData.relocatedFrom !== undefined) {
+                cluster.movedFrom = lockedData.relocatedFrom;
             }
 
             // 2. VISUAL OVERRIDE: Restore Pinned Representatives
-            // We use the exact 16 images stored at freeze time.
-            cluster.representatives = JSON.parse(JSON.stringify(frozenData.representatives));
+            // We use the exact 16 images stored at lock time.
+            cluster.representatives = JSON.parse(JSON.stringify(lockedData.representatives));
 
             // 3. DETAILED LOGGING (Membership Churn)
             const currentMembers = cluster.members;
-            const initialPaths = frozenData.initialMembership;
+            const initialPaths = lockedData.initialMembership;
 
             let coreRetained = 0;
             let coreAbsorbed = 0;
@@ -829,7 +829,7 @@ class App {
             let proximityAbsorbed = 0;
 
             currentMembers.forEach(m => {
-                const isInRadius = this.clustering.cosineDistance(m.embedding, frozenData.centroid) <= frozenData.maxRadius;
+                const isInRadius = this.clustering.cosineDistance(m.embedding, lockedData.centroid) <= lockedData.maxRadius;
                 const isInitial = initialPaths.has(m.path);
 
                 if (isInRadius) {
@@ -844,15 +844,12 @@ class App {
             const currentPaths = new Set(currentMembers.map(m => m.path));
             const departedCount = Array.from(initialPaths).filter(path => !currentPaths.has(path)).length;
 
-            console.log(`%c[Freeze] Cluster ${index + 1}:`, "font-weight: bold;");
+            console.log(`%c[Lock] Cluster ${index + 1}:`, "font-weight: bold;");
             console.log(`  - Core Lock: ${coreRetained + coreAbsorbed} images (${coreRetained} retained | ${coreAbsorbed} absorbed) | Forced`);
             console.log(`  - Proximity: ${proximityRetained + proximityAbsorbed} total (${proximityRetained} retained | ${proximityAbsorbed} absorbed)`);
             console.log(`  - Departures: ${departedCount} images left for other clusters`);
-            console.log(`  - Cluster Size: ${currentMembers.length} (Initial: ${frozenData.initialTotalSize})`);
+            console.log(`  - Cluster Size: ${currentMembers.length} (Initial: ${lockedData.initialTotalSize})`);
         });
-
-        // Sync frozenClusters map if indices shifted (though sorting is disabled, safety first)
-        // Actually, with sorting disabled in engine, indices are stable.
 
         return clusters;
     }

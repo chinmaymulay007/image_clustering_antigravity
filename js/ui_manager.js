@@ -149,6 +149,7 @@ export class UIManager {
         this.btnUploadPassfaces.addEventListener('click', () => {
             const username = this.passfacesUsername.value.trim();
             this.modalActionChoice.classList.add('hidden');
+            this.callbacks.onLockCluster?.(username); // Using the same placeholder for consistency if updated
             this.callbacks.onUploadPassfaces?.(username);
         });
     }
@@ -348,7 +349,7 @@ export class UIManager {
 
             // Drift Indicator (e.g. "1➔ 🔄 2")
             let statusBadge = '';
-            if (cluster.isFrozen) {
+            if (cluster.isLocked) {
                 const driftCount = cluster.driftCount || 0;
                 const relocated = cluster.movedFrom !== undefined;
 
@@ -366,7 +367,7 @@ export class UIManager {
                         ? `Was Cluster ${cluster.movedFrom + 1} previously. `
                         : '';
                     const tooltip = `${moveTooltip}${driftCount} images replaced.`;
-                    statusBadge = `<span class="freeze-badge" title="${tooltip}">${moveHtml}${driftIcon}${driftHtml}</span>`;
+                    statusBadge = `<span class="lock-badge" title="${tooltip}">${moveHtml}${driftIcon}${driftHtml}</span>`;
                 }
             }
 
@@ -420,7 +421,7 @@ export class UIManager {
                 this.clusterGrid.appendChild(card);
             }
 
-            // ALWAYS Update dynamic UI states (frozen, title, styling)
+            // ALWAYS Update dynamic UI states (locked, title, styling)
             const checkbox = card.querySelector('.cluster-checkbox');
             const title = card._titleNode;
 
@@ -442,29 +443,29 @@ export class UIManager {
             // The existing code didn't maintain selection on re-render explicity? 
             // Actually, `renderClusters` might be destructive. 
             // If `renderClusters` is called, it usually means new clusters.
-            // However, `isFrozen` implies persistence. 
-            // Let's ensure logic: if frozen, it is auto-selected?
-            if (cluster.isFrozen) {
-                card.classList.add('frozen');
+            // However, `isLocked` implies persistence. 
+            // Let's ensure logic: if locked, it is auto-selected?
+            if (cluster.isLocked) {
+                card.classList.add('locked');
                 checkbox.checked = true;
-                title.classList.add('frozen-title');
+                title.classList.add('locked-title');
                 card._lockToggleNode.classList.add('active');
                 card._lockIconNode.innerHTML = '🔒';
             } else {
-                card.classList.remove('frozen');
-                title.classList.remove('frozen-title');
+                card.classList.remove('locked');
+                title.classList.remove('locked-title');
                 card._lockToggleNode.classList.remove('active');
                 card._lockIconNode.innerHTML = '🔓';
-                // Force uncheck if not frozen to maintain sync with engine state (esp. on auto-unfreeze)
+                // Force uncheck if not locked to maintain sync with engine state (esp. on auto-unlock)
                 checkbox.checked = false;
             }
 
             // Wire/Update checkbox behavior
             checkbox.onchange = () => {
                 if (checkbox.checked) {
-                    this.callbacks.onFreezeCluster?.(index);
+                    this.callbacks.onLockCluster?.(index);
                 } else {
-                    this.callbacks.onUnfreezeCluster?.(index);
+                    this.callbacks.onUnlockCluster?.(index);
                 }
                 this.updateSelectionIndicator();
             };
@@ -519,10 +520,10 @@ export class UIManager {
                         image.className = '';
                         cell.classList.add('skeleton');
 
-                        // CONDITIONAL UI: Prevent showing remove button if cluster is frozen
-                        // (Only blocking exclusion of representatives in frozen clusters)
+                        // CONDITIONAL UI: Prevent showing remove button if cluster is locked
+                        // (Only blocking exclusion of representatives in locked clusters)
                         cell.onmouseenter = () => {
-                            if (cluster.isFrozen) {
+                            if (cluster.isLocked) {
                                 btnRemove.style.display = 'none';
                             } else {
                                 btnRemove.style.display = 'flex';
@@ -553,8 +554,8 @@ export class UIManager {
                                         image.classList.add('loaded');
                                         cell.classList.remove('skeleton');
 
-                                        // Show/Hide replacement badge (Only if frozen)
-                                        if (cluster.isFrozen && imgData.isReplacement) {
+                                        // Show/Hide replacement badge (Only if locked)
+                                        if (cluster.isLocked && imgData.isReplacement) {
                                             cell._driftIcon.style.display = 'block';
                                         } else {
                                             cell._driftIcon.style.display = 'none';
@@ -574,18 +575,18 @@ export class UIManager {
                         });
                     } else {
                         // Even if image didn't change, we must update the mouseenter handler
-                        // because cluster.isFrozen might have changed
+                        // because cluster.isLocked might have changed
                         const btnRemove = cell._btn;
                         cell.onmouseenter = () => {
-                            if (cluster.isFrozen) {
+                            if (cluster.isLocked) {
                                 btnRemove.style.display = 'none';
                             } else {
                                 btnRemove.style.display = 'flex';
                             }
                         };
 
-                        // Ensure replacement badge matches current state (Only if frozen)
-                        if (cluster.isFrozen && imgData.isReplacement) {
+                        // Ensure replacement badge matches current state (Only if locked)
+                        if (cluster.isLocked && imgData.isReplacement) {
                             cell._driftIcon.style.display = 'block';
                         } else {
                             cell._driftIcon.style.display = 'none';
@@ -622,6 +623,9 @@ export class UIManager {
     updateSelectionIndicator() {
         const selectedCount = this.getSelectedClusterIndices().length;
         this.selectionCountSpan.textContent = selectedCount;
+
+        // Functional disabling
+        this.btnProceed.disabled = (selectedCount === 0);
 
         // Always show the indicator (0/6 selected is useful info)
         this.selectionIndicator.classList.remove('hidden');

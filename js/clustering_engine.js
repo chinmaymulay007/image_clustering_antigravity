@@ -10,7 +10,7 @@ export class ClusteringEngine {
      * @param {number} dedupThreshold - Uniqueness threshold (default 0.15)
      * @returns {Array} - Array of formatted cluster objects
      */
-    updateClusters(allEmbeddings, k = 6, dedupThreshold = 0.15, previousCentroids = null, frozenIndices = [], frozenRadii = {}, frozenCentroids = {}) {
+    updateClusters(allEmbeddings, k = 6, dedupThreshold = 0.15, previousCentroids = null, lockedIndices = [], lockedRadii = {}, lockedCentroids = {}) {
         // Safety: Filter out any corrupted records (e.g. from previous worker crashes)
         allEmbeddings = allEmbeddings.filter(e => e && e.embedding && Array.isArray(e.embedding));
 
@@ -18,7 +18,7 @@ export class ClusteringEngine {
         if (allEmbeddings.length < k) k = allEmbeddings.length;
 
         // 1. Run K-Means (Warm Start if possible)
-        const { centroids, assignments } = this.kMeans(allEmbeddings, k, previousCentroids, frozenIndices, frozenRadii, frozenCentroids);
+        const { centroids, assignments } = this.kMeans(allEmbeddings, k, previousCentroids, lockedIndices, lockedRadii, lockedCentroids);
 
         // 2. Group by Assignment
         const clusters = centroids.map((centroid, index) => ({
@@ -35,14 +35,14 @@ export class ClusteringEngine {
 
         // 3. Select Representatives
         clusters.forEach((cluster, index) => {
-            // Note: If cluster is frozen, the representatives selection might be overridden in app.js
+            // Note: If cluster is locked, the representatives selection might be overridden in app.js
             // but we still do a "natural" selection here for consistency if needed.
             cluster.representatives = this.selectClosestToCentroid(cluster.members, cluster.centroid, 16, dedupThreshold);
         });
 
-        // 4. Sort by Size (Largest first) - DISABLING for stability if any are frozen
-        // If there are frozen ones, we SHOULD NOT Sort, as indices are hard-coded to frozen state.
-        if (frozenIndices.length === 0) {
+        // 4. Sort by Size (Largest first) - DISABLING for stability if any are locked
+        // If there are locked ones, we SHOULD NOT Sort, as indices are hard-coded to locked state.
+        if (lockedIndices.length === 0) {
             clusters.sort((a, b) => b.members.length - a.members.length);
             // Re-label for consistency only if sorted
             clusters.forEach((c, i) => {
@@ -59,7 +59,7 @@ export class ClusteringEngine {
      * Standard K-Means (Lloyd's Algorithm) with K-Means++ initialization.
      * Modified to support Fixed Anchors and Radius Locks.
      */
-    kMeans(embeddings, k, previousCentroids, frozenIndices = [], frozenRadii = {}, frozenCentroids = {}) {
+    kMeans(embeddings, k, previousCentroids, lockedIndices = [], lockedRadii = {}, lockedCentroids = {}) {
         // A. Init Centroids
         let centroids;
 
@@ -72,11 +72,11 @@ export class ClusteringEngine {
         }
 
         // ANCHOR INJECTION: If K changed, our initial centroids might be random.
-        // We MUST force-overwrite the frozen indices with their original anchors.
-        for (const idxString in frozenCentroids) {
+        // We MUST force-overwrite the locked indices with their original anchors.
+        for (const idxString in lockedCentroids) {
             const idx = parseInt(idxString);
             if (idx < k) {
-                centroids[idx] = [...frozenCentroids[idxString]];
+                centroids[idx] = [...lockedCentroids[idxString]];
             }
         }
 
@@ -95,9 +95,9 @@ export class ClusteringEngine {
                 let bestC = -1;
 
                 // 1. CHECK RADIUS LOCKS (Inner Boundary)
-                // If an image is within the "frozen radius", it MUST stay in that cluster.
-                for (const idx of frozenIndices) {
-                    const radius = frozenRadii[idx];
+                // If an image is within the "locked radius", it MUST stay in that cluster.
+                for (const idx of lockedIndices) {
+                    const radius = lockedRadii[idx];
                     if (radius === undefined || radius === null || !centroids[idx]) continue;
 
                     const d = this.cosineDistance(embeddings[i].embedding, centroids[idx]);
@@ -140,15 +140,15 @@ export class ClusteringEngine {
                 }
 
                 for (let c = 0; c < k; c++) {
-                    // ANCHOR: If this cluster is frozen, skip moving its centroid!
-                    if (frozenIndices.includes(c)) continue;
+                    // ANCHOR: If this cluster is locked, skip moving its centroid!
+                    if (lockedIndices.includes(c)) continue;
 
                     if (counts[c] > 0) {
                         for (let j = 0; j < 512; j++) {
                             centroids[c][j] = sums[c][j] / counts[c];
                         }
                     } else {
-                        // Orphan centroid policy (only for non-frozen)
+                        // Orphan centroid policy (only for non-locked)
                         const randIdx = Math.floor(Math.random() * embeddings.length);
                         centroids[c] = [...embeddings[randIdx].embedding];
                     }
