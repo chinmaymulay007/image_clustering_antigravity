@@ -35,6 +35,9 @@ export class UIManager {
         this.btnProceed = document.getElementById('btn-proceed');
         this.statusBarText = document.getElementById('status-current-text');
         this.statusEvent = document.getElementById('status-event');
+        this.statusBarRight = document.getElementById('status-bar-right');
+        this.currStatusTimeout = null;
+
         this.statusSpinner = document.getElementById('status-spinner');
         this.aiStatusIndicator = document.getElementById('ai-status-indicator');
         this.aiMachineAnim = document.getElementById('ai-machine-anim');
@@ -212,14 +215,25 @@ export class UIManager {
         }
 
         // Last Event (Right side)
+        // Last Event (Right side - Transient Toast)
         if (stats.lastEvent) {
             this.lastSignificantEvent = stats.lastEvent;
             this.statusEvent.textContent = stats.lastEvent;
-            // Trigger animation
-            this.statusEvent.style.animation = 'none';
-            this.statusEvent.offsetHeight; // trigger reflow
-            this.statusEvent.style.animation = 'fadeSlideIn 0.3s ease-out';
-        } else if (this.lastSignificantEvent) {
+
+            // Show the transient pill
+            this.statusBarRight.classList.remove('hidden');
+
+            // Clear previous timer
+            if (this.currStatusTimeout) clearTimeout(this.currStatusTimeout);
+
+            // Auto-hide after 3 seconds (Toast behavior)
+            this.currStatusTimeout = setTimeout(() => {
+                this.statusBarRight.classList.add('hidden');
+            }, 3000);
+
+        } else if (this.lastSignificantEvent && !this.statusBarRight.classList.contains('hidden')) {
+            // If already showing, update text but don't reset timer (optional choice, 
+            // but standard toast usually refreshes on new content. Here we just maintain content if visible)
             this.statusEvent.textContent = this.lastSignificantEvent;
         }
 
@@ -598,100 +612,98 @@ export class UIManager {
         const selectedCount = this.getSelectedClusterIndices().length;
         this.selectionCountSpan.textContent = selectedCount;
 
-        if (selectedCount > 0) {
-            this.selectionIndicator.style.display = 'block';
-        } else {
-            // Optional: hide if 0? or show 0/6?
-            this.selectionIndicator.style.display = 'block';
-        }
-
-        // Color coding
-        if (selectedCount === 6) {
-            this.selectionIndicator.style.color = '#10b981'; // Green
-        } else if (selectedCount > 6) {
-            this.selectionIndicator.style.color = '#ef4444'; // Red
-        } else {
-            this.selectionIndicator.style.color = '#f59e0b'; // Orange/Yellow
-        }
+        // Always show the indicator (0/6 selected is useful info)
+        this.selectionIndicator.classList.remove('hidden');
+        this.selectionIndicator.style.display = ''; // Clear any inline conflicts
     }
 
-    showActionChoice() {
-        this.modalActionChoice.classList.remove('hidden');
-        this.validateUploadRequirements();
+    // Color coding
+    if(selectedCount === 6) {
+    this.selectionIndicator.style.color = '#10b981'; // Green
+} else if (selectedCount > 6) {
+    this.selectionIndicator.style.color = '#ef4444'; // Red
+} else {
+    this.selectionIndicator.style.color = '#f59e0b'; // Orange/Yellow
+}
     }
 
-    showProgress(title) {
-        const modal = document.getElementById('modal-progress');
-        const titleEl = document.getElementById('progress-title');
-        titleEl.textContent = title;
-        modal.classList.remove('hidden');
+showActionChoice() {
+    this.modalActionChoice.classList.remove('hidden');
+    this.validateUploadRequirements();
+}
+
+showProgress(title) {
+    const modal = document.getElementById('modal-progress');
+    const titleEl = document.getElementById('progress-title');
+    titleEl.textContent = title;
+    modal.classList.remove('hidden');
+}
+
+updateProgress(current, total, text) {
+    const fill = document.getElementById('progress-bar-fill');
+    const textEl = document.getElementById('progress-text');
+
+    const pct = Math.min(100, Math.max(0, (current / total) * 100));
+    fill.style.width = `${pct}%`;
+    textEl.textContent = text || `${current} / ${total}`;
+}
+
+hideProgress() {
+    document.getElementById('modal-progress').classList.add('hidden');
+}
+
+renderExcludedImages(excludedSet) {
+    this.excludedGrid.innerHTML = '';
+    if (excludedSet.size === 0) {
+        this.excludedEmptyMessage.style.display = 'block';
+        return;
     }
+    this.excludedEmptyMessage.style.display = 'none';
 
-    updateProgress(current, total, text) {
-        const fill = document.getElementById('progress-bar-fill');
-        const textEl = document.getElementById('progress-text');
+    excludedSet.forEach(path => {
+        const cell = document.createElement('div');
+        cell.className = 'img-cell';
+        cell.style.aspectRatio = "1";
+        cell.style.position = "relative";
 
-        const pct = Math.min(100, Math.max(0, (current / total) * 100));
-        fill.style.width = `${pct}%`;
-        textEl.textContent = text || `${current} / ${total}`;
-    }
+        const image = document.createElement('img');
+        image.style.width = "100%";
+        image.style.height = "100%";
+        image.style.objectFit = "cover";
 
-    hideProgress() {
-        document.getElementById('modal-progress').classList.add('hidden');
-    }
+        // Add Restore Button Overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; opacity:0; transition:opacity 0.2s; cursor:pointer;";
+        overlay.innerHTML = '<span style="font-size:2rem;">↩️</span>'; // Undo icon
 
-    renderExcludedImages(excludedSet) {
-        this.excludedGrid.innerHTML = '';
-        if (excludedSet.size === 0) {
-            this.excludedEmptyMessage.style.display = 'block';
-            return;
-        }
-        this.excludedEmptyMessage.style.display = 'none';
+        cell.onmouseenter = () => overlay.style.opacity = '1';
+        cell.onmouseleave = () => overlay.style.opacity = '0';
 
-        excludedSet.forEach(path => {
-            const cell = document.createElement('div');
-            cell.className = 'img-cell';
-            cell.style.aspectRatio = "1";
-            cell.style.position = "relative";
+        overlay.onclick = () => {
+            this.callbacks.onRestoreImage?.(path);
+            // Optimistic UI update: remove from this grid immediately
+            cell.remove();
+            if (this.excludedGrid.children.length === 0) {
+                this.excludedEmptyMessage.style.display = 'block';
+            }
+        };
 
-            const image = document.createElement('img');
-            image.style.width = "100%";
-            image.style.height = "100%";
-            image.style.objectFit = "cover";
+        cell.appendChild(image);
+        cell.appendChild(overlay);
+        this.excludedGrid.appendChild(cell);
 
-            // Add Restore Button Overlay
-            const overlay = document.createElement('div');
-            overlay.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; opacity:0; transition:opacity 0.2s; cursor:pointer;";
-            overlay.innerHTML = '<span style="font-size:2rem;">↩️</span>'; // Undo icon
-
-            cell.onmouseenter = () => overlay.style.opacity = '1';
-            cell.onmouseleave = () => overlay.style.opacity = '0';
-
-            overlay.onclick = () => {
-                this.callbacks.onRestoreImage?.(path);
-                // Optimistic UI update: remove from this grid immediately
-                cell.remove();
-                if (this.excludedGrid.children.length === 0) {
-                    this.excludedEmptyMessage.style.display = 'block';
-                }
-            };
-
-            cell.appendChild(image);
-            cell.appendChild(overlay);
-            this.excludedGrid.appendChild(cell);
-
-            // Trigger load (Thumbnail)
-            this.callbacks.onLoadThumbnail?.(path).then(url => {
-                if (url) image.src = url;
-            });
+        // Trigger load (Thumbnail)
+        this.callbacks.onLoadThumbnail?.(path).then(url => {
+            if (url) image.src = url;
         });
-    }
+    });
+}
 
-    formatTime(ms) {
-        if (!isFinite(ms) || ms < 0) return '-';
-        const seconds = Math.floor(ms / 1000);
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m}m ${s}s`;
-    }
+formatTime(ms) {
+    if (!isFinite(ms) || ms < 0) return '-';
+    const seconds = Math.floor(ms / 1000);
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}m ${s}s`;
+}
 }
