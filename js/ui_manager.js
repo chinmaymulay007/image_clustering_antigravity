@@ -55,6 +55,8 @@ export class UIManager {
         this.btnCloseAction = document.getElementById('btn-close-action');
         this.btnSaveSame = document.getElementById('btn-save-same');
         this.btnSaveDiff = document.getElementById('btn-save-diff');
+        this.passfacesUsername = document.getElementById('passfaces-username');
+        this.btnUploadPassfaces = document.getElementById('btn-upload-passfaces');
         this.uploadErrorMsg = document.getElementById('upload-error-msg');
         this.btnCancelAction = document.getElementById('btn-cancel-action');
 
