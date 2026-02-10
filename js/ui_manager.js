@@ -252,6 +252,12 @@ export class UIManager {
             this.aiStatusIndicator.textContent = "✅ AI Engine Complete";
             this.aiStatusIndicator.className = "ai-indicator running";
         } else if (stats.currentAction) {
+            // Prevent redundancy: If main action is "Clusters updated", hide the right toast immediately
+            if (stats.currentAction.includes('Clusters updated')) {
+                this.statusBarRight.classList.add('hidden');
+                this.lastSignificantEvent = null; // Clear history
+            }
+
             const isAIAction = stats.currentAction.includes('🧠') ||
                 stats.currentAction.includes('⏸️') ||
                 stats.currentAction.includes('▶️') ||

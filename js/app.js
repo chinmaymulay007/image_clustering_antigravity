@@ -80,7 +80,7 @@ class App {
 
         // Immediate Re-cluster
         console.log("[App] Triggering immediate re-cluster due to settings change.");
-        this.ui.updateStats({ lastEvent: `Settings: K=${this.k}, Threshold=${this.threshold}` });
+        this.ui.updateStats({ lastEvent: `Settings changed` });
         this.refreshClusters();
     }
 
@@ -348,7 +348,11 @@ class App {
                         this.ui.updateStats({ currentAction: `🖼️ Loading thumbnails (${this.thumbnailPromises.size})...` });
                     } else {
                         // Complete
-                        this.ui.updateStats({ currentAction: this.processing.isRunning ? "✅ Clusters updated." : "✅ Ready." });
+                        this.ui.updateStats({
+                            currentAction: this.processing.isRunning
+                                ? `✅ Clusters updated based on available ${this.currentEmbeddings.length} images data.`
+                                : "✅ Ready."
+                        });
                         this.logImageSummary();
                     }
                 };
