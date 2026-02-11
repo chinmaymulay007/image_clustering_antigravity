@@ -712,7 +712,7 @@ body {
     background: rgba(30, 27, 75, 0.6);
     border: 1px solid rgba(79, 70, 229, 0.4);
     padding: 0 4px 0 20px;
-    border-radius: 12px;
+    border-radius: 30px;
     font-size: 0.9rem;
     backdrop-filter: blur(12px);
     white-space: nowrap;
@@ -801,19 +801,19 @@ body {
 /* Suggestion Box - Breaking News Style */
 .suggestion-container {
     position: fixed;
-    top: 90px;
-    /* Below the app-header */
+    top: 115px;
+    /* Separated from header */
     left: 50%;
     transform: translateX(-50%);
     z-index: 900;
     display: flex;
     align-items: center;
-    background: rgba(31, 41, 55, 0.7);
+    background: rgba(31, 41, 55, 0.6);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
-    padding: 4px 16px 4px 6px;
-    gap: 12px;
+    padding: 6px 20px 6px 8px;
+    gap: 16px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     pointer-events: none;
     max-width: 90%;
@@ -828,21 +828,21 @@ body {
 }
 
 .suggestion-news-badge {
-    background: #ef4444;
-    /* Breaking news red */
-    color: white;
-    font-size: 0.65rem;
-    font-weight: 900;
-    padding: 3px 8px;
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 4px 10px;
     border-radius: 20px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    animation: pulse-red 2s infinite;
+    animation: pulse-blue 3s infinite;
 }
 
 .suggestion-text {
     color: #f3f4f6;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     font-weight: 500;
     transition: opacity 0.3s ease;
 }
@@ -851,17 +851,17 @@ body {
     opacity: 0;
 }
 
-@keyframes pulse-red {
+@keyframes pulse-blue {
     0% {
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3);
     }
 
     70% {
-        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+        box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
     }
 
     100% {
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
     }
 }
 
@@ -893,12 +893,12 @@ body {
 
 @media (max-width: 768px) {
     .suggestion-container {
-        top: 130px;
+        top: 140px;
         /* Lower on mobile due to stacked header */
     }
 
     .cluster-grid {
-        padding-top: 200px;
+        padding-top: 220px;
     }
 }
 
