@@ -759,7 +759,7 @@ body {
     margin-left: 2px;
 }
 
-/* Landing Screen Styling */
+/* Landing Screen Styling - Sleeker & More Compact */
 .landing-overlay {
     position: fixed;
     top: 0;
@@ -771,23 +771,21 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    padding-top: 5vh;
-    /* Reduced upper padding */
 }
 
 .landing-card {
-    max-width: 600px;
+    max-width: 650px;
     width: 90%;
-    padding: 2.5rem;
+    padding: 2rem;
     background: #1e293b;
-    border-radius: 24px;
+    border-radius: 20px;
     border: 1px solid #334155;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
 }
 
 .landing-title {
-    margin-bottom: 0.5rem;
-    font-size: 3rem;
+    margin-bottom: 0.25rem;
+    font-size: 2.2rem;
     text-align: center;
     color: #ffffff;
     font-weight: 800;
@@ -796,55 +794,52 @@ body {
 .landing-subtitle {
     color: #94a3b8;
     text-align: center;
-    margin-bottom: 2.5rem;
-    font-size: 1.15rem;
+    margin-bottom: 2rem;
+    font-size: 1rem;
 }
 
-.landing-section {
-    background: #0f172a;
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    border: 1px solid #334155;
+.landing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
-.landing-section h4 {
-    margin-top: 0;
-    margin-bottom: 1rem;
+.landing-feature {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.landing-feature h4 {
+    margin: 0;
     color: #ffffff;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     font-weight: 600;
 }
 
-.landing-icon-monochrome {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    background: #94a3b8;
-    mask-size: contain;
-    mask-repeat: no-repeat;
-    mask-position: center;
-    -webkit-mask-size: contain;
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-position: center;
+.landing-feature p,
+.landing-feature ul {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
-/* Fallback monochrome shapes if masks aren't used */
+.landing-feature li {
+    margin-bottom: 4px;
+}
+
 .landing-icon-circle {
-    width: 10px;
-    height: 10px;
-    background: #64748b;
+    width: 8px;
+    height: 8px;
+    background: #475569;
     border-radius: 50%;
-}
-
-.landing-card p,
-.landing-card li {
-    color: #cbd5e1;
-    font-size: 0.95rem;
-    line-height: 1.6;
 }
 
 .btn-pause-pill {
@@ -932,11 +927,10 @@ body {
     bottom: 0;
     left: 0;
     height: 12px;
-    /* Taller */
     width: 0%;
     background: #3b82f6;
-    border-radius: 0;
-    /* Straight edge fix */
+    border-radius: 0 6px 6px 0;
+    /* Soften the right moving edge */
     transition: width 0.3s ease, background-color 0.4s ease, box-shadow 0.4s ease;
     z-index: 10;
     mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.2) 60%, rgba(0, 0, 0, 0) 100%);

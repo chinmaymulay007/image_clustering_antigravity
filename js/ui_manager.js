@@ -334,6 +334,11 @@ export class UIManager {
         this.btnPauseResume.classList.toggle('analyzing', !isPaused);
         this.headerProgressBar.classList.toggle('shining', !isPaused);
         this.headerProgressBar.classList.toggle('paused', isPaused);
+
+        // Also update metrics visibility immediately for better responsiveness
+        if (this.aiMetricsContainer) {
+            this.aiMetricsContainer.classList.toggle('hidden', isPaused);
+        }
     }
 
     showStatus(text) {

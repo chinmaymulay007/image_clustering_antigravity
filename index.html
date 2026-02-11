@@ -15,41 +15,24 @@
     <div id="overlay-initial" class="landing-overlay">
         <div class="landing-content landing-card">
             <h1 class="landing-title">ClusterAI</h1>
-
             <p class="landing-subtitle">Privacy-first image clustering powered by local AI.</p>
 
-            <div class="landing-section">
-                <h4>
-                    <div class="landing-icon-circle"></div> Folder Scanning
-                </h4>
-                <p>
-                    All images in your selected folder (and its <strong>nested sub-folders</strong>) will be used for
-                    clustering.
-                </p>
-                <p style="margin-top: 10px; font-size: 0.85rem; color: #64748b;">
-                    <strong>Formats:</strong> JPG, PNG, WEBP, GIF, BMP
-                </p>
+            <div class="landing-grid">
+                <div class="landing-feature">
+                    <h4>
+                        <div class="landing-icon-circle"></div> Local Privacy
+                    </h4>
+                    <p>Total security. Your images never leave this device.</p>
+                </div>
+                <div class="landing-feature">
+                    <h4>
+                        <div class="landing-icon-circle"></div> Smart Scan
+                    </h4>
+                    <p>Deep cluster analysis including subfolders. Fast & local.</p>
+                </div>
             </div>
 
-            <div class="landing-section">
-                <h4>
-                    <div class="landing-icon-circle"></div> Privacy Assured
-                </h4>
-                <ul style="list-style: none; padding: 0; margin: 0;">
-                    <li style="margin-bottom: 12px; display: flex; gap: 12px; align-items: flex-start;">
-                        <span style="color: #64748b; margin-top: 4px;">•</span>
-                        <span><strong>Zero Uploads</strong>: Your images never leave your device. All processing happens
-                            locally.</span>
-                    </li>
-                    <li style="display: flex; gap: 12px; align-items: flex-start;">
-                        <span style="color: #64748b; margin-top: 4px;">•</span>
-                        <span><strong>Total Security</strong>: We do not store, see, or transmit your data to any
-                            server.</span>
-                    </li>
-                </ul>
-            </div>
-
-            <div style="text-align: center; margin-top: 2rem;">
+            <div style="text-align: center; margin-top: 1.5rem;">
                 <button id="btn-select-folder-initial" class="btn-primary" style="width: 100%;">
                     Select Folder to Begin
                 </button>
