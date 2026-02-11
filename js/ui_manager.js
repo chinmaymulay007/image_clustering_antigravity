@@ -318,12 +318,12 @@ export class UIManager {
             }
         }
 
-        // Handle Metrics Visibility (Bottom Right Header)
+        // Handle Metrics Visibility (Next to AI Pill)
         if (this.aiMetricsContainer) {
             const isPaused = this.btnPauseResume.classList.contains('paused');
             const isComplete = stats.completed;
-            const hasData = stats.speed !== undefined || stats.eta !== undefined;
-            const shouldShow = !isPaused && !isComplete && hasData;
+            // Show metrics whenever running (not paused and not complete)
+            const shouldShow = !isPaused && !isComplete;
 
             this.aiMetricsContainer.classList.toggle('hidden', !shouldShow);
         }
