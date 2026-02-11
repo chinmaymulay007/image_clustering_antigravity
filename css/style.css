@@ -666,125 +666,151 @@ body {
 }
 
 
-/* Modern Sleek Status Bar */
-/* Split Status Bar Container */
+/* Modern Sleek Status Bar (Bottom Left) */
 .status-bar-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    width: calc(100% - 30px);
-    /* Match header width */
-    /* Centered relative to screen, matches header margins essentially */
-    padding: 0 15px;
-    /* Alignment fix */
-    box-sizing: border-box;
     position: fixed;
-    top: 95px;
-    /* Just below header */
-    left: 50%;
-    transform: translateX(-50%);
-    /* Pull up slightly */
-    z-index: 900;
+    bottom: 25px;
+    left: 25px;
+    z-index: 1100;
     pointer-events: none;
-    /* Let clicks pass through empty space */
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Base Status Pill */
-.status-pill {
-    background: rgba(17, 24, 39, 0.95);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: 16px;
-    padding: 8px 20px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #9ca3af;
-    font-size: 0.9rem;
-    pointer-events: auto;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.status-pill-left {
-    border-top-left-radius: 4px;
-    /* Align visual flow with header above */
-    color: #f3f4f6;
-}
-
-.status-pill-right {
-    border-top-right-radius: 4px;
-    color: #60a5fa;
-    border-color: rgba(96, 165, 250, 0.4);
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.status-pill-right.hidden {
+.status-bar-container.hidden {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(10px);
     pointer-events: none;
     display: flex !important;
-    /* Override display:none to allow transition */
+    /* Allow transition */
     visibility: hidden;
+}
+
+.status-pill {
+    background: rgba(17, 24, 39, 0.9);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 20px;
+    padding: 10px 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #f3f4f6;
+    font-size: 0.85rem;
+    pointer-events: auto;
+    transition: all 0.3s ease;
 }
 
 
 
 /* AI Engine Pill (Compact) */
+/* AI Engine Pill (Simplified) */
 .ai-engine-pill {
     display: flex;
     align-items: center;
     gap: 15px;
-    background: rgba(30, 27, 75, 0.4);
-    border: 1px solid #312e81;
-    padding: 10px 18px;
-    border-radius: 25px;
-    font-size: 0.95rem;
-    backdrop-filter: blur(4px);
+    background: rgba(30, 27, 75, 0.5);
+    border: 1px solid rgba(79, 70, 229, 0.3);
+    padding: 8px 16px;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    backdrop-filter: blur(8px);
     white-space: nowrap;
-    flex-wrap: nowrap;
-    min-width: max-content;
+    position: relative;
+    overflow: hidden;
 }
 
-.ai-status-indicator-wrap {
+.ai-pill-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ai-pill-text {
+    color: #f3f4f6;
+    font-weight: 500;
+}
+
+.ai-pill-secondary {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: rgba(156, 163, 175, 0.7);
+    /* Faded text */
 }
 
-.ai-indicator {
-    font-weight: 700;
-    transition: all 0.3s ease;
+.ai-pill-secondary .metric strong {
+    color: rgba(156, 163, 175, 0.9);
 }
 
-.ai-indicator.paused {
-    color: #f59e0b;
-}
-
-.ai-indicator.running {
-    display: none;
-    /* Hide brain emoji when running */
-}
-
-.ai-status-text {
-    color: #f59e0b;
-    font-weight: 400;
-    /* Not bold */
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    opacity: 0.8;
-}
-
-/* AI Machine Animation */
-.ai-machine-anim {
+.btn-pause-pill {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.9rem;
-    position: relative;
-    overflow: hidden;
-    padding: 0 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f3f4f6;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-pause-pill:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-pause-pill.paused {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+}
+
+.btn-pause-pill.analyzing {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+
+/* Header Progress Bar */
+.header-progress-bar {
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background: #3b82f6;
+    border-radius: 0 0 24px 24px;
+    transition: width 0.3s ease;
+    z-index: 10;
+}
+
+.header-progress-bar.shining {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
+    background-size: 200% 100%;
+    animation: shine-sweep 2s infinite linear;
+}
+
+@keyframes shine-sweep {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Legacy styles kept for safety but should be cleaned up later */
+.ai-status-indicator-wrap,
+.ai-indicator,
+.ai-status-text,
+.ai-machine-anim {
+    display: none;
 }
 
 .anim-input {

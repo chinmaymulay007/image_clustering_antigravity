@@ -41,10 +41,11 @@ export class UIManager {
         this.statusSpinner = document.getElementById('status-spinner');
         this.aiStatusIndicator = document.getElementById('ai-status-indicator');
         this.aiMachineAnim = document.getElementById('ai-machine-anim');
-        this.aiPillStatusText = document.getElementById('ai-pill-status-text');
-        this.aiDynamicMetrics = document.getElementById('ai-dynamic-metrics');
-        this.aiMetrics = document.getElementById('ai-metrics');
-        this.aiMetrics = document.getElementById('ai-metrics');
+        this.aiPillText = document.getElementById('ai-pill-text');
+        this.headerProgressBar = document.getElementById('header-progress-bar');
+        this.btnPauseResumeText = this.btnPauseResume.querySelector('.btn-text');
+        this.btnPauseResumeIcon = this.btnPauseResume.querySelector('.btn-icon');
+
         this.floatingControls = document.getElementById('floating-controls');
         this.appHeader = document.querySelector('.app-header');
         this.statusBarContainer = document.getElementById('status-bar-container');
@@ -89,7 +90,7 @@ export class UIManager {
         this.btnSelectInitial.addEventListener('click', () => this.callbacks.onSelectFolder?.());
 
         this.btnPauseResume.addEventListener('click', () => {
-            const isPaused = this.btnPauseResume.textContent === 'RESUME';
+            const isPaused = this.btnPauseResumeText.textContent === 'RESUME';
             this.callbacks.onPauseResume?.(!isPaused); // Toggle
         });
 
@@ -242,6 +243,15 @@ export class UIManager {
         if (stats.processed !== undefined) this.statProcessed.textContent = stats.processed;
         if (stats.total !== undefined) this.statTotal.textContent = stats.total;
 
+        // Update new AI pill text
+        if (stats.processed !== undefined && stats.total !== undefined) {
+            this.aiPillText.textContent = `${stats.processed}/${stats.total} images analyzed by AI`;
+
+            // Update header progress bar
+            const percent = (stats.processed / stats.total) * 100 || 0;
+            this.headerProgressBar.style.width = `${percent}%`;
+        }
+
         // Speed (sec per img)
         if (stats.speed !== undefined) {
             this.statSpeed.textContent = `${stats.speed.toFixed(2)} s/img`;
@@ -251,45 +261,27 @@ export class UIManager {
         if (stats.eta !== undefined && stats.eta !== null) {
             this.statEta.textContent = this.formatTime(stats.eta);
         } else if (stats.currentAction && stats.currentAction.includes('▶️')) {
-            this.statEta.textContent = 'Calculating...';
+            this.statEta.textContent = '...';
         }
 
-        // Last Event (Right side)
-        // Last Event (Right side - Transient Toast)
+        // Last Event (now routed through showStatus)
         if (stats.lastEvent) {
-            this.lastSignificantEvent = stats.lastEvent;
-            this.statusEvent.textContent = stats.lastEvent;
-
-            // Show the transient pill
-            this.statusBarRight.classList.remove('hidden');
-
-            // Clear previous timer
-            if (this.currStatusTimeout) clearTimeout(this.currStatusTimeout);
-
-            // Auto-hide after 3 seconds (Toast behavior)
-            this.currStatusTimeout = setTimeout(() => {
-                this.statusBarRight.classList.add('hidden');
-            }, 3000);
-
-        } else if (this.lastSignificantEvent && !this.statusBarRight.classList.contains('hidden')) {
-            // If already showing, update text but don't reset timer (optional choice, 
-            // but standard toast usually refreshes on new content. Here we just maintain content if visible)
-            this.statusEvent.textContent = this.lastSignificantEvent;
+            this.showStatus(stats.lastEvent);
         }
 
         // Current Activity (Global Status Bar & AI Engine Indicator)
         if (stats.completed) {
             this.btnPauseResume.textContent = "COMPLETE";
             this.btnPauseResume.disabled = true;
-            this.statusBarText.textContent = "✅ Processing Complete. Ready to save.";
+            this.showStatus("✅ Processing Complete. Ready to save.");
             this.statusSpinner.classList.add('hidden');
 
             this.aiStatusIndicator.textContent = "✅ AI Engine Complete";
             this.aiStatusIndicator.className = "ai-indicator running";
         } else if (stats.currentAction) {
-            // Prevent redundancy: If main action is "Clusters updated", hide the right toast immediately
+            // Prevent redundancy: If main action is "Clusters updated", it's a global status.
+            // showStatus will handle displaying it and clearing previous messages.
             if (stats.currentAction.includes('Clusters updated')) {
-                this.statusBarRight.classList.add('hidden');
                 this.lastSignificantEvent = null; // Clear history
             }
 
@@ -323,11 +315,16 @@ export class UIManager {
                     this.aiDynamicMetrics.classList.toggle('paused', isPaused);
                 }
 
-                this.btnPauseResume.textContent = isPaused ? 'RESUME' : 'PAUSE';
-                this.btnPauseResume.classList.toggle('active', !isPaused);
+                this.btnPauseResumeText.textContent = isPaused ? 'RESUME' : 'PAUSE';
+                this.btnPauseResumeIcon.textContent = isPaused ? '▶️' : '⏸️';
+                this.btnPauseResume.classList.toggle('paused', isPaused);
+                this.btnPauseResume.classList.toggle('analyzing', !isPaused);
+
+                // Progress Bar animation
+                this.headerProgressBar.classList.toggle('shining', !isPaused);
             } else {
                 // Route to Global Status Bar
-                this.statusBarText.textContent = stats.currentAction;
+                this.showStatus(stats.currentAction);
 
                 // Show spinner if activity looks like background work (excluding AI)
                 const isWork = stats.currentAction.toLowerCase().includes('ing') ||
@@ -354,8 +351,22 @@ export class UIManager {
     }
 
     setPauseState(isPaused) {
-        this.btnPauseResume.textContent = isPaused ? 'RESUME' : 'PAUSE';
-        this.btnPauseResume.classList.toggle('active', !isPaused);
+        this.btnPauseResumeText.textContent = isPaused ? 'RESUME' : 'PAUSE';
+        this.btnPauseResumeIcon.textContent = isPaused ? '▶️' : '⏸️';
+        this.btnPauseResume.classList.toggle('paused', isPaused);
+        this.btnPauseResume.classList.toggle('analyzing', !isPaused);
+        this.headerProgressBar.classList.toggle('shining', !isPaused);
+    }
+
+    showStatus(text) {
+        if (!text) return;
+        this.statusBarText.textContent = text;
+        this.statusBarContainer.classList.remove('hidden');
+
+        if (this.currStatusTimeout) clearTimeout(this.currStatusTimeout);
+        this.currStatusTimeout = setTimeout(() => {
+            this.statusBarContainer.classList.add('hidden');
+        }, 5000);
     }
 
     renderClusters(clusters) {
