@@ -71,11 +71,6 @@
                 <div id="ai-engine-pill" class="ai-engine-pill">
                     <div class="ai-pill-main">
                         <span id="ai-pill-text" class="ai-pill-text">0/0 images analyzed by AI</span>
-                        <div id="ai-pill-secondary" class="ai-pill-secondary">
-                            <span class="metric">Speed: <strong id="stat-speed">-</strong></span>
-                            <span class="metric-sep">•</span>
-                            <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
-                        </div>
                     </div>
                     <button id="btn-pause-resume" class="btn-pause-pill">
                         <span class="btn-icon">⏸️</span>
@@ -97,6 +92,11 @@
             <div class="header-actions">
                 <button id="btn-view-excluded" class="btn-header-action" title="Excluded Images">🗑️</button>
                 <button id="btn-settings" class="btn-header-action" title="Settings">⚙️</button>
+            </div>
+            <div id="ai-pill-secondary" class="ai-pill-secondary hidden">
+                <span class="metric">Speed: <strong id="stat-speed">-</strong></span>
+                <span class="metric-sep">•</span>
+                <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
             </div>
         </header>
 

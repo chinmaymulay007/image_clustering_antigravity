@@ -732,16 +732,33 @@ body {
 }
 
 .ai-pill-secondary {
+    position: absolute;
+    bottom: 8px;
+    right: 30px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.75rem;
-    color: rgba(156, 163, 175, 0.7);
-    /* Faded text */
+    gap: 12px;
+    font-size: 0.72rem;
+    color: rgba(156, 163, 175, 0.6);
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 20;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.ai-pill-secondary.hidden {
+    opacity: 0;
+    transform: translateY(5px);
+    pointer-events: none;
+    display: flex !important;
+    /* Allow transition */
+    visibility: hidden;
 }
 
 .ai-pill-secondary .metric strong {
-    color: rgba(156, 163, 175, 0.9);
+    color: rgba(156, 163, 175, 0.85);
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .btn-pause-pill {

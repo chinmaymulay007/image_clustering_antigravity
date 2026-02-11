@@ -45,6 +45,7 @@ export class UIManager {
         this.headerProgressBar = document.getElementById('header-progress-bar');
         this.btnPauseResumeText = this.btnPauseResume.querySelector('.btn-text');
         this.btnPauseResumeIcon = this.btnPauseResume.querySelector('.btn-icon');
+        this.aiMetricsContainer = document.getElementById('ai-pill-secondary');
 
         this.floatingControls = document.getElementById('floating-controls');
         this.appHeader = document.querySelector('.app-header');
@@ -228,8 +229,7 @@ export class UIManager {
 
         // PROTECT PAUSE STATE: If engine is manually paused, prevent secondary messages 
         // from reverting the visual state to "running".
-        const currentPillText = this.aiPillStatusText.textContent;
-        const isCurrentlyPaused = this.btnPauseResume.textContent === 'RESUME' || currentPillText === 'PAUSED';
+        const isCurrentlyPaused = this.btnPauseResumeText.textContent === 'RESUME';
 
         // Check if the message contains run-indicators (emojis that usually trigger running state)
         const isRunMessage = stats.currentAction && (stats.currentAction.includes('🧠') || stats.currentAction.includes('💾') || stats.currentAction.includes('🧩'));
@@ -304,22 +304,6 @@ export class UIManager {
                 // brain is hidden when running by css (.running { display: none })
                 this.aiStatusIndicator.className = `ai-indicator ${(isPaused || isResuming) ? 'paused' : 'running'}`;
 
-                if (this.aiMachineAnim) {
-                    const shouldShowAnim = !isPaused && (stats.currentAction.includes('🧠') || stats.currentAction.includes('▶️') || stats.currentAction.toLowerCase().includes('initializ'));
-                    this.aiMachineAnim.classList.toggle('hidden', !shouldShowAnim);
-
-                    // Toggle "paused" text
-                    this.aiPillStatusText.classList.toggle('hidden', !isPaused);
-
-                    // Toggle dynamic metrics (Speed/ETA) - use display:none via class
-                    this.aiDynamicMetrics.classList.toggle('paused', isPaused);
-                }
-
-                this.btnPauseResumeText.textContent = isPaused ? 'RESUME' : 'PAUSE';
-                this.btnPauseResumeIcon.textContent = isPaused ? '▶️' : '⏸️';
-                this.btnPauseResume.classList.toggle('paused', isPaused);
-                this.btnPauseResume.classList.toggle('analyzing', !isPaused);
-
                 // Progress Bar animation
                 this.headerProgressBar.classList.toggle('shining', !isPaused);
             } else {
@@ -337,16 +321,24 @@ export class UIManager {
                 }
             }
 
-            // Clear dynamic stats if paused
-            if (stats.currentAction.includes('⏸️')) {
+            if (stats.currentAction && stats.currentAction.includes('⏸️')) {
                 this.statSpeed.textContent = '-';
                 this.statEta.textContent = '-';
-            } else if (stats.currentAction.includes('▶️')) {
+            } else if (stats.currentAction && stats.currentAction.includes('▶️')) {
                 // Show calculating if resuming - smaller text
                 this.statSpeed.textContent = '...';
                 this.statEta.textContent = '...';
-                this.aiDynamicMetrics.classList.remove('paused');
             }
+        }
+
+        // Handle Metrics Visibility (Bottom Right Header)
+        if (this.aiMetricsContainer) {
+            const isPaused = this.btnPauseResumeText.textContent === 'RESUME';
+            const isComplete = stats.completed;
+            const hasData = stats.speed !== undefined || stats.eta !== undefined;
+            const shouldShow = !isPaused && !isComplete && hasData;
+
+            this.aiMetricsContainer.classList.toggle('hidden', !shouldShow);
         }
     }
 
