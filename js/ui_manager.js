@@ -43,7 +43,7 @@ export class UIManager {
         this.aiMachineAnim = document.getElementById('ai-machine-anim');
         this.aiPillText = document.getElementById('ai-pill-text');
         this.headerProgressBar = document.getElementById('header-progress-bar');
-        this.btnPauseResumeIcon = this.btnPauseResume.querySelector('.btn-icon');
+        this.btnPauseResumeIcon = this.btnPauseResume.querySelector('.pause-resume-icon');
         this.aiMetricsContainer = document.getElementById('ai-pill-secondary');
 
         this.floatingControls = document.getElementById('floating-controls');
@@ -90,8 +90,8 @@ export class UIManager {
         this.btnSelectInitial.addEventListener('click', () => this.callbacks.onSelectFolder?.());
 
         this.btnPauseResume.addEventListener('click', () => {
-            const isPaused = this.btnPauseResumeText.textContent === 'RESUME';
-            this.callbacks.onPauseResume?.(!isPaused); // Toggle
+            const isCurrentlyPaused = this.btnPauseResume.classList.contains('paused');
+            this.callbacks.onPauseResume?.(!isCurrentlyPaused);
         });
 
         // Settings Modal
@@ -270,7 +270,7 @@ export class UIManager {
 
         // Current Activity (Global Status Bar & AI Engine Indicator)
         if (stats.completed) {
-            this.btnPauseResume.textContent = "COMPLETE";
+            this.btnPauseResume.innerHTML = '<span style="font-size: 0.7rem; font-weight: 800;">DONE</span>';
             this.btnPauseResume.disabled = true;
             this.showStatus("✅ Processing Complete. Ready to save.");
             this.statusSpinner.classList.add('hidden');
@@ -279,7 +279,6 @@ export class UIManager {
             this.aiStatusIndicator.className = "ai-indicator running";
         } else if (stats.currentAction) {
             // Prevent redundancy: If main action is "Clusters updated", it's a global status.
-            // showStatus will handle displaying it and clearing previous messages.
             if (stats.currentAction.includes('Clusters updated')) {
                 this.lastSignificantEvent = null; // Clear history
             }
@@ -290,21 +289,10 @@ export class UIManager {
                 stats.currentAction.toLowerCase().includes('ai worker');
 
             if (isAIAction) {
-                // Route to AI Engine Pill
                 const isPaused = stats.currentAction.includes('⏸️');
-                const isResuming = stats.currentAction.includes('▶️');
-
-                if (isResuming) {
-                    this.aiStatusIndicator.textContent = '▶️';
-                } else {
-                    this.aiStatusIndicator.textContent = isPaused ? '⏸️' : '🧠';
-                }
-
-                // brain is hidden when running by css (.running { display: none })
-                this.aiStatusIndicator.className = `ai-indicator ${(isPaused || isResuming) ? 'paused' : 'running'}`;
-
-                // Progress Bar animation
+                // Progress Bar animation and color
                 this.headerProgressBar.classList.toggle('shining', !isPaused);
+                this.headerProgressBar.classList.toggle('paused', isPaused);
             } else {
                 // Route to Global Status Bar
                 this.showStatus(stats.currentAction);
@@ -342,10 +330,10 @@ export class UIManager {
     }
 
     setPauseState(isPaused) {
-        this.btnPauseResumeIcon.textContent = isPaused ? '▶️' : '⏸️';
         this.btnPauseResume.classList.toggle('paused', isPaused);
         this.btnPauseResume.classList.toggle('analyzing', !isPaused);
         this.headerProgressBar.classList.toggle('shining', !isPaused);
+        this.headerProgressBar.classList.toggle('paused', isPaused);
     }
 
     showStatus(text) {
