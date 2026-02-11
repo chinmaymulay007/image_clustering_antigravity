@@ -43,7 +43,6 @@ export class UIManager {
         this.aiMachineAnim = document.getElementById('ai-machine-anim');
         this.aiPillText = document.getElementById('ai-pill-text');
         this.headerProgressBar = document.getElementById('header-progress-bar');
-        this.btnPauseResumeText = this.btnPauseResume.querySelector('.btn-text');
         this.btnPauseResumeIcon = this.btnPauseResume.querySelector('.btn-icon');
         this.aiMetricsContainer = document.getElementById('ai-pill-secondary');
 
@@ -229,7 +228,7 @@ export class UIManager {
 
         // PROTECT PAUSE STATE: If engine is manually paused, prevent secondary messages 
         // from reverting the visual state to "running".
-        const isCurrentlyPaused = this.btnPauseResumeText.textContent === 'RESUME';
+        const isCurrentlyPaused = this.btnPauseResume.classList.contains('paused');
 
         // Check if the message contains run-indicators (emojis that usually trigger running state)
         const isRunMessage = stats.currentAction && (stats.currentAction.includes('🧠') || stats.currentAction.includes('💾') || stats.currentAction.includes('🧩'));
@@ -333,7 +332,7 @@ export class UIManager {
 
         // Handle Metrics Visibility (Bottom Right Header)
         if (this.aiMetricsContainer) {
-            const isPaused = this.btnPauseResumeText.textContent === 'RESUME';
+            const isPaused = this.btnPauseResume.classList.contains('paused');
             const isComplete = stats.completed;
             const hasData = stats.speed !== undefined || stats.eta !== undefined;
             const shouldShow = !isPaused && !isComplete && hasData;
@@ -343,7 +342,6 @@ export class UIManager {
     }
 
     setPauseState(isPaused) {
-        this.btnPauseResumeText.textContent = isPaused ? 'RESUME' : 'PAUSE';
         this.btnPauseResumeIcon.textContent = isPaused ? '▶️' : '⏸️';
         this.btnPauseResume.classList.toggle('paused', isPaused);
         this.btnPauseResume.classList.toggle('analyzing', !isPaused);
