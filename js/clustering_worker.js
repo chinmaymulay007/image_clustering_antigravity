@@ -11,7 +11,7 @@ self.onmessage = function (e) {
         const result = engine.updateClusters(embeddings, k, threshold, previousCentroids, lockedIndices, lockedRadii, lockedCentroids);
         const end = performance.now();
 
-        console.log(`%c[Clustering Worker] Re-calculated ${result.clusters.length} clusters in ${(end - start).toFixed(1)}ms`, "color: #8b5cf6;");
+        console.log(`[Clustering Worker] Re-calculated ${result.clusters.length} clusters in ${(end - start).toFixed(1)}ms`);
         self.postMessage({ status: 'success', result });
     } catch (err) {
         self.postMessage({ status: 'error', error: err.message });

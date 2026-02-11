@@ -11,6 +11,7 @@ async function init(config) {
     env.localModelPath = '../models/'; // Relative to worker in js/
     env.allowRemoteModels = true;
     env.backends.onnx.wasm.wasmPaths = 'vendor/dist/';
+    self.debug = config.debug || false;
 
     // Inherit debug settings if passed
     if (config.debug) {
@@ -26,7 +27,7 @@ async function init(config) {
         device: 'webgpu'
     });
 
-    console.log("%c[AI Worker] Model loaded & ready.", "color: #10b981; font-weight: bold;");
+    console.log("[AI Worker] Model loaded & ready.");
 
     // Enhanced Probing for Hardware Info
     let backend = 'Unknown';
@@ -52,7 +53,7 @@ async function init(config) {
         console.warn("[AI Worker] Hardware probe hit a snag:", e);
     }
 
-    console.log(`%c[AI Worker] Backend: ${backend} | Device: ${device}`, "color: #10b981; font-weight: bold;");
+    console.log(`[AI Worker] Backend: ${backend} | Device: ${device}`);
     self.postMessage({ status: 'ready', backend, device });
 }
 
@@ -71,7 +72,9 @@ async function processBatch(batch) {
                 return null;
             }
 
-            console.log(`%c[AI Worker] Decoding file: ${item.path.split('/').pop()} (${(file.size / 1024).toFixed(1)}KB)`, "color: #fb8c00; font-size: 0.8rem;");
+            if (self.debug) {
+                console.log(`[AI Worker] Decoding file: ${item.path.split('/').pop()} (${(file.size / 1024).toFixed(1)}KB)`);
+            }
 
             const url = URL.createObjectURL(file);
             try {
@@ -103,7 +106,7 @@ async function processBatch(batch) {
             result.push(Array.from(image_embeds.data.slice(rowStart, rowEnd)));
         }
 
-        console.log(`%c[AI Worker] Processed batch of ${batch.length} in ${duration.toFixed(1)}ms (${(duration / batch.length).toFixed(1)}ms/img)`, "color: #10b981;");
+        console.log(`[AI Worker] Processed batch of ${batch.length} in ${duration.toFixed(1)}ms (${(duration / batch.length).toFixed(1)}ms/img)`);
 
         self.postMessage({
             status: 'success',

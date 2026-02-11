@@ -33,7 +33,7 @@ export class ProcessingManager {
         if (this.worker) return;
 
         if (this.onProgress) this.onProgress({ currentAction: "🧠 Initializing AI Worker..." });
-        console.log("%c[ProcessingManager] Initializing AI Worker...", "color: #3f51b5; font-weight: bold;");
+        console.log("[ProcessingManager] Initializing AI Worker...");
         this.worker = new Worker('js/ai_worker.js', { type: 'module' });
 
         return new Promise((resolve) => {
@@ -60,7 +60,7 @@ export class ProcessingManager {
 
             this.worker.postMessage({
                 action: 'init',
-                payload: { debug: true }
+                payload: { debug: false }
             });
         });
     }
@@ -71,7 +71,7 @@ export class ProcessingManager {
 
         // 1. Scan Files
         if (this.onProgress) this.onProgress({ currentAction: "🔍 Scanning folder for images..." });
-        console.log("%c[ProcessingManager] Scanning files...", "color: #3f51b5;");
+        console.log("[ProcessingManager] Scanning files...");
         this.allImages = await this.fs.scanAllImagesRecursive();
 
         // 2. Resume Logic (Using IndexedDB instead of files)
@@ -99,7 +99,7 @@ export class ProcessingManager {
         // If we have NO data (fresh run), we AUTO-START.
         if (hasData) {
             this.isPaused = true;
-            console.log("%c[Processing] Existing database found. PAUSED (Automatic) for user review.", "color: #f59e0b; font-weight: bold;");
+            console.log("[Processing] Existing database found. PAUSED (Automatic) for user review.");
             if (this.onProgress) {
                 this.onProgress({
                     processed: this.processedPaths.size,
@@ -109,7 +109,7 @@ export class ProcessingManager {
             }
         } else {
             this.isPaused = false;
-            console.log("%c[Processing] Fresh run detected. RESUMED (Auto-Start)...", "color: #3b82f6; font-weight: bold;");
+            console.log("[Processing] Fresh run detected. RESUMED (Auto-Start)...");
             // Load immediately for fresh runs
             if (!this.workerReady) await this.loadModel();
         }
@@ -126,7 +126,7 @@ export class ProcessingManager {
         if (this.isPaused) {
             console.log(`%c[ProcessingManager] Analysis queue ready: ${unprocessed.length} items pending. Waiting for Resume...`, "color: #f59e0b;");
         } else {
-            console.log(`%c[ProcessingManager] Analysis started for ${unprocessed.length} items.`, "color: #3f51b5; font-weight: bold;");
+            console.log(`[ProcessingManager] Analysis started for ${unprocessed.length} items.`);
         }
 
         while (this.isRunning && !this.aborted) {
@@ -273,15 +273,15 @@ export class ProcessingManager {
 
     pause() {
         this.isPaused = true;
-        console.log("%c[Processing] PAUSED (Manual)", "color: #f59e0b; font-weight: bold;");
+        console.log("[Processing] PAUSED (Manual)");
     }
     resume() {
         this.isPaused = false;
-        console.log("%c[Processing] RESUMED (Manual)", "color: #3b82f6; font-weight: bold;");
+        console.log("[Processing] RESUMED (Manual)");
     }
     stop() {
         this.isRunning = false;
         this.aborted = true;
-        console.log("%c[Processing] STOPPED", "color: #ef4444; font-weight: bold;");
+        console.log("[Processing] STOPPED");
     }
 }
