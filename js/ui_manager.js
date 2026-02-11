@@ -76,6 +76,17 @@ export class UIManager {
         this.modalProgress = document.getElementById('modal-progress');
         this.activeClusterPreview = document.getElementById('active-cluster-preview');
 
+        // Suggestions
+        this.suggestionContainer = document.getElementById('suggestion-container');
+        this.suggestionText = document.getElementById('suggestion-text');
+        this.suggestions = [
+            "Lock 6 clusters for Passfaces setup",
+            "Exclude images that you don't want",
+            "Change number of clusters from settings"
+        ];
+        this.currSuggestionIndex = 0;
+        this.suggestionInterval = null;
+
         // State
         this.callbacks = {};
         this.cards = new Map(); // Index -> Card DOM node
@@ -221,6 +232,31 @@ export class UIManager {
         this.floatingControls?.classList.remove('hidden');
         this.appHeader?.classList.remove('hidden');
         this.statusBarContainer?.classList.remove('hidden');
+
+        this.startSuggestionRotation();
+    }
+
+    startSuggestionRotation() {
+        if (this.suggestionInterval) return;
+
+        const rotate = () => {
+            if (!this.suggestionText) return;
+
+            // Fade out
+            this.suggestionText.classList.add('fade-out');
+
+            setTimeout(() => {
+                this.currSuggestionIndex = (this.currSuggestionIndex + 1) % this.suggestions.length;
+                this.suggestionText.textContent = this.suggestions[this.currSuggestionIndex];
+                this.suggestionText.classList.remove('fade-out');
+            }, 300);
+        };
+
+        // Initial text
+        this.suggestionText.textContent = this.suggestions[0];
+        this.suggestionContainer.classList.remove('hidden');
+
+        this.suggestionInterval = setInterval(rotate, 5000);
     }
 
     updateStats(stats) {
@@ -441,8 +477,8 @@ export class UIManager {
                 title.innerHTML = titleHtml;
                 card._titleNode = title; // Link
 
-                header.appendChild(lockToggle);
                 header.appendChild(title);
+                header.appendChild(lockToggle);
                 card.appendChild(header);
 
                 const grid = document.createElement('div');
@@ -670,6 +706,14 @@ export class UIManager {
         } else {
             this.selectionIndicator.style.color = '#f59e0b'; // Orange/Yellow
         }
+
+        // Animate count change
+        if (this._lastSelectionCount !== undefined && this._lastSelectionCount !== selectedCount) {
+            this.selectionCountSpan.classList.remove('selection-count-pop');
+            void this.selectionCountSpan.offsetWidth; // Trigger reflow
+            this.selectionCountSpan.classList.add('selection-count-pop');
+        }
+        this._lastSelectionCount = selectedCount;
     }
 
     showActionChoice() {

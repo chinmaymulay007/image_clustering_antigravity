@@ -28,8 +28,8 @@ body {
     backdrop-filter: blur(20px);
     /* Deeper blur */
     border: 1px solid rgba(59, 130, 246, 0.4);
-    border-radius: 24px;
-    /* Rounded rectangle */
+    border-radius: 12px;
+    /* Match cluster cards */
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
     /* Stronger lift */
     z-index: 1000;
@@ -689,7 +689,7 @@ body {
     background: rgba(17, 24, 39, 0.9);
     backdrop-filter: blur(16px);
     border: 1px solid rgba(59, 130, 246, 0.25);
-    border-radius: 20px;
+    border-radius: 12px;
     padding: 10px 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     display: flex;
@@ -712,7 +712,7 @@ body {
     background: rgba(30, 27, 75, 0.6);
     border: 1px solid rgba(79, 70, 229, 0.4);
     padding: 0 4px 0 20px;
-    border-radius: 30px;
+    border-radius: 12px;
     font-size: 0.9rem;
     backdrop-filter: blur(12px);
     white-space: nowrap;
@@ -796,6 +796,110 @@ body {
     text-align: center;
     margin-bottom: 2rem;
     font-size: 1rem;
+}
+
+/* Suggestion Box - Breaking News Style */
+.suggestion-container {
+    position: fixed;
+    top: 90px;
+    /* Below the app-header */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    background: rgba(31, 41, 55, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 4px 16px 4px 6px;
+    gap: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+    max-width: 90%;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: all 0.5s ease;
+}
+
+.suggestion-container.hidden {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+}
+
+.suggestion-news-badge {
+    background: #ef4444;
+    /* Breaking news red */
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 3px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    animation: pulse-red 2s infinite;
+}
+
+.suggestion-text {
+    color: #f3f4f6;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: opacity 0.3s ease;
+}
+
+.suggestion-text.fade-out {
+    opacity: 0;
+}
+
+@keyframes pulse-red {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* Counter Animation */
+.selection-count-pop {
+    animation: counter-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes counter-pop {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.4);
+        color: #10b981;
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Adjust cluster grid to accommodate suggestion box if needed */
+.cluster-grid {
+    padding-top: 160px;
+    /* Increased from 140px to leave space for suggestions */
+}
+
+@media (max-width: 768px) {
+    .suggestion-container {
+        top: 130px;
+        /* Lower on mobile due to stacked header */
+    }
+
+    .cluster-grid {
+        padding-top: 200px;
+    }
 }
 
 .landing-grid {
@@ -1269,8 +1373,8 @@ body {
     backdrop-filter: blur(20px);
     border: 1px solid rgba(59, 130, 246, 0.4);
     padding: 12px 30px;
-    border-radius: 24px;
-    /* Match header rounded rectangle */
+    border-radius: 12px;
+    /* Match cluster cards */
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 15px rgba(59, 130, 246, 0.1);
     z-index: 1000;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
