@@ -215,6 +215,19 @@ class DatabaseManager {
         });
     }
 
+    async getManifest() {
+        if (!this.db || !this.currentProject) return null;
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['projects'], 'readonly');
+            const store = transaction.objectStore('projects');
+            const request = store.get(this.currentProject);
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
     /**
      * Internal helper to open DB without a specific project context if needed.
      */
