@@ -32,9 +32,13 @@
                 </div>
             </div>
 
-            <div style="text-align: center; margin-top: 1.5rem;">
+            <div style="text-align: center; margin-top: 1.5rem; display: flex; flex-direction: column; gap: 12px;">
                 <button id="btn-select-folder-initial" class="btn-primary" style="width: 100%;">
                     Select Folder to Begin
+                </button>
+                <button id="btn-manage-storage-initial" class="btn-secondary"
+                    style="width: 100%; padding: 12px; font-size: 0.95rem;">
+                    📦 Manage Local AI Storage
                 </button>
             </div>
         </div>
@@ -150,6 +154,16 @@
                         <small style="color:#9ca3af; display:block; margin-top:5px;">
                             Clustering updates automatically every time this many new images are processed.
                         </small>
+                    </div>
+
+                    <div class="setting-group"
+                        style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #374151;">
+                        <label
+                            style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">Storage</label>
+                        <button id="btn-manage-storage" class="btn-secondary"
+                            style="width:100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px;">
+                            <span>📦</span> Manage Local AI Metadata
+                        </button>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -288,6 +302,35 @@
 
         </div>
     </div>
+    <!-- Storage Management Modal -->
+    <div id="modal-manage-storage" class="modal hidden" style="z-index: 3500;">
+        <div class="modal-content" style="max-width: 550px; width: 90%;">
+            <div class="modal-header">
+                <h3>Manage Local AI Storage</h3>
+                <button id="btn-close-storage" class="btn-close">×</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p style="color: #9ca3af; font-size: 0.9rem; margin-bottom: 20px;">
+                    Below are the projects with AI metadata stored in your browser. Deleting metadata will clear cached
+                    image embeddings.
+                </p>
+                <div id="storage-project-list" class="storage-list">
+                    <!-- Project list items will be injected here -->
+                </div>
+
+                <div style="margin-top: 25px; padding-top: 15px; border-top: 1px dashed #374151;">
+                    <button id="btn-delete-all-storage" class="btn-delete-storage"
+                        style="width: 100%; justify-content: center; padding: 12px; background: rgba(239, 68, 68, 0.05);">
+                        <span>🔥</span> Delete All AI Metadata
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-close-storage-footer" class="btn-secondary" style="width: 100%;">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script src="//cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
 </body>

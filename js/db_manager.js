@@ -124,17 +124,107 @@ class DatabaseManager {
     }
 
     /**
-     * Retrieve project manifest.
+     * Retrieve all projects in the database with stats.
      */
-    async getManifest() {
-        if (!this.db || !this.currentProject) return null;
+    async getAllProjects() {
+        if (!this.db) {
+            await this.initStub();
+        }
 
         return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['projects'], 'readonly');
-            const store = transaction.objectStore('projects');
-            const request = store.get(this.currentProject);
+            const transaction = this.db.transaction(['projects', 'embeddings'], 'readonly');
+            const projectStore = transaction.objectStore('projects');
+            const embeddingStore = transaction.objectStore('embeddings');
+            const index = embeddingStore.index('project');
+            const request = projectStore.getAll();
 
-            request.onsuccess = () => resolve(request.result);
+            request.onsuccess = async () => {
+                const projects = request.result;
+                const statsPromises = projects.map(project => {
+                    return new Promise((res) => {
+                        const countReq = index.count(IDBKeyRange.only(project.id));
+                        countReq.onsuccess = () => {
+                            project.embeddingCount = countReq.result;
+                            res(project);
+                        };
+                        countReq.onerror = () => res(project);
+                    });
+                });
+
+                const results = await Promise.all(statsPromises);
+                resolve(results);
+            };
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    /**
+     * Wipe everything from the database.
+     */
+    async deleteAllData() {
+        if (!this.db) await this.initStub();
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['embeddings', 'projects'], 'readwrite');
+            const embeddingStore = transaction.objectStore('embeddings');
+            const projectStore = transaction.objectStore('projects');
+
+            embeddingStore.clear();
+            projectStore.clear();
+
+            transaction.oncomplete = () => {
+                console.log(`%c[Database] All AI metadata cleared from browser memory`, "color: #ef4444; font-weight: bold;");
+                resolve();
+            };
+            transaction.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    /**
+     * Delete all data associated with a project.
+     * @param {string} projectId 
+     */
+    async deleteProjectData(projectId) {
+        if (!this.db) await this.initStub();
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['embeddings', 'projects'], 'readwrite');
+
+            // 1. Delete embeddings
+            const embeddingStore = transaction.objectStore('embeddings');
+            const index = embeddingStore.index('project');
+            const embeddingRequest = index.openCursor(IDBKeyRange.only(projectId));
+
+            embeddingRequest.onsuccess = (e) => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    cursor.delete();
+                    cursor.continue();
+                }
+            };
+
+            // 2. Delete project manifest
+            const projectStore = transaction.objectStore('projects');
+            projectStore.delete(projectId);
+
+            transaction.oncomplete = () => {
+                console.log(`%c[Database] Project ${projectId} data cleared`, "color: #ef4444; font-weight: bold;");
+                resolve();
+            };
+            transaction.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    /**
+     * Internal helper to open DB without a specific project context if needed.
+     */
+    async initStub() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, this.dbVersion);
+            request.onsuccess = (e) => {
+                this.db = e.target.result;
+                resolve(this.db);
+            };
             request.onerror = (e) => reject(e.target.error);
         });
     }

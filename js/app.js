@@ -49,7 +49,10 @@ class App {
             onRestoreImage: (path) => this.handleRestore(path),
             onConfirmSaveLocation: (isDifferent) => this.handleConfirmSaveLocation(isDifferent),
             onLockCluster: (index) => this.handleLockCluster(index),
-            onUnlockCluster: (index) => this.handleUnlockCluster(index)
+            onUnlockCluster: (index) => this.handleUnlockCluster(index),
+            onManageStorage: () => this.handleManageStorage(),
+            onDeleteProjectData: (projectId) => this.handleDeleteProjectData(projectId),
+            onDeleteAllData: () => this.handleDeleteAllData()
         });
     }
 
@@ -626,6 +629,42 @@ class App {
             this.ui.hideProgress();
             document.getElementById('btn-proceed').disabled = false;
             document.getElementById('btn-proceed').textContent = originalText;
+        }
+    }
+
+    async handleManageStorage() {
+        try {
+            const projects = await db.getAllProjects();
+            this.ui.renderProjectStorageList(projects, db.currentProject);
+        } catch (e) {
+            console.error("Failed to fetch storage projects:", e);
+        }
+    }
+
+    async handleDeleteProjectData(projectId) {
+        try {
+            await db.deleteProjectData(projectId);
+
+            if (projectId === db.currentProject) {
+                // If it's the current project, we need to reset/reload
+                window.location.reload();
+            } else {
+                // Otherwise just refresh the list
+                this.handleManageStorage();
+            }
+        } catch (e) {
+            console.error("Failed to delete project data:", e);
+            alert("❌ Deletion Failed: Could not clear AI metadata.");
+        }
+    }
+
+    async handleDeleteAllData() {
+        try {
+            await db.deleteAllData();
+            window.location.reload();
+        } catch (e) {
+            console.error("Failed to delete all project data:", e);
+            alert("❌ Deletion Failed: Could not clear all AI metadata.");
         }
     }
 

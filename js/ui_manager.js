@@ -90,6 +90,15 @@ export class UIManager {
         // State
         this.callbacks = {};
         this.cards = new Map(); // Index -> Card DOM node
+
+        // Storage Management Elements
+        this.btnManageStorage = document.getElementById('btn-manage-storage');
+        this.modalStorage = document.getElementById('modal-manage-storage');
+        this.btnCloseStorage = document.getElementById('btn-close-storage');
+        this.btnCloseStorageFooter = document.getElementById('btn-close-storage-footer');
+        this.storageProjectList = document.getElementById('storage-project-list');
+        this.btnManageStorageInitial = document.getElementById('btn-manage-storage-initial');
+        this.btnDeleteAllStorage = document.getElementById('btn-delete-all-storage');
     }
 
     setCallbacks(callbacks) {
@@ -183,6 +192,27 @@ export class UIManager {
             this.modalReorder.classList.add('hidden');
             this.onReorderConfirm?.(this.reorderClusters);
         });
+
+        // Storage Management Listeners
+        this.btnManageStorage.addEventListener('click', () => {
+            this.callbacks.onManageStorage?.();
+            this.modalStorage.classList.remove('hidden');
+        });
+
+        this.btnManageStorageInitial?.addEventListener('click', () => {
+            this.callbacks.onManageStorage?.();
+            this.modalStorage.classList.remove('hidden');
+        });
+
+        this.btnDeleteAllStorage?.addEventListener('click', () => {
+            if (confirm("🔥 DANGER: This will delete ALL AI metadata for ALL projects from your browser memory. This cannot be undone.\n\nContinue?")) {
+                this.callbacks.onDeleteAllData?.();
+            }
+        });
+
+        const closeStorage = () => this.modalStorage.classList.add('hidden');
+        this.btnCloseStorage.addEventListener('click', closeStorage);
+        this.btnCloseStorageFooter.addEventListener('click', closeStorage);
     }
 
     validateUploadRequirements() {
@@ -904,5 +934,57 @@ export class UIManager {
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
         return `${m}m ${s}s`;
+    }
+
+    renderProjectStorageList(projects, currentProjectId) {
+        this.storageProjectList.innerHTML = '';
+        if (!projects || projects.length === 0) {
+            this.storageProjectList.innerHTML = '<div style="text-align:center; padding: 20px; color:#9ca3af;">No project data found in browser.</div>';
+            return;
+        }
+
+        projects.forEach(project => {
+            const isCurrent = project.id === currentProjectId;
+            const item = document.createElement('div');
+            item.className = `storage-item ${isCurrent ? 'current-project' : ''}`;
+
+            const info = document.createElement('div');
+            info.className = 'storage-info';
+
+            const name = document.createElement('div');
+            name.className = 'storage-name';
+            name.textContent = project.id;
+            if (isCurrent) {
+                const indicator = document.createElement('span');
+                indicator.className = 'current-indicator';
+                indicator.textContent = 'Current';
+                name.appendChild(indicator);
+            }
+
+            const meta = document.createElement('div');
+            meta.className = 'storage-meta';
+            const dateStr = project.lastUpdated ? new Date(project.lastUpdated).toLocaleDateString() : 'Unknown';
+            const countStr = project.embeddingCount !== undefined ? `${project.embeddingCount} images` : '';
+            meta.textContent = `Last active: ${dateStr} ${countStr ? `• ${countStr}` : ''}`;
+
+            info.appendChild(name);
+            info.appendChild(meta);
+
+            const btnDelete = document.createElement('button');
+            btnDelete.className = 'btn-delete-storage';
+            btnDelete.innerHTML = '<span>🗑️</span> Delete AI Metadata';
+            btnDelete.onclick = () => {
+                const msg = isCurrent
+                    ? `Are you sure you want to delete AI metadata for the CURRENT project? This will reset the app.`
+                    : `Delete AI metadata for project "${project.id}"?`;
+                if (confirm(msg)) {
+                    this.callbacks.onDeleteProjectData?.(project.id);
+                }
+            };
+
+            item.appendChild(info);
+            item.appendChild(btnDelete);
+            this.storageProjectList.appendChild(item);
+        });
     }
 }
