@@ -435,6 +435,11 @@ export class UIManager {
             return;
         }
 
+        // If we were showing the placeholder, clear it now that we have data
+        if (this.clusterGrid.querySelector('.cluster-placeholder')) {
+            this.clusterGrid.innerHTML = '';
+        }
+
         this.floatingControls.classList.remove('hidden'); // Show when we have data
 
         // 1. Remove clusters that are no longer present
