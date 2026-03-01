@@ -502,6 +502,37 @@ body {
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
     background: rgba(16, 185, 129, 0.05);
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.cluster-card.locked .image-grid {
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+.cluster-card.locked .cluster-header {
+    z-index: 10;
+    position: relative;
+}
+
+.badge-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ef4444;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid #1f2937;
+    z-index: 20;
 }
 
 /* Polished Header Components */
@@ -1567,4 +1598,35 @@ body {
     font-weight: 800;
     margin-left: 8px;
     vertical-align: middle;
+}
+
+.cluster-placeholder {
+    grid-column: 1/-1;
+    text-align: center;
+    margin-top: 100px;
+    padding: 40px;
+    color: #94a3b8;
+    font-size: 1.1rem;
+    font-style: italic;
+    background: rgba(55, 65, 81, 0.4);
+    border-radius: 12px;
+    border: 1px dashed #4b5563;
+    animation: pulsePlaceholder 2.5s infinite ease-in-out;
+}
+
+@keyframes pulsePlaceholder {
+    0% {
+        opacity: 0.5;
+        transform: scale(0.98);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    100% {
+        opacity: 0.5;
+        transform: scale(0.98);
+    }
 }

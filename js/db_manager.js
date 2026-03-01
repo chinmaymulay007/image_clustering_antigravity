@@ -6,24 +6,23 @@
 class DatabaseManager {
     constructor() {
         this.dbName = 'ClusterAIDB';
-        this.dbVersion = 1;
+        this.dbVersion = 2; // Bumped version to ensure upgrade runs and creates stores
         this.db = null;
         this.currentProject = null;
     }
 
     /**
-     * Initialize the database and open a project-specific session.
-     * @param {string} projectName - Unique name for the folder/project.
+     * Internal helper to open the database with upgrade logic.
      */
-    async init(projectName) {
-        if (!projectName) throw new Error("Project name required for DB initialization");
-        this.currentProject = projectName;
+    async open() {
+        if (this.db) return this.db;
 
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName, this.dbVersion);
 
             request.onupgradeneeded = (e) => {
                 const db = e.target.result;
+                console.log(`[Database] Upgrading to version ${this.dbVersion}...`);
 
                 // Store project-level settings and stats
                 if (!db.objectStoreNames.contains('projects')) {
@@ -39,15 +38,26 @@ class DatabaseManager {
 
             request.onsuccess = (e) => {
                 this.db = e.target.result;
-                console.log(`%c[Database] Connected to project: ${projectName}`, "color: #2196f3; font-weight: bold;");
                 resolve(this.db);
             };
 
             request.onerror = (e) => {
-                console.error("%c[Database] Connection Error:", "color: #ef4444;", e.target.error);
+                console.error("[Database] Open error:", e.target.error);
                 reject(e.target.error);
             };
         });
+    }
+
+    /**
+     * Initialize the database and open a project-specific session.
+     * @param {string} projectName - Unique name for the folder/project.
+     */
+    async init(projectName) {
+        if (!projectName) throw new Error("Project name required for DB initialization");
+        this.currentProject = projectName;
+        await this.open();
+        console.log(`%c[Database] Connected to project: ${projectName}`, "color: #2196f3; font-weight: bold;");
+        return this.db;
     }
 
     /**
@@ -232,14 +242,7 @@ class DatabaseManager {
      * Internal helper to open DB without a specific project context if needed.
      */
     async initStub() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName, this.dbVersion);
-            request.onsuccess = (e) => {
-                this.db = e.target.result;
-                resolve(this.db);
-            };
-            request.onerror = (e) => reject(e.target.error);
-        });
+        return this.open();
     }
 }
 

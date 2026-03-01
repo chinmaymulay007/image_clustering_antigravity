@@ -99,6 +99,7 @@ export class UIManager {
         this.storageProjectList = document.getElementById('storage-project-list');
         this.btnManageStorageInitial = document.getElementById('btn-manage-storage-initial');
         this.btnDeleteAllStorage = document.getElementById('btn-delete-all-storage');
+        this.excludedBadge = document.getElementById('excluded-badge');
     }
 
     setCallbacks(callbacks) {
@@ -146,9 +147,11 @@ export class UIManager {
 
         batchButtons.forEach(btn => {
             btn.addEventListener('click', () => {
+                const value = parseInt(btn.dataset.value);
                 batchButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                hiddenBatchInput.value = btn.dataset.value;
+                hiddenBatchInput.value = value;
+                this.callbacks.onBatchSizeChange?.(value);
             });
         });
 
@@ -292,6 +295,12 @@ export class UIManager {
     updateStats(stats) {
         if (!stats) return;
 
+        // Excluded Badge
+        if (stats.excludedCount !== undefined) {
+            this.excludedBadge.textContent = stats.excludedCount;
+            this.excludedBadge.classList.toggle('hidden', stats.excludedCount === 0);
+        }
+
         // PROTECT PAUSE STATE: If engine is manually paused, prevent secondary messages 
         // from reverting the visual state to "running".
         const isCurrentlyPaused = this.btnPauseResume.classList.contains('paused');
@@ -421,9 +430,12 @@ export class UIManager {
     renderClusters(clusters) {
         this.lastClusters = clusters; // Store for validation
         if (!clusters || clusters.length === 0) {
-            this.clusterGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; margin-top: 50px; color: #9ca3af;">Scanning for patterns...</div>';
+            this.clusterGrid.innerHTML = '<div class="cluster-placeholder">Processing images, clusters will be displayed soon...</div>';
+            this.floatingControls.classList.add('hidden'); // Hide "PROCEED" when no clusters
             return;
         }
+
+        this.floatingControls.classList.remove('hidden'); // Show when we have data
 
         // 1. Remove clusters that are no longer present
         const existingCards = Array.from(this.clusterGrid.querySelectorAll('.cluster-card'));

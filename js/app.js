@@ -52,7 +52,8 @@ class App {
             onUnlockCluster: (index) => this.handleUnlockCluster(index),
             onManageStorage: () => this.handleManageStorage(),
             onDeleteProjectData: (projectId) => this.handleDeleteProjectData(projectId),
-            onDeleteAllData: () => this.handleDeleteAllData()
+            onDeleteAllData: () => this.handleDeleteAllData(),
+            onBatchSizeChange: (size) => this.handleBatchSizeChange(size)
         });
     }
 
@@ -83,8 +84,24 @@ class App {
 
         // Immediate Re-cluster
         console.log("[App] Triggering immediate re-cluster due to settings change.");
-        this.ui.updateStats({ lastEvent: `Settings changed` });
+        this.updateUI({ lastEvent: `Settings changed` });
         this.refreshClusters();
+    }
+
+    updateUI(stats) {
+        if (!stats) return;
+        const enrichedStats = {
+            ...stats,
+            excludedCount: this.excludedPaths.size
+        };
+        this.ui.updateStats(enrichedStats);
+    }
+
+    handleBatchSizeChange(size) {
+        console.log(`[App] Batch size updated to ${size} (Applying immediately)`);
+        this.refreshInterval = size;
+        this.processing.refreshInterval = size;
+        this.updateUI({ lastEvent: `Batch size: ${size}` });
     }
 
     async handleSelectFolder() {
@@ -97,10 +114,11 @@ class App {
             await db.init(dirName);
 
             this.ui.hideInitialOverlay();
+            this.ui.renderClusters([]); // Show placeholder immediately during scan
 
             // Setup callbacks from Processing
             this.processing.onProgress = (stats) => {
-                this.ui.updateStats(stats);
+                this.updateUI(stats);
             };
 
             this.processing.onClusterUpdate = async (embeddings) => {
@@ -123,10 +141,10 @@ class App {
                 console.log(`[App] Synced ${this.excludedPaths.size} exclusions from manifest.`);
 
                 if (this.processing.isPaused) {
-                    this.ui.updateStats({ currentAction: "⏸️ Database loaded. Ready to resume." });
+                    this.updateUI({ currentAction: "⏸️ Database loaded. Ready to resume." });
                     this.ui.setPauseState(true); // Ensure button says "RESUME"
                 } else {
-                    this.ui.updateStats({ currentAction: "🧠 Scan complete. Starting AI analysis..." });
+                    this.updateUI({ currentAction: "🧠 Scan complete. Starting AI analysis..." });
                     this.ui.setPauseState(false);
                 }
 
@@ -151,13 +169,13 @@ class App {
     handlePauseResume(shouldPause) {
         if (shouldPause) {
             this.processing.pause();
-            this.ui.updateStats({
+            this.updateUI({
                 currentAction: "⏸️ Processing Paused.",
                 lastEvent: "Processing Paused"
             });
         } else {
             this.processing.resume();
-            this.ui.updateStats({
+            this.updateUI({
                 currentAction: "▶️ Resuming...",
                 lastEvent: "Processing Resumed"
             });
@@ -189,7 +207,7 @@ class App {
         });
 
         // Immediate UI Refresh
-        this.ui.updateStats({
+        this.updateUI({
             currentAction: `🚫 Excluding: ${path.split('/').pop()}`,
             lastEvent: `Excluded 1 image`
         });
@@ -213,7 +231,7 @@ class App {
         console.log(`[App] Restored ${path}. Exclusions persisted to DB.`);
 
         // Immediate UI Refresh
-        this.ui.updateStats({
+        this.updateUI({
             currentAction: `♻️ Restoring: ${path.split('/').pop()}`,
             lastEvent: `Restored 1 image`
         });
@@ -231,7 +249,7 @@ class App {
 
         console.log(`[App] Offloading clustering of ${validEmbeddings.length} items to Worker...`);
         this.isClustering = true;
-        this.ui.updateStats({ currentAction: "♻️ Refreshing clusters..." });
+        this.updateUI({ currentAction: "♻️ Refreshing clusters..." });
 
         if (!this.clusterWorker) {
             this.clusterWorker = new Worker('js/clustering_worker.js', { type: 'module' });
@@ -255,17 +273,17 @@ class App {
 
                     // Check for pending thumbnails
                     if (this.thumbnailPromises.size > 0) {
-                        this.ui.updateStats({ currentAction: `🖼️ Loading thumbnails (${this.thumbnailPromises.size})...` });
+                        this.updateUI({ currentAction: `🖼️ Loading thumbnails (${this.thumbnailPromises.size})...` });
                     } else {
                         const processedCount = this.processing.processedPaths.size;
                         const msg = `✅ Clusters updated based on available ${processedCount} images data.`;
                         // Only show "Clusters updated" if NOT paused, otherwise it clears the PAUSED indicator
                         if (!this.processing.isPaused) {
-                            this.ui.updateStats({
+                            this.updateUI({
                                 currentAction: msg
                             });
                         }
-                        this.ui.updateStats({
+                        this.updateUI({
                             lastEvent: msg // Also show in last event area for persistence
                         });
                     }
@@ -353,10 +371,10 @@ class App {
 
                     // Update UI status during loading
                     if (this.thumbnailPromises.size > 0) {
-                        this.ui.updateStats({ currentAction: `🖼️ Loading thumbnails (${this.thumbnailPromises.size})...` });
+                        this.updateUI({ currentAction: `🖼️ Loading thumbnails (${this.thumbnailPromises.size})...` });
                     } else {
                         // Complete
-                        this.ui.updateStats({
+                        this.updateUI({
                             currentAction: this.processing.isRunning
                                 ? `✅ Clusters updated based on available ${this.currentEmbeddings.length} images data.`
                                 : "✅ Ready."
@@ -711,7 +729,7 @@ class App {
         console.log(`[App] %cLocked cluster ${clusterIndex + 1} | Radius: ${maxRadius.toFixed(4)} | Initial Radius Lock Coverage: ${inRadiusCount} images | Initial Total Size: ${cluster.members.length}`, "color: #10b981; font-weight: bold;");
 
         this.ui.renderClusters(this.currentClusters);
-        this.ui.updateStats({ lastEvent: `Locked Cluster ${clusterIndex + 1}` });
+        this.updateUI({ lastEvent: `Locked Cluster ${clusterIndex + 1}` });
     }
 
     handleUnlockCluster(clusterIndex) {
@@ -735,7 +753,7 @@ class App {
             }
 
             this.ui.renderClusters(this.currentClusters);
-            this.ui.updateStats({ lastEvent: `Unlocked Cluster ${clusterIndex + 1}` });
+            this.updateUI({ lastEvent: `Unlocked Cluster ${clusterIndex + 1}` });
             console.log(`[App] Unlocked cluster ${clusterIndex + 1}`);
         }
     }
@@ -779,9 +797,9 @@ class App {
         }
 
         if (movedCount === 1) {
-            this.ui.updateStats({ lastEvent: `Relocated Cluster ${lastFrom + 1} ➔ ${lastTo + 1}` });
+            this.updateUI({ lastEvent: `Relocated Cluster ${lastFrom + 1} ➔ ${lastTo + 1}` });
         } else if (movedCount > 1) {
-            this.ui.updateStats({ lastEvent: `Relocated ${movedCount} clusters` });
+            this.updateUI({ lastEvent: `Relocated ${movedCount} clusters` });
         }
 
         this.lockedClusters = newMap;
