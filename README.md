@@ -13,9 +13,9 @@ A high-performance, browser-based application for semantic image clustering usin
 - **Deferred AI Worker**: The AI model initializes on-demand to minimize page load time.
 - **Two Clustering Modes**: The app provides two complementary views of your images:
   - **🎨 Visual Clusters** — Groups images by semantic/visual similarity using K-Means on CLIP embeddings.
-  - **📅 Timeline Clusters** — Groups images by date (and optionally location) using EXIF metadata. Labels include the date and reverse-geocoded place name (via OpenStreetMap Nominatim).
+  - **📅 Timeline Clusters** — Groups images by date (and optionally location). Labels include the date and reverse-geocoded place name. *Note: Cluster thumbnails may shift as new batches are processed due to "Centroid Drift" (the AI's "average" for that day evolving).*
 - **Dynamic Clustering**: Real-time K-Means clustering that evolves as images are processed.
-- **Clustering Stability (Warm Start)**: Centroids remember their positions during updates, preventing the UI from jumping around.
+- **Clustering Stability (Warm Start)**: Centroids remember their positions during updates (Visual Clusters only), preventing the UI from jumping around.
 - **Smart Deduplication**: Adjust the "Uniqueness Threshold" to ensure cluster previews show diverse images rather than near-duplicates.
 
 ### Cluster Management

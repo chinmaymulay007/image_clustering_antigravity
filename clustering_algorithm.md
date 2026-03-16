@@ -151,6 +151,9 @@ The resolved location name (e.g., "Mumbai, Maharashtra") is appended to the clus
 
 Each Timeline cluster reuses the **same deduplication logic from Step B**: a visual centroid is computed from the group's CLIP embeddings, and the 16 most representative (yet diverse) images are selected using the Uniqueness Threshold.
 
+> [!IMPORTANT]
+> **Centroid Drift & Thumbnail Shifting**: As new images are added to a day-group during processing, the "Visual Centroid" (the average theme) of that day evolves. This can cause the rank-order of representatives to change significantly. While **Visual Clusters** use a "Warm Start" to stay stable, **Timeline Clusters** are purely data-driven and will "drift" until all images for that date have been processed.
+
 ### 5. Sorting
 
 Timeline clusters are sorted by **member count** (largest first), mirroring the Visual Clusters behavior.
