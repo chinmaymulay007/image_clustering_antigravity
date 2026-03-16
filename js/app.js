@@ -1078,10 +1078,15 @@ class App {
     cleanupThumbnails(shouldLog = true) {
         if (!this.currentClusters || this.currentClusters.length === 0) return;
 
-        // 1. Get all paths currently being displayed
+        // 1. Get all paths currently being displayed (from BOTH visual and timeline grids)
         const activePaths = new Set();
-        this.currentClusters.forEach(cluster => {
-            cluster.representatives.forEach(rep => activePaths.add(rep.path));
+        const allActiveSourceGrids = [this.currentClusters, this.currentMetadataClusters];
+        
+        allActiveSourceGrids.forEach(grid => {
+            if (!grid) return;
+            grid.forEach(cluster => {
+                cluster.representatives.forEach(rep => activePaths.add(rep.path));
+            });
         });
 
         // 2. Clear cache for paths NOT in the active set

@@ -320,6 +320,7 @@ export class ClusteringEngine {
         // Sort by largest volume first
         clusters.sort((a, b) => b.members.length - a.members.length);
         
+        console.log(`[Metadata Clustering] Finalized ${clusters.length} date-based clusters.`);
         return clusters;
     }
 
