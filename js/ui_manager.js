@@ -50,7 +50,8 @@ export class UIManager {
 
         this.floatingControls = document.getElementById('floating-controls');
         this.appHeader = document.querySelector('.app-header');
-        this.statusBarContainer = document.getElementById('status-bar-container');
+        this.aiPausedMessage = document.getElementById('ai-paused-message');
+        this.aiCompleteMessage = document.getElementById('ai-complete-message');
         this.lastSignificantEvent = '';
 
         // Action Selection Modal
@@ -363,12 +364,12 @@ export class UIManager {
 
         // Current Activity (Global Status Bar & AI Engine Indicator)
         if (stats.completed) {
-            this.btnPauseResume.innerHTML = '<span style="font-size: 0.7rem; font-weight: 800;">DONE</span>';
+            this.btnPauseResume.innerHTML = '<span class="tick-mark-icon"></span>';
             this.btnPauseResume.disabled = true;
-            this.showStatus("✅ Processing Complete. Ready to save.");
+            this.showStatus("✅ Analysis Complete");
             this.statusSpinner.classList.add('hidden');
 
-            this.aiStatusIndicator.textContent = "✅ AI Engine Complete";
+            this.aiStatusIndicator.textContent = "✅ Analysis Complete";
             this.aiStatusIndicator.className = "ai-indicator running";
         } else if (stats.currentAction) {
             // Prevent redundancy: If main action is "Clusters updated", it's a global status.
@@ -411,14 +412,25 @@ export class UIManager {
             }
         }
 
-        // Handle Metrics Visibility (Next to AI Pill)
+        // Handle Metrics/Paused/Complete Message Visibility (Next to AI Pill)
         if (this.aiMetricsContainer) {
             const isPaused = this.btnPauseResume.classList.contains('paused');
             const isComplete = stats.completed;
-            // Show metrics whenever running (not paused and not complete)
-            const shouldShow = !isPaused && !isComplete;
+            
+            // Show metrics only when running and not complete
+            const showMetrics = !isPaused && !isComplete;
+            // Show paused message when manually paused (not complete)
+            const showPausedMsg = isPaused && !isComplete;
+            // Show complete message only when complete
+            const showCompleteMsg = isComplete;
 
-            this.aiMetricsContainer.classList.toggle('hidden', !shouldShow);
+            this.aiMetricsContainer.classList.toggle('hidden', !showMetrics);
+            if (this.aiPausedMessage) {
+                this.aiPausedMessage.classList.toggle('hidden', !showPausedMsg);
+            }
+            if (this.aiCompleteMessage) {
+                this.aiCompleteMessage.classList.toggle('hidden', !showCompleteMsg);
+            }
         }
     }
 
@@ -430,7 +442,18 @@ export class UIManager {
 
         // Also update metrics visibility immediately for better responsiveness
         if (this.aiMetricsContainer) {
-            this.aiMetricsContainer.classList.toggle('hidden', isPaused);
+            const isComplete = this.aiStatusIndicator?.textContent.includes("Complete");
+            const showMetrics = !isPaused && !isComplete;
+            const showPausedMsg = isPaused && !isComplete;
+            const showCompleteMsg = isComplete;
+            
+            this.aiMetricsContainer.classList.toggle('hidden', !showMetrics);
+            if (this.aiPausedMessage) {
+                this.aiPausedMessage.classList.toggle('hidden', !showPausedMsg);
+            }
+            if (this.aiCompleteMessage) {
+                this.aiCompleteMessage.classList.toggle('hidden', !showCompleteMsg);
+            }
         }
     }
 
