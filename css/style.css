@@ -1727,32 +1727,38 @@ body {
 
     /* --- Header Refinement (3-row compact layout) --- */
     .app-header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas: 
+            "brand actions"
+            "pill pill"
+            "metrics metrics";
         padding: 8px 12px;
         gap: 6px;
         width: calc(100% - 16px);
         top: 8px;
         border-radius: 8px;
-        flex-direction: column;
-        align-items: stretch;
+        align-items: center;
     }
 
-    /* Row 1: Brand (left) + Actions (right) */
+    /* Break the container to allow its children to be grid items of app-header */
     .brand-pill-container {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-        margin-bottom: 2px;
+        display: contents;
+    }
+
+    .brand {
+        grid-area: brand;
     }
 
     .brand h2 {
         font-size: 1.1rem;
+        margin: 0;
     }
 
     .header-actions {
-        order: 10;
+        grid-area: actions;
         gap: 4px;
+        display: flex;
     }
 
     .btn-header-action {
@@ -1763,13 +1769,14 @@ body {
 
     /* Row 2: Progress Pill (full width) */
     .ai-engine-pill {
-        order: 15;
+        grid-area: pill;
         width: 100%;
         height: 32px;
         padding: 0 10px;
         font-size: 0.75rem;
         gap: 6px;
         border-radius: 6px;
+        display: flex; /* Ensure it stays a flex container for its own children */
     }
 
     .ai-pill-text {
@@ -1784,7 +1791,7 @@ body {
 
     /* Row 3: Speed & ETA */
     .ai-pill-secondary {
-        order: 20;
+        grid-area: metrics;
         width: 100%;
         font-size: 0.68rem;
         padding: 4px 8px;
@@ -1793,11 +1800,12 @@ body {
         border: none;
         background: transparent;
         margin-top: -2px;
+        display: flex; /* Ensure it stays a flex container */
     }
 
     /* --- Section Headers (Inline/Block instead of Tabs) --- */
     .sections-wrapper {
-        padding: 130px 10px 120px 10px;
+        padding: 155px 10px 120px 10px;
         gap: 15px;
     }
 
@@ -1879,12 +1887,15 @@ body {
 
     /* --- Floating Footer & Status bar --- */
     .floating-controls-container {
-        bottom: 10px;
-        left: 10px;
-        width: calc(100% - 20px);
-        padding: 8px 15px;
-        gap: 10px;
-        transform: none;
+        bottom: 15px;
+        left: 50%;
+        width: auto;
+        min-width: 280px;
+        max-width: 95vw;
+        padding: 8px 20px;
+        gap: 15px;
+        transform: translateX(-50%);
+        border-radius: 30px;
     }
 
     .selection-indicator-pill {
@@ -1898,16 +1909,28 @@ body {
     }
 
     .status-bar-container {
-        bottom: 65px; /* Stay above the floating footer */
-        left: 10px;
-        right: 10px;
+        bottom: 75px; /* Stay above the floating centered footer */
+        left: 50%;
+        transform: translateX(-50%);
+        width: auto;
+        max-width: 90vw;
         pointer-events: none;
     }
 
     .status-pill {
-        padding: 6px 12px;
-        font-size: 0.7rem;
-        max-width: fit-content;
+        padding: 6px 16px;
+        font-size: 0.72rem;
+        white-space: nowrap;
+        justify-content: center;
+    }
+
+    .suggestion-container {
+        top: 96px; /* Positioned tightly below the 3-row header */
+        padding: 4px 12px;
+        gap: 8px;
+        max-width: 95vw;
+        left: 50%;
+        transform: translateX(-50%);
     }
 
     /* --- Landing Card --- */
