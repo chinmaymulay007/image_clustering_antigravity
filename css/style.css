@@ -1714,3 +1714,282 @@ body {
         transform: scale(0.98);
     }
 }
+
+/* =============================================
+   MOBILE RESPONSIVENESS - Consolidated
+   ============================================= */
+
+@media (max-width: 600px) {
+
+    /* --- Header --- */
+    .app-header {
+        padding: 10px 12px;
+        gap: 10px;
+        width: calc(100% - 16px);
+        top: 8px;
+        border-radius: 10px;
+    }
+
+    .brand-pill-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .brand h2 {
+        font-size: 1.3rem;
+    }
+
+    /* --- AI Engine Pill --- */
+    .ai-engine-pill {
+        font-size: 0.75rem;
+        padding: 0 4px 0 12px;
+        height: 36px;
+        gap: 8px;
+        max-width: 100%;
+        white-space: normal;
+    }
+
+    .ai-pill-text {
+        font-size: 0.75rem;
+    }
+
+    .ai-pill-secondary {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        gap: 8px;
+    }
+
+    .btn-pause-pill {
+        width: 30px;
+        height: 30px;
+        font-size: 0.9rem;
+    }
+
+    /* --- Header Action Buttons (Bin + Settings) --- */
+    .header-actions {
+        gap: 6px;
+    }
+
+    .btn-header-action {
+        width: 36px;
+        height: 36px;
+        font-size: 1.1rem;
+    }
+
+    /* --- Landing Card (Intro Page) --- */
+    .landing-card {
+        padding: 1.2rem;
+        width: 94%;
+        border-radius: 14px;
+    }
+
+    .landing-title {
+        font-size: 1.6rem !important;
+    }
+
+    .landing-subtitle {
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Instructions text */
+    .landing-content div[style*="line-height: 1.8"] {
+        font-size: 0.8rem !important;
+        line-height: 1.7 !important;
+    }
+
+    /* --- Sections Wrapper --- */
+    .sections-wrapper {
+        padding: 110px 10px 130px 10px;
+    }
+
+    .sections-wrapper section {
+        padding: 15px;
+        margin-top: 40px;
+        border-radius: 0 12px 12px 12px;
+    }
+
+    .sections-wrapper section h2 {
+        font-size: 0.8rem;
+        padding: 8px 16px;
+        top: -38px;
+    }
+
+    /* --- Cluster Grid --- */
+    .cluster-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    /* --- Floating Controls (PROCEED bar) --- */
+    .floating-controls-container {
+        bottom: 16px;
+        padding: 10px 16px;
+        gap: 12px;
+        border-radius: 10px;
+        width: calc(100% - 32px);
+        box-sizing: border-box;
+        left: 16px;
+        transform: none;
+    }
+
+    .selection-indicator-pill {
+        font-size: 0.9rem;
+        padding-right: 12px;
+    }
+
+    .btn-primary-pill {
+        padding: 10px 20px;
+        font-size: 0.85rem;
+    }
+
+    /* --- Modals --- */
+    .modal-content {
+        width: 95% !important;
+        max-width: none !important;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        padding: 12px 16px;
+    }
+
+    .modal-header h3 {
+        font-size: 1rem;
+    }
+
+    .modal-body {
+        padding: 14px;
+    }
+
+    .modal-footer {
+        padding: 14px;
+    }
+
+    /* --- Status Bar (Bottom-left) --- */
+    .status-bar-container {
+        bottom: 12px;
+        left: 12px;
+    }
+
+    .status-pill {
+        padding: 8px 14px;
+        font-size: 0.78rem;
+        gap: 8px;
+    }
+
+    /* --- Suggestion Container (TIPS) --- */
+    .suggestion-container {
+        max-width: 94%;
+        white-space: normal;
+        padding: 6px 12px 6px 8px;
+        gap: 10px;
+        top: 100px;
+    }
+
+    .suggestion-text {
+        font-size: 0.82rem;
+    }
+
+    .suggestion-news-badge {
+        font-size: 0.6rem;
+        padding: 3px 7px;
+    }
+
+    /* --- Reorder Grid --- */
+    .reorder-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .mini-cluster-card .mini-header {
+        font-size: 0.6rem;
+    }
+
+    .position-badge {
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+    }
+
+    /* --- Settings Modal specifics --- */
+    .option-group {
+        flex-wrap: wrap;
+    }
+
+    .opt-btn {
+        padding: 8px;
+        font-size: 0.8rem;
+    }
+
+    /* --- Storage Modal --- */
+    .storage-item {
+        padding: 10px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .btn-delete-storage {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* --- Action Modal --- */
+    .action-section {
+        padding: 12px;
+    }
+
+    #passfaces-username {
+        padding: 10px !important;
+        font-size: 0.9rem;
+    }
+}
+
+/* Extra-small screens */
+@media (max-width: 400px) {
+
+    .landing-title {
+        font-size: 1.4rem !important;
+    }
+
+    .landing-card {
+        padding: 1rem;
+    }
+
+    .brand h2 {
+        font-size: 1.1rem;
+    }
+
+    .ai-engine-pill {
+        font-size: 0.7rem;
+        padding: 0 2px 0 8px;
+        height: 32px;
+    }
+
+    .btn-header-action {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+
+    .reorder-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .floating-controls-container {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .selection-indicator-pill {
+        padding-right: 0;
+        border-right: none;
+        border-bottom: 1px solid rgba(75, 85, 99, 0.6);
+        padding-bottom: 8px;
+    }
+}

@@ -17,25 +17,28 @@
             <h1 class="landing-title">ClusterAI</h1>
             <p class="landing-subtitle">Privacy-first image clustering powered by local AI.</p>
 
-            <div class="landing-grid">
-                <div class="landing-feature">
-                    <h4>
-                        <div class="landing-icon-circle"></div> Local Privacy
-                    </h4>
-                    <p>Total security. Your images never leave this device.</p>
-                </div>
-                <div class="landing-feature">
-                    <h4>
-                        <div class="landing-icon-circle"></div> Smart Scan
-                    </h4>
-                    <p>Deep cluster analysis including subfolders. Fast & local.</p>
-                </div>
+            <div style="margin-top: 1rem; color: #9ca3af; font-size: 0.88rem; line-height: 1.8;">
+                <p style="margin: 0;">1. Click the button below to select a parent folder containing your photos.</p>
+                <p style="margin: 0;">2. The local AI model will analyze and group similar images into clusters.</p>
+                <p style="margin: 0;">3. This will take time, but clusters update in real-time as photos are analysed.</p>
+                <p style="margin: 0;">4. Review the images and exclude the ones you don't want to use for Passfaces.</p>
+                <p style="margin: 0;">5. Clusters improve as more images are processed.</p>
+                <p style="margin: 0;">6. You need 6 clusters of 16 unique photos to create your Passfaces.</p>
+                <p style="margin: 0;">7. Lock the clusters you want, then proceed to upload to Passfaces or save locally.</p>
+                <p style="margin: 0;">8. All AI processing happens on your device. Your photos are not sent to any
+                    server.</p>
+                <p style="margin: 0;">9. Only your final selections (6x16) are uploaded to the Passfaces app in compressed format.</p>
             </div>
 
             <div style="text-align: center; margin-top: 1.5rem; display: flex; flex-direction: column; gap: 12px;">
                 <button id="btn-select-folder-initial" class="btn-primary" style="width: 100%;">
                     Select Folder to Begin
                 </button>
+                <p style="font-size: 0.78rem; color: #9ca3af; margin: 0; line-height: 1.4;">
+                    Your browser may show an "upload" confirmation — this is normal.<br>
+                    <strong>No images are uploaded anywhere.</strong> All processing happens 100% locally on your
+                    device.
+                </p>
                 <button id="btn-manage-storage-initial" class="btn-secondary"
                     style="width: 100%; padding: 12px; font-size: 0.95rem;">
                     Manage Local AI Storage
@@ -47,7 +50,7 @@
     <div class="app-container">
         <!-- Hidden file input for universal directory selection -->
         <input type="file" id="folder-input" webkitdirectory directory multiple class="hidden" style="display: none;" />
-        
+
         <header class="app-header hidden">
             <div class="brand-pill-container">
                 <div class="brand">
@@ -104,7 +107,8 @@
         </div>
 
         <div class="sections-wrapper">
-            <div id="global-processing-placeholder" class="cluster-placeholder" style="text-align: center; margin: 100px 0; font-size: 1.2rem; color: #9ca3af;">
+            <div id="global-processing-placeholder" class="cluster-placeholder"
+                style="text-align: center; margin: 100px 0; font-size: 1.2rem; color: #9ca3af;">
                 Processing images, clusters will be displayed soon...
             </div>
 
@@ -121,7 +125,8 @@
                     <!-- Metadata Clusters will be injected here -->
                 </main>
                 <div style="text-align: center; margin-top: 25px;">
-                    <button id="btn-show-more-metadata" class="btn-secondary hidden" style="padding: 10px 24px; border-radius: 20px;">
+                    <button id="btn-show-more-metadata" class="btn-secondary hidden"
+                        style="padding: 10px 24px; border-radius: 20px;">
                         Show More
                     </button>
                 </div>
