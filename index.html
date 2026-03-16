@@ -45,6 +45,9 @@
     </div>
 
     <div class="app-container">
+        <!-- Hidden file input for universal directory selection -->
+        <input type="file" id="folder-input" webkitdirectory directory multiple class="hidden" style="display: none;" />
+        
         <header class="app-header hidden">
             <div class="brand-pill-container">
                 <div class="brand">
@@ -100,9 +103,30 @@
             <div id="status-bar-right" class="hidden"><span id="status-event"></span></div>
         </div>
 
-        <main class="cluster-grid" id="cluster-grid-container">
-            <!-- Clusters will be injected here -->
-        </main>
+        <div class="sections-wrapper">
+            <div id="global-processing-placeholder" class="cluster-placeholder" style="text-align: center; margin: 100px 0; font-size: 1.2rem; color: #9ca3af;">
+                Processing images, clusters will be displayed soon...
+            </div>
+
+            <section id="section-visual" class="hidden">
+                <h2>Visual Clusters</h2>
+                <main class="cluster-grid" id="cluster-grid-container">
+                    <!-- Clusters will be injected here -->
+                </main>
+            </section>
+
+            <section id="section-timeline" class="hidden">
+                <h2>Timeline Clusters</h2>
+                <main class="cluster-grid" id="metadata-cluster-grid-container">
+                    <!-- Metadata Clusters will be injected here -->
+                </main>
+                <div style="text-align: center; margin-top: 25px;">
+                    <button id="btn-show-more-metadata" class="btn-secondary hidden" style="padding: 10px 24px; border-radius: 20px;">
+                        Show More
+                    </button>
+                </div>
+            </section>
+        </div>
 
         <div id="floating-controls" class="floating-controls-container hidden">
             <div id="selection-indicator" class="selection-indicator-pill hidden">
@@ -257,6 +281,8 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script type="module" src="js/app.js"></script>
     <!-- Action Selection Modal -->
     <div id="modal-action-choice" class="modal hidden">
@@ -304,16 +330,14 @@
                             style="margin-top: 10px; padding: 15px; border: 1px dashed #4b5563; background: transparent;">
                             <h4
                                 style="margin-top: 0; color: #60a5fa; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
-                                📁 Save to Device
+                                📦 Download as ZIP
                             </h4>
                             <p style="font-size: 0.8rem; color: #9ca3af; margin-bottom: 12px;">
-                                Save selected clusters as folders on your local machine.
+                                Download your selected clusters as a structured ZIP archive.
                             </p>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                <button id="btn-save-same" class="btn-secondary"
-                                    style="font-size: 0.8rem; padding: 8px;">Source Folder</button>
+                            <div style="display: flex; justify-content: flex-end;">
                                 <button id="btn-save-diff" class="btn-secondary"
-                                    style="font-size: 0.8rem; padding: 8px;">Pick Location...</button>
+                                    style="font-size: 0.8rem; padding: 8px 16px; width: 100%;">Download ZIP</button>
                             </div>
                         </div>
                     </details>

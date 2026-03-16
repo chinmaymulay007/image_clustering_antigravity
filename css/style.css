@@ -9,9 +9,74 @@ body {
 .app-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    padding: 20px;
+    min-height: 100vh;
+    padding: 0; /* Remove container padding since we use wrapper */
     box-sizing: border-box;
+}
+
+.sections-wrapper {
+    padding: 140px 15px 150px 15px; /* Matches header 15px side margin */
+    display: flex;
+    flex-direction: column;
+    gap: 30px; /* Reduced gap between sections */
+    max-width: 2000px; /* Increased to fill ultra-wide displays better */
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sections-wrapper section {
+    position: relative;
+    margin-top: 50px; 
+    background: linear-gradient(135deg, rgba(31, 41, 55, 0.4) 0%, rgba(17, 24, 39, 0.4) 100%);
+    border: 1px solid rgba(75, 85, 99, 0.4);
+    border-radius: 0 16px 16px 16px;
+    padding: 25px; /* Sync with grid gap for equidistance */
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.sections-wrapper section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+    z-index: 10;
+}
+
+.sections-wrapper section:hover {
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+
+.sections-wrapper section h2 {
+    position: absolute;
+    top: -46px; 
+    left: -1px; 
+    background: #1f2937;
+    color: #60a5fa; 
+    margin: 0;
+    font-weight: 700; 
+    font-size: 0.95rem; 
+    padding: 12px 30px;
+    border: 1px solid rgba(75, 85, 99, 0.4);
+    border-bottom: 3px solid #1f2937; /* Completely seal the overlap */
+    border-radius: 14px 14px 0 0;
+    z-index: 5;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.2);
+}
+
+
+#section-timeline h2 {
+    color: #8b5cf6; /* Purple for timeline folder */
 }
 
 .app-header {
@@ -80,15 +145,10 @@ body {
 
 .cluster-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    flex: 1;
-    flex: 1;
-    margin-top: 0;
-    padding-top: 140px;
-    padding-bottom: 120px;
-    /* Header (80px) + Status (40px) + Gaps */
-    overflow-y: auto;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); 
+    gap: 25px; /* Sync with folder padding for equidistance */
+    margin: 0;
+    padding: 0; 
 }
 
 .cluster-card {
@@ -505,9 +565,35 @@ body {
     position: relative;
 }
 
+/* Conflicting (Disabled) Cluster Styling */
+.cluster-card.conflicting {
+    position: relative;
+    cursor: help;
+}
+
+.cluster-card.conflicting::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(17, 24, 39, 0.7); /* Deep overlay */
+    border-radius: 12px;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.cluster-card.conflicting .image-grid {
+    filter: grayscale(0.8) blur(1px);
+    opacity: 0.3;
+    pointer-events: none;
+}
+
 .cluster-card.locked .image-grid {
     opacity: 0.6;
     transition: opacity 0.3s ease;
+    pointer-events: none;
 }
 
 .cluster-card.locked .cluster-header {
@@ -917,8 +1003,7 @@ body {
 
 /* Adjust cluster grid to accommodate suggestion box if needed */
 .cluster-grid {
-    padding-top: 160px;
-    /* Increased from 140px to leave space for suggestions */
+    padding-top: 20px;
 }
 
 @media (max-width: 768px) {
@@ -928,7 +1013,7 @@ body {
     }
 
     .cluster-grid {
-        padding-top: 220px;
+        padding-top: 20px;
     }
 }
 

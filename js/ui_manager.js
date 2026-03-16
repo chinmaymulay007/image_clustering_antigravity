@@ -32,6 +32,8 @@ export class UIManager {
         this.valThreshold = document.getElementById('val-threshold');
 
         this.clusterGrid = document.getElementById('cluster-grid-container');
+        this.metadataClusterGrid = document.getElementById('metadata-cluster-grid-container');
+        this.btnShowMoreMetadata = document.getElementById('btn-show-more-metadata');
         this.btnProceed = document.getElementById('btn-proceed');
         this.statusBarText = document.getElementById('status-current-text');
         this.statusEvent = document.getElementById('status-event');
@@ -43,7 +45,7 @@ export class UIManager {
         this.aiMachineAnim = document.getElementById('ai-machine-anim');
         this.aiPillText = document.getElementById('ai-pill-text');
         this.headerProgressBar = document.getElementById('header-progress-bar');
-        this.btnPauseResumeIcon = this.btnPauseResume.querySelector('.pause-resume-icon');
+        this.btnPauseResumeIcon = this.btnPauseResume?.querySelector('.pause-resume-icon');
         this.aiMetricsContainer = document.getElementById('ai-pill-secondary');
 
         this.floatingControls = document.getElementById('floating-controls');
@@ -54,7 +56,6 @@ export class UIManager {
         // Action Selection Modal
         this.modalActionChoice = document.getElementById('modal-action-choice');
         this.btnCloseAction = document.getElementById('btn-close-action');
-        this.btnSaveSame = document.getElementById('btn-save-same');
         this.btnSaveDiff = document.getElementById('btn-save-diff');
         this.passfacesUsername = document.getElementById('passfaces-username');
         this.btnUploadPassfaces = document.getElementById('btn-upload-passfaces');
@@ -89,7 +90,7 @@ export class UIManager {
 
         // State
         this.callbacks = {};
-        this.cards = new Map(); // Index -> Card DOM node
+        this.cards = new Map(); // Index/ID -> Card DOM node
 
         // Storage Management Elements
         this.btnManageStorage = document.getElementById('btn-manage-storage');
@@ -100,6 +101,10 @@ export class UIManager {
         this.btnManageStorageInitial = document.getElementById('btn-manage-storage-initial');
         this.btnDeleteAllStorage = document.getElementById('btn-delete-all-storage');
         this.excludedBadge = document.getElementById('excluded-badge');
+
+        this.sectionVisual = document.getElementById('section-visual');
+        this.sectionTimeline = document.getElementById('section-timeline');
+        this.globalPlaceholder = document.getElementById('global-processing-placeholder');
     }
 
     setCallbacks(callbacks) {
@@ -108,7 +113,25 @@ export class UIManager {
     }
 
     initListeners() {
-        this.btnSelectInitial.addEventListener('click', () => this.callbacks.onSelectFolder?.());
+        this.btnSelectInitial.addEventListener('click', () => {
+            document.getElementById('folder-input').click();
+        });
+
+        // Add listener for the hidden file input
+        const folderInput = document.getElementById('folder-input');
+        if (folderInput) {
+            folderInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    this.callbacks.onFilesSelected?.(e.target.files);
+                }
+            });
+        }
+
+        if(this.btnShowMoreMetadata) {
+            this.btnShowMoreMetadata.addEventListener('click', () => {
+                this.callbacks.onShowMoreMetadata?.();
+            });
+        }
 
         this.btnPauseResume.addEventListener('click', () => {
             const isCurrentlyPaused = this.btnPauseResume.classList.contains('paused');
@@ -134,12 +157,12 @@ export class UIManager {
         }
 
         const closeExcludedManager = () => this.modalExcluded.classList.add('hidden');
-        this.btnCloseExcluded.addEventListener('click', closeExcludedManager);
-        this.btnCloseExcludedAction.addEventListener('click', closeExcludedManager);
+        this.btnCloseExcluded?.addEventListener('click', closeExcludedManager);
+        this.btnCloseExcludedAction?.addEventListener('click', closeExcludedManager);
 
         // Live values
-        this.settingK.addEventListener('input', (e) => this.valK.textContent = e.target.value);
-        this.settingThreshold.addEventListener('input', (e) => this.valThreshold.textContent = e.target.value);
+        this.settingK?.addEventListener('input', (e) => this.valK.textContent = e.target.value);
+        this.settingThreshold?.addEventListener('input', (e) => this.valThreshold.textContent = e.target.value);
 
         // Batch Options Buttons
         const batchButtons = document.querySelectorAll('#batch-options .opt-btn');
@@ -150,38 +173,33 @@ export class UIManager {
                 const value = parseInt(btn.dataset.value);
                 batchButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                hiddenBatchInput.value = value;
+                if (hiddenBatchInput) hiddenBatchInput.value = value;
                 this.callbacks.onBatchSizeChange?.(value);
             });
         });
 
-        this.btnApplySettings.addEventListener('click', () => {
+        this.btnApplySettings?.addEventListener('click', () => {
             const settings = {
-                k: parseInt(this.settingK.value),
-                threshold: parseFloat(this.settingThreshold.value),
-                refreshInterval: parseInt(hiddenBatchInput.value)
+                k: parseInt(this.settingK?.value || 6),
+                threshold: parseFloat(this.settingThreshold?.value || 0.15),
+                refreshInterval: parseInt(hiddenBatchInput?.value || 20)
             };
             this.callbacks.onApplySettings?.(settings);
             this.modalSettings.classList.add('hidden');
         });
 
-        this.btnProceed.addEventListener('click', () => this.callbacks.onProceed?.());
+        this.btnProceed?.addEventListener('click', () => this.callbacks.onProceed?.());
 
-        this.btnSaveSame.addEventListener('click', () => {
+        this.btnSaveDiff?.addEventListener('click', () => {
             this.modalActionChoice.classList.add('hidden');
-            this.callbacks.onConfirmSaveLocation?.(false); // same
-        });
-
-        this.btnSaveDiff.addEventListener('click', () => {
-            this.modalActionChoice.classList.add('hidden');
-            this.callbacks.onConfirmSaveLocation?.(true); // different
+            this.callbacks.onConfirmSaveLocation?.(true); // download zip
         });
 
         this.btnCancelAction?.addEventListener('click', () => this.modalActionChoice.classList.add('hidden'));
         this.btnCloseAction?.addEventListener('click', () => this.modalActionChoice.classList.add('hidden'));
 
-        this.passfacesUsername.addEventListener('input', () => this.validateUploadRequirements());
-        this.btnUploadPassfaces.addEventListener('click', () => {
+        this.passfacesUsername?.addEventListener('input', () => this.validateUploadRequirements());
+        this.btnUploadPassfaces?.addEventListener('click', () => {
             const username = this.passfacesUsername.value.trim();
             this.modalActionChoice.classList.add('hidden');
             this.callbacks.onUploadPassfaces?.(username);
@@ -197,7 +215,7 @@ export class UIManager {
         });
 
         // Storage Management Listeners
-        this.btnManageStorage.addEventListener('click', () => {
+        this.btnManageStorage?.addEventListener('click', () => {
             this.callbacks.onManageStorage?.();
             this.modalStorage.classList.remove('hidden');
         });
@@ -214,36 +232,36 @@ export class UIManager {
         });
 
         const closeStorage = () => this.modalStorage.classList.add('hidden');
-        this.btnCloseStorage.addEventListener('click', closeStorage);
-        this.btnCloseStorageFooter.addEventListener('click', closeStorage);
+        this.btnCloseStorage?.addEventListener('click', closeStorage);
+        this.btnCloseStorageFooter?.addEventListener('click', closeStorage);
     }
 
     validateUploadRequirements() {
         if (!this.lastClusters) return;
 
         const username = this.passfacesUsername.value.trim();
-        const selectedIndices = this.getSelectedClusterIndices();
+        const selectedRefs = this.getSelectedClusterIndices();
         const errorMsg = this.uploadErrorMsg;
         const btnUpload = this.btnUploadPassfaces;
 
         let error = "";
         let isValid = true;
 
-        if (selectedIndices.length !== 6) {
-            error = `Selected ${selectedIndices.length}/6 groups. Exactly 6 groups required for Passfaces.`;
+        if (selectedRefs.length !== 6) {
+            error = `Selected ${selectedRefs.length}/6 groups. Exactly 6 groups required for Passfaces.`;
             isValid = false;
         } else if (!username) {
-            // Only show username error if count is correct, to avoid noise? 
-            // Or show it always? 
-            // Better: "Please enter a username."
             error = "Please enter a username.";
             isValid = false;
         } else {
             // Check if each selected cluster has exactly 16 representatives
-            for (const idx of selectedIndices) {
-                const cluster = this.lastClusters[idx];
-                if (cluster.representatives.length !== 16) {
-                    error = `Group ${idx + 1} has only ${cluster.representatives.length}/16 images. (Try increasing cluster size/decreasing threshold)`;
+            for (const ref of selectedRefs) {
+                const clusterList = ref.domain === 'visual' ? this.lastClusters : this.lastMetadataClusters;
+                const cluster = clusterList?.find(c => c.id.toString() === ref.id.toString());
+
+                if (cluster && cluster.representatives.length !== 16) {
+                    const label = cluster.label || `Group ${ref.id + 1}`;
+                    error = `${label} has only ${cluster.representatives.length}/16 images. (Try increasing cluster size/decreasing threshold)`;
                     isValid = false;
                     break;
                 }
@@ -427,35 +445,74 @@ export class UIManager {
         }, 5000);
     }
 
-    renderClusters(clusters) {
-        this.lastClusters = clusters; // Store for validation
+    updateMetadataPagination(visibleCount, totalCount) {
+        if (!this.btnShowMoreMetadata) return;
+
+        if (visibleCount < totalCount) {
+            this.btnShowMoreMetadata.classList.remove('hidden');
+            this.btnShowMoreMetadata.textContent = `Show More (${totalCount - visibleCount} remaining)`;
+        } else {
+            this.btnShowMoreMetadata.classList.add('hidden');
+        }
+    }
+
+    renderClusters(clusters, targetGrid = null) {
+        if (!targetGrid) targetGrid = this.clusterGrid;
+
+        // Differentiate lastClusters storage
+        if (targetGrid === this.clusterGrid) {
+            this.lastClusters = clusters;
+        } else {
+            this.lastMetadataClusters = clusters;
+        }
+
         if (!clusters || clusters.length === 0) {
-            this.clusterGrid.innerHTML = '<div class="cluster-placeholder">Processing images, clusters will be displayed soon...</div>';
-            this.floatingControls.classList.add('hidden'); // Hide "PROCEED" when no clusters
+            targetGrid.innerHTML = ''; // Keep it clean
+
+            // Toggle section visibility
+            if (targetGrid === this.clusterGrid) {
+                this.sectionVisual?.classList.add('hidden');
+            } else {
+                this.sectionTimeline?.classList.add('hidden');
+            }
+
+            // If BOTH grids are empty, show global placeholder
+            const isVisualEmpty = !this.lastClusters?.length;
+            const isTimelineEmpty = !this.lastMetadataClusters?.length;
+
+            if (isVisualEmpty && isTimelineEmpty) {
+                this.globalPlaceholder?.classList.remove('hidden');
+                this.floatingControls.classList.add('hidden');
+            }
             return;
         }
 
-        // If we were showing the placeholder, clear it now that we have data
-        if (this.clusterGrid.querySelector('.cluster-placeholder')) {
-            this.clusterGrid.innerHTML = '';
+        // If we have clusters, show the corresponding section and hide global placeholder
+        if (targetGrid === this.clusterGrid) {
+            this.sectionVisual?.classList.remove('hidden');
+        } else {
+            this.sectionTimeline?.classList.remove('hidden');
         }
 
+        this.globalPlaceholder?.classList.add('hidden');
         this.floatingControls.classList.remove('hidden'); // Show when we have data
 
-        // 1. Remove clusters that are no longer present
-        const existingCards = Array.from(this.clusterGrid.querySelectorAll('.cluster-card'));
-        const activeIds = new Set(clusters.map((_, i) => i.toString()));
+        // 1. Remove clusters that are no longer present IN THIS GRID
+        const existingCards = Array.from(targetGrid.querySelectorAll('.cluster-card'));
+        const activeIds = new Set(clusters.map(c => c.id.toString()));
 
         existingCards.forEach(card => {
             if (!activeIds.has(card.dataset.clusterId)) {
-                this.cards.delete(parseInt(card.dataset.clusterId));
+                this.cards.delete(card.dataset.clusterId);
                 card.remove();
             }
         });
 
         // 2. Update or Create clusters
-        clusters.forEach((cluster, index) => {
-            let card = this.cards.get(index);
+        clusters.forEach((cluster) => {
+            // Using ID instead of array index to support separate grids robustly
+            const idKey = cluster.id.toString();
+            let card = this.cards.get(idKey);
             const memberCount = cluster.memberCount !== undefined ? cluster.memberCount : cluster.members.length;
 
             // Drift Indicator (e.g. "1➔ 🔄 2")
@@ -471,7 +528,7 @@ export class UIManager {
                         : '';
 
                     const moveHtml = relocated
-                        ? `<span class="move-count">${cluster.movedFrom + 1}➔${index + 1}</span>`
+                        ? `<span class="move-count">${cluster.movedFrom + 1}➔${cluster.label || (idKey + 1)}</span>`
                         : '';
 
                     const moveTooltip = relocated
@@ -486,7 +543,8 @@ export class UIManager {
                 }
             }
 
-            const labelHtml = `<span class="cluster-name">${cluster.label || `Cluster ${index + 1}`}</span>`;
+            const geotagHtml = cluster.resolvedLocation ? ` <span class="geotag-label" style="font-size: 0.85em; opacity: 0.8; margin-left: 5px;">(${cluster.resolvedLocation})</span>` : '';
+            const labelHtml = `<span class="cluster-name">${cluster.label || `Cluster ${idKey + 1}`}${geotagHtml}</span>`;
             const countHtml = `<span class="cluster-count">${memberCount} items</span>`;
 
             // Flex layout handles the spacing
@@ -496,8 +554,10 @@ export class UIManager {
                 // Create New
                 card = document.createElement('div');
                 card.className = 'cluster-card';
-                card.dataset.clusterId = index;
-                this.cards.set(index, card);
+                card.dataset.clusterId = idKey;
+                // Add domain marker for UI constraint logic
+                card.dataset.domain = targetGrid === this.clusterGrid ? 'visual' : 'metadata';
+                this.cards.set(idKey, card);
 
                 const header = document.createElement('div');
                 header.className = 'card-header';
@@ -533,7 +593,7 @@ export class UIManager {
                 card._gridNode = grid; // Link
                 card.appendChild(grid);
 
-                this.clusterGrid.appendChild(card);
+                targetGrid.appendChild(card);
             }
 
             // ALWAYS Update dynamic UI states (locked, title, styling)
@@ -551,15 +611,6 @@ export class UIManager {
                 title.innerHTML = titleHtml;
             }
 
-            // Ensure checkbox state matches expectation (if we are re-rendering)
-            // Note: If we had an external selection state, we'd use it here.
-            // For now, we rely on the DOM or the `cluster` object if it had a `selected` prop.
-            // But `cluster` object doesn't seem to have `selected`. 
-            // The existing code didn't maintain selection on re-render explicity? 
-            // Actually, `renderClusters` might be destructive. 
-            // If `renderClusters` is called, it usually means new clusters.
-            // However, `isLocked` implies persistence. 
-            // Let's ensure logic: if locked, it is auto-selected?
             if (cluster.isLocked) {
                 card.classList.add('locked');
                 checkbox.checked = true;
@@ -575,12 +626,28 @@ export class UIManager {
                 checkbox.checked = false;
             }
 
+            // Check Conflicting constraint state
+            if (cluster.isDisabled) {
+                card.classList.add('conflicting');
+                card.title = "Some of these images are already locked in another cluster";
+                card._lockToggleNode.style.pointerEvents = 'none';
+                card._lockToggleNode.style.opacity = '0.3';
+                checkbox.disabled = true;
+            } else {
+                card.classList.remove('conflicting');
+                card.title = "";
+                card._lockToggleNode.style.pointerEvents = 'auto';
+                card._lockToggleNode.style.opacity = '1';
+                checkbox.disabled = false;
+            }
+
             // Wire/Update checkbox behavior
             checkbox.onchange = () => {
+                const domain = card.dataset.domain;
                 if (checkbox.checked) {
-                    this.callbacks.onLockCluster?.(index);
+                    this.callbacks.onLockCluster?.(cluster.id, domain);
                 } else {
-                    this.callbacks.onUnlockCluster?.(index);
+                    this.callbacks.onUnlockCluster?.(cluster.id, domain);
                 }
                 this.updateSelectionIndicator();
             };
@@ -650,8 +717,6 @@ export class UIManager {
                             e.stopPropagation();
                             this.callbacks.onExcludeImage?.(imgData.path);
                         };
-
-                        const isLowPerf = document.body.getAttribute('data-low-perf') === 'true';
 
                         this.callbacks.onLoadThumbnail?.(imgData.path).then(url => {
                             if (!url) {
@@ -727,12 +792,20 @@ export class UIManager {
     }
 
     getSelectedClusterIndices() {
-        const checkboxes = this.clusterGrid.querySelectorAll('.cluster-checkbox');
-        const indices = [];
-        checkboxes.forEach((cb, index) => {
-            if (cb.checked) indices.push(index);
+        const checkboxes = document.querySelectorAll('.cluster-checkbox');
+        const ids = [];
+        checkboxes.forEach((cb) => {
+            if (cb.checked) {
+                const card = cb.closest('.cluster-card');
+                if(card) {
+                    ids.push({
+                        id: card.dataset.clusterId,
+                        domain: card.dataset.domain
+                    });
+                }
+            }
         });
-        return indices;
+        return ids;
     }
 
     updateSelectionIndicator() {
@@ -1003,5 +1076,22 @@ export class UIManager {
             item.appendChild(btnDelete);
             this.storageProjectList.appendChild(item);
         });
+    }
+
+    /**
+     * Dynamically update a cluster's title with its resolved geolocated name.
+     */
+    updateClusterGeotag(clusterId, locationName) {
+        if (!locationName) return;
+        const card = this.cards.get(clusterId.toString());
+        if (!card || !card._titleNode) return;
+
+        const nameSpan = card._titleNode.querySelector('.cluster-name');
+        if (nameSpan) {
+            // Avoid duplicate appending if triggered multiple times
+            if (!nameSpan.textContent.includes(`(${locationName})`)) {
+                nameSpan.innerHTML += ` <span class="geotag-label" style="font-size: 0.85em; opacity: 0.8; margin-left: 5px;">(${locationName})</span>`;
+            }
+        }
     }
 }

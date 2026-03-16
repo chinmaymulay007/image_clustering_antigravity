@@ -14,6 +14,9 @@ class App {
         // State
         this.currentEmbeddings = [];
         this.currentClusters = []; // Cache for WYSIWYG
+        this.allMetadataClusters = []; // All extracted
+        this.currentMetadataClusters = []; // Timeline Clusters shown
+        this.visibleMetadataClustersCount = 6;
         this.lastCentroids = null; // Warm start stability
         this.excludedPaths = new Set();
         this.refreshInterval = 20;
@@ -26,7 +29,10 @@ class App {
         this.clusterWorker = null;
         this.imageWorker = null;
         this.thumbnailPromises = new Map(); // Path -> Promise
-        this.lockedClusters = new Map(); // Index -> { preferredPaths }
+        this.thumbnailResolvers = new Map(); // Path -> resolve function
+                
+        // Locked state is now keyed by domain + index, e.g., 'visual_0', 'metadata_meta_1'
+        this.lockedClusters = new Map(); 
 
         // Logging & Memory Stats
         this.thumbnailsCreatedSinceLastLog = 0;
@@ -38,7 +44,7 @@ class App {
 
     init() {
         this.ui.setCallbacks({
-            onSelectFolder: () => this.handleSelectFolder(),
+            onFilesSelected: (files) => this.handleFilesSelected(files),
             onPauseResume: (shouldPause) => this.handlePauseResume(shouldPause),
             onApplySettings: (settings) => this.handleApplySettings(settings),
             onProceed: () => this.handleProceed(),
@@ -47,18 +53,23 @@ class App {
             onLoadThumbnail: (path) => this.loadThumbnail(path),
             onGetExcludedPaths: () => this.excludedPaths,
             onRestoreImage: (path) => this.handleRestore(path),
-            onConfirmSaveLocation: (isDifferent) => this.handleConfirmSaveLocation(isDifferent),
-            onLockCluster: (index) => this.handleLockCluster(index),
-            onUnlockCluster: (index) => this.handleUnlockCluster(index),
+            onConfirmSaveLocation: () => this.handleConfirmSaveLocation(),
+            onLockCluster: (id, domain) => this.handleLockCluster(id, domain),
+            onUnlockCluster: (id, domain) => this.handleUnlockCluster(id, domain),
             onManageStorage: () => this.handleManageStorage(),
             onDeleteProjectData: (projectId) => this.handleDeleteProjectData(projectId),
             onDeleteAllData: () => this.handleDeleteAllData(),
-            onBatchSizeChange: (size) => this.handleBatchSizeChange(size)
+            onBatchSizeChange: (size) => this.handleBatchSizeChange(size),
+            onShowMoreMetadata: () => this.handleShowMoreMetadata()
         });
     }
 
     handleApplySettings(settings) {
-        const currentLockedCount = this.lockedClusters.size;
+        // Count visual locks only for K constraint checking if we still want that
+        let visualLockedCount = 0;
+        for (const [key] of this.lockedClusters) {
+            if (key.startsWith('visual_')) visualLockedCount++;
+        }
 
         if (settings.k < currentLockedCount) {
             alert(`⚠️ Action Required: Cannot reduce total clusters to ${settings.k}.\n\nYou currently have ${currentLockedCount} clusters locked. Please unlock some clusters before decreasing the total count.`);
@@ -104,14 +115,20 @@ class App {
         this.updateUI({ lastEvent: `Batch size: ${size}` });
     }
 
-    async handleSelectFolder() {
-        console.log("[App] User clicked Select Folder.");
+    async handleFilesSelected(fileList) {
+        console.log("[App] User selected folder via universal input.");
         try {
-            const dirName = await this.fs.selectDirectory();
-            console.log(`[App] Selected: ${dirName}`);
+            // Filter and set files in FileSystemManager
+            const { projectName, imageCount } = await this.fs.setFiles(fileList);
+            console.log(`[App] Project Name inferred: ${projectName}, Found ${imageCount} valid images.`);
+
+            if (imageCount === 0) {
+                alert("❌ No valid images found in the selected folder.");
+                return;
+            }
 
             // Initialize Database for this project
-            await db.init(dirName);
+            await db.init(projectName);
 
             this.ui.hideInitialOverlay();
             this.ui.renderClusters([]); // Show placeholder immediately during scan
@@ -127,11 +144,6 @@ class App {
             };
 
             // Start Processing
-            // Note: We need to populate handleMap AFTER processing scans
-            // But processing.start() scans internaly. 
-            // We should split scan? Or just read access from processing.
-            // Let's rely on processing to set state, then we read it.
-
             this.processing.start(this.refreshInterval).then(() => {
                 // Post-scan, build map for fast retrieval
                 this.rebuildHandleMap();
@@ -153,7 +165,7 @@ class App {
 
         } catch (error) {
             console.error("Initialization failed:", error);
-            alert("❌ Folder Access Failed: We couldn't open the selected folder. Please ensure the app has permission and try again.");
+            alert("❌ Initialization Failed: We couldn't process the selected files. Please check console for details.");
         }
     }
 
@@ -161,7 +173,7 @@ class App {
         this.handleMap.clear();
         if (this.processing.allImages) {
             this.processing.allImages.forEach(img => {
-                this.handleMap.set(img.path, img.handle);
+                this.handleMap.set(img.path, img.file); // Store File object directly
             });
         }
     }
@@ -253,23 +265,34 @@ class App {
 
         if (!this.clusterWorker) {
             this.clusterWorker = new Worker('js/clustering_worker.js', { type: 'module' });
-            this.clusterWorker.onmessage = (e) => {
+            this.clusterWorker.onmessage = async (e) => {
                 const { status, result, error } = e.data;
-                this.isClustering = false;
-
                 if (status === 'success') {
                     let clusters = result.clusters;
 
-                    // POST-PROCESSING: Apply locked constraints
+                    // Compute Metadata Clusters locally (It's fast enough on main thread or we could workerize)
+                    // We need to wait for geo-coding which is async so we do it here.
+                    const metadataClusters = await this.clustering.updateMetadataClusters(validEmbeddings, 15, this.threshold);
+                    this.allMetadataClusters = metadataClusters;
+                    this.currentMetadataClusters = this.allMetadataClusters.slice(0, this.visibleMetadataClustersCount);
+
+                    // POST-PROCESSING: Apply locked constraints to both
                     if (this.lockedClusters.size > 0) {
                         clusters = this.applyLockedConstraints(clusters);
+                        this.currentMetadataClusters = this.applyMetadataLockedConstraints(this.currentMetadataClusters);
                     }
 
                     this.currentClusters = clusters;
                     this.lastCentroids = result.centroids;
 
-                    // Update UI
-                    this.ui.renderClusters(this.currentClusters);
+                    // Calculate cross-domain interlocking (disabling locks)
+                    this.evaluateLockingConstraints();
+
+                    // Update UI (Pass grid targets from ui class)
+                    this.ui.renderClusters(this.currentClusters, this.ui.clusterGrid);
+                    this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataClusterGrid);
+                    this.ui.updateMetadataPagination(this.currentMetadataClusters.length, this.allMetadataClusters.length);
+                    this.enrichTimelineClusters();
 
                     // Check for pending thumbnails
                     if (this.thumbnailPromises.size > 0) {
@@ -296,6 +319,8 @@ class App {
                         this.logImageSummary();
                     }
 
+                    this.isClustering = false;
+
                     // If a re-cluster was requested while we were busy, do it now
                     if (this.pendingRecluster) {
                         this.pendingRecluster = false;
@@ -303,18 +328,24 @@ class App {
                     }
                 } else {
                     console.error("Clustering Worker Error:", error);
+                    this.isClustering = false;
                 }
             };
         }
 
-        const lockedIndices = Array.from(this.lockedClusters.keys());
+        const lockedIndices = [];
         const lockedRadii = {};
         const lockedCentroids = {};
 
+        // Worker only knows about "Visual" clusters by INT index
         if (this.lockedClusters.size > 0) {
-            this.lockedClusters.forEach((data, index) => {
-                lockedRadii[index] = data.maxRadius;
-                lockedCentroids[index] = data.centroid;
+            this.lockedClusters.forEach((data, key) => {
+                if (key.startsWith('visual_')) {
+                    const idx = parseInt(key.replace('visual_', ''));
+                    lockedIndices.push(idx);
+                    lockedRadii[idx] = data.maxRadius;
+                    lockedCentroids[idx] = data.centroid;
+                }
             });
         }
 
@@ -355,7 +386,7 @@ class App {
                 this.imageWorker = new Worker('js/image_worker.js');
                 this.imageWorker.onmessage = (e) => {
                     const { status, blob, path: resPath, error } = e.data;
-                    const resolver = this.thumbnailPromises.get(resPath)?.resolver;
+                    const resolver = this.thumbnailResolvers.get(resPath);
                     if (status === 'success') {
                         const url = URL.createObjectURL(blob);
                         // Store both URL and blob for reuse during upload
@@ -367,6 +398,7 @@ class App {
                         if (resolver) resolver(null);
                     }
 
+                    this.thumbnailResolvers.delete(resPath);
                     this.thumbnailPromises.delete(resPath);
 
                     // Update UI status during loading
@@ -385,9 +417,9 @@ class App {
             }
 
             try {
-                const file = await handle.getFile();
+                const file = handle; // handle is now the File object directly
                 return new Promise((resolve) => {
-                    this.thumbnailPromises.set(path, { resolver: resolve });
+                    this.thumbnailResolvers.set(path, resolve);
                     this.imageWorker.postMessage({ file, targetWidth: 300, path });
                 });
             } catch (e) {
@@ -398,6 +430,24 @@ class App {
 
         this.thumbnailPromises.set(path, promise);
         return promise;
+    }
+
+    handleShowMoreMetadata() {
+        if (this.currentMetadataClusters.length < this.allMetadataClusters.length) {
+            this.visibleMetadataClustersCount += 3;
+            this.currentMetadataClusters = this.allMetadataClusters.slice(0, this.visibleMetadataClustersCount);
+            
+            if (this.lockedClusters.size > 0) {
+                this.currentMetadataClusters = this.applyMetadataLockedConstraints(this.currentMetadataClusters);
+            }
+            this.evaluateLockingConstraints();
+            
+            this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataClusterGrid);
+            this.ui.updateMetadataPagination(this.currentMetadataClusters.length, this.allMetadataClusters.length);
+            
+            // Trigger Enrichment for the newly visible clusters
+            this.enrichTimelineClusters();
+        }
     }
 
     async handleProceed() {
@@ -416,21 +466,32 @@ class App {
 
     async handleUploadPassfaces(username) {
         try {
-            const selectedIndices = this.ui.getSelectedClusterIndices();
-            const clustersToUpload = this.currentClusters.filter((c, i) => selectedIndices.includes(i));
+            const selectedMetadata = this.ui.getSelectedClusterIndices(); // Returns {id, domain}
+            let clustersToUpload = [];
 
-            if (clustersToUpload.length !== 6) {
-                alert("⚠️ Selection Required: Please select exactly 6 clusters to initialize your Passfaces setup.");
+            const totalLocks = selectedMetadata.length;
+            
+            if (totalLocks !== 6) {
+                alert(`⚠️ Selection Required: Please select exactly 6 clusters to initialize your Passfaces setup. You currently have ${totalLocks} selected.`);
                 return;
             }
 
+            // Gather clusters from both domains
+            selectedMetadata.forEach(sel => {
+                if (sel.domain === 'visual') {
+                    const cl = this.currentClusters.find(c => c.id.toString() === sel.id.toString());
+                    if (cl) clustersToUpload.push(cl);
+                } else if (sel.domain === 'metadata') {
+                    const cl = this.currentMetadataClusters.find(c => c.id.toString() === sel.id.toString());
+                    if (cl) clustersToUpload.push(cl);
+                }
+            });
+
             // Mapping clusters to include their original user-facing label (Cluster 1, etc.)
             const clustersWithMetadata = clustersToUpload.map((c, i) => {
-                // Find the index of this cluster in the original array to get the "Cluster N" label
-                const originalIndex = this.currentClusters.indexOf(c);
                 return {
                     ...c,
-                    originalLabel: `Cluster ${originalIndex + 1}`
+                    originalLabel: c.label || `Cluster ${i + 1}`
                 };
             });
 
@@ -475,7 +536,7 @@ class App {
                     if (cached && cached.blob) {
                         blob = cached.blob;
                     } else {
-                        const file = await handle.getFile();
+                        const file = handle; // handle is now the File object directly
                         blob = await this.compressImageForUpload(file, TARGET_SIZE_KB);
                     }
                     compressedImages.push(blob);
@@ -601,25 +662,26 @@ class App {
         this.handleProceed();
     }
 
-    async handleConfirmSaveLocation(isDifferent) {
+    async handleConfirmSaveLocation() {
         try {
             const btn = document.getElementById('btn-proceed');
             const originalText = "🚀 PROCEED";
 
-            let targetHandle = null;
-            if (isDifferent) {
-                try {
-                    targetHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-                } catch (userCancelled) {
-                    return; // Stop if user cancels folder picker
-                }
-            }
-
-            btn.textContent = "SAVING...";
+            btn.textContent = "ZIPPING...";
             btn.disabled = true;
 
-            const selectedIndices = this.ui.getSelectedClusterIndices();
-            const clustersToSave = this.currentClusters.filter((c, i) => selectedIndices.includes(i));
+            const selectedMetadata = this.ui.getSelectedClusterIndices();
+            let clustersToSave = [];
+
+            selectedMetadata.forEach(sel => {
+                if (sel.domain === 'visual') {
+                    const cl = this.currentClusters.find(c => c.id.toString() === sel.id.toString());
+                    if (cl) clustersToSave.push(cl);
+                } else if (sel.domain === 'metadata') {
+                    const cl = this.currentMetadataClusters.find(c => c.id.toString() === sel.id.toString());
+                    if (cl) clustersToSave.push(cl);
+                }
+            });
 
             if (clustersToSave.length === 0) {
                 alert("❌ System Error: A selection mismatch occurred. Please try selecting the clusters again."); // Should not happen
@@ -628,25 +690,62 @@ class App {
                 return;
             }
 
-            // 4. Show Progress UI
-            this.ui.showProgress("Starting Save...");
+            this.ui.showProgress("Starting Zipping...");
 
-            // 5. Execute Save with Progress Callback
-            const folderName = await this.fs.saveClusters(clustersToSave, this.handleMap, (current, total, text) => {
-                this.ui.updateProgress(current, total, text);
-            }, targetHandle);
+            // Create ZIP using JSZip
+            const zip = new JSZip();
+            const rootFolderName = `clusterai_curated_${new Date().getTime()}`;
+            const zipRoot = zip.folder(rootFolderName);
+
+            let totalFiles = 0;
+            clustersToSave.forEach(c => totalFiles += c.representatives.length);
+            let processedFiles = 0;
+
+            for (const cluster of clustersToSave) {
+                const safeLabel = cluster.label.replace(/[^a-z0-9]/gi, '_');
+                const clusterFolder = zipRoot.folder(safeLabel);
+
+                for (const member of cluster.representatives) {
+                    const file = this.handleMap.get(member.path); // handleMap now stores the actual File
+                    if (!file) {
+                        console.warn(`Cannot find file for ${member.path}, skipping save.`);
+                        continue;
+                    }
+
+                    const originalName = member.path.split('/').pop();
+                    clusterFolder.file(originalName, file);
+                    processedFiles++;
+                    this.ui.updateProgress(processedFiles, totalFiles, `Adding ${originalName} to zip...`);
+                }
+            }
+
+            this.ui.showProgress("Generating ZIP file...");
+            const blob = await zip.generateAsync({ type: "blob" }, (metadata) => {
+                this.ui.updateProgress(metadata.percent, 100, `Compressing... ${metadata.percent.toFixed(0)}%`);
+            });
+
+            // Trigger Download
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = `${rootFolderName}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
 
             this.ui.hideProgress();
-            alert(`✅ Success: Your curated clusters have been saved to "${folderName}".`);
+            alert(`✅ Success: Your curated clusters have been downloaded as a ZIP file.`);
 
             btn.textContent = originalText;
             btn.disabled = false;
         } catch (e) {
             console.error("Save failed:", e);
-            alert("❌ Save Error: We encountered a problem saving your selection. Please try again or pick a different location.");
+            alert("❌ Save Error: We encountered a problem zipping your selection. Please try again or check your memory usage.");
             this.ui.hideProgress();
             document.getElementById('btn-proceed').disabled = false;
-            document.getElementById('btn-proceed').textContent = originalText;
+            document.getElementById('btn-proceed').textContent = "🚀 PROCEED";
         }
     }
 
@@ -688,62 +787,100 @@ class App {
 
     // --- Lock / Unlock Logic ---
 
-    handleLockCluster(clusterIndex) {
-        const cluster = this.currentClusters[clusterIndex];
+    handleLockCluster(clusterId, domain) {
+        let cluster;
+        let lockKey = `${domain}_${clusterId}`;
+
+        if (domain === 'visual') {
+            cluster = this.currentClusters.find(c => c.id.toString() === clusterId.toString());
+        } else {
+            cluster = this.currentMetadataClusters.find(c => c.id.toString() === clusterId.toString());
+        }
 
         if (!cluster) return;
 
         if (cluster.representatives.length < 16) {
             alert("⚠️ Cluster Too Small: Only clusters with 16 or more images can be locked for Passfaces.");
-            this.ui.renderClusters(this.currentClusters); // Revert checkbox state
+            // Re-render grids to revert checkbox visually
+            this.evaluateLockingConstraints();
+            this.ui.renderClusters(this.currentClusters, this.ui.clusterGrid);
+            this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataClusterGrid);
             return;
         }
 
-        // Calculate Radius (Distance from centroid to 16th representative)
-        const reps = cluster.representatives;
-        const centroid = cluster.centroid;
-        let maxRadius = 0;
-        reps.forEach(r => {
-            const d = this.clustering.cosineDistance(r.embedding, centroid);
-            if (d > maxRadius) maxRadius = d;
-        });
+        if (domain === 'visual') {
+            // Calculate Radius only relevant for visual KMeans anchoring
+            const reps = cluster.representatives;
+            const centroid = cluster.centroid;
+            let maxRadius = 0;
+            reps.forEach(r => {
+                const d = this.clustering.cosineDistance(r.embedding, centroid);
+                if (d > maxRadius) maxRadius = d;
+            });
 
-        // Count images currently within this radius (Radius Lock Coverage)
-        const inRadiusCount = cluster.members.filter(m =>
-            this.clustering.cosineDistance(m.embedding, centroid) <= maxRadius
-        ).length;
+            const inRadiusCount = cluster.members.filter(m =>
+                this.clustering.cosineDistance(m.embedding, centroid) <= maxRadius
+            ).length;
 
-        this.lockedClusters.set(clusterIndex, {
-            centroid: [...centroid],
-            representatives: JSON.parse(JSON.stringify(reps)), // Pinned set
-            maxRadius: maxRadius,
-            initialCoverage: inRadiusCount,
-            initialTotalSize: cluster.members.length,
-            initialMembership: new Set(cluster.members.map(m => m.path)),
-            initialIndex: clusterIndex
-        });
+            this.lockedClusters.set(lockKey, {
+                domain: domain,
+                centroid: [...centroid],
+                representatives: JSON.parse(JSON.stringify(reps)), // Pinned set
+                maxRadius: maxRadius,
+                initialCoverage: inRadiusCount,
+                initialTotalSize: cluster.members.length,
+                initialMembership: new Set(cluster.members.map(m => m.path)),
+                initialIndex: cluster.id
+            });
+        } else {
+            // Metadata cluster lock (Just pinning the cluster contents)
+            this.lockedClusters.set(lockKey, {
+                domain: domain,
+                representatives: JSON.parse(JSON.stringify(cluster.representatives)),
+                initialIndex: cluster.id
+            });
+        }
 
         cluster.isLocked = true;
         cluster.driftCount = 0;
 
-        console.log(`[App] %cLocked cluster ${clusterIndex + 1} | Radius: ${maxRadius.toFixed(4)} | Initial Radius Lock Coverage: ${inRadiusCount} images | Initial Total Size: ${cluster.members.length}`, "color: #10b981; font-weight: bold;");
+        console.log(`[App] %cLocked ${domain} cluster ${cluster.label}`, "color: #10b981; font-weight: bold;");
 
-        this.ui.renderClusters(this.currentClusters);
-        this.updateUI({ lastEvent: `Locked Cluster ${clusterIndex + 1}` });
+        // Compute cross-domain constraints
+        this.evaluateLockingConstraints();
+
+        this.ui.renderClusters(this.currentClusters, this.ui.clusterGrid);
+        this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataClusterGrid);
+        
+        this.updateUI({ lastEvent: `Locked ${domain} Cluster ${cluster.label}` });
     }
 
-    handleUnlockCluster(clusterIndex) {
-        if (this.lockedClusters.has(clusterIndex)) {
-            this.lockedClusters.delete(clusterIndex);
+    handleUnlockCluster(clusterId, domain) {
+        let lockKey = `${domain}_${clusterId}`;
+        
+        if (this.lockedClusters.has(lockKey)) {
+            this.lockedClusters.delete(lockKey);
 
-            const cluster = this.currentClusters[clusterIndex];
+            let cluster;
+            if (domain === 'visual') {
+                cluster = this.currentClusters.find(c => c.id.toString() === clusterId.toString());
+            } else {
+                cluster = this.currentMetadataClusters.find(c => c.id.toString() === clusterId.toString());
+            }
+
             if (cluster) {
                 cluster.isLocked = false;
 
-                // Re-select representatives immediately using CURRENT members
-                // This updates the view to show "natural" representatives without full recluster
-                if (cluster.members.length > 0) {
-                    cluster.representatives = this.clustering.selectClosestToCentroid(
+                if (domain === 'visual' && cluster.members.length > 0) {
+                     cluster.representatives = this.clustering.selectClosestToCentroid(
+                        cluster.members,
+                        cluster.centroid,
+                        16,
+                        this.threshold
+                    );
+                } else if (domain === 'metadata' && cluster.members.length > 0) {
+                     // Metadata uses the same selection logic as the engine for stability
+                     cluster.representatives = this.clustering.selectClosestToCentroid(
                         cluster.members,
                         cluster.centroid,
                         16,
@@ -752,10 +889,76 @@ class App {
                 }
             }
 
-            this.ui.renderClusters(this.currentClusters);
-            this.updateUI({ lastEvent: `Unlocked Cluster ${clusterIndex + 1}` });
-            console.log(`[App] Unlocked cluster ${clusterIndex + 1}`);
+            // Compute cross-domain constraints
+            this.evaluateLockingConstraints();
+
+            this.ui.renderClusters(this.currentClusters, this.ui.clusterGrid);
+             this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataClusterGrid);
+             
+            this.updateUI({ lastEvent: `Unlocked ${domain} Cluster` });
+            console.log(`[App] Unlocked ${domain} cluster ${clusterId}`);
         }
+    }
+
+    /**
+     * Cross-Domain Constraints:
+     * Disables clusters in Section B if they share any representative image with a locked cluster in Section A.
+     */
+    evaluateLockingConstraints() {
+        // Build sets of locked image paths per domain
+        const lockedVisualPaths = new Set();
+        const lockedMetadataPaths = new Set();
+
+        for (const [key, data] of this.lockedClusters) {
+            data.representatives.forEach(r => {
+                if(data.domain === 'visual') lockedVisualPaths.add(r.path);
+                else lockedMetadataPaths.add(r.path);
+            });
+        }
+
+        // Check Visual Clusters against locked metadata paths
+        this.currentClusters.forEach(cluster => {
+            if(cluster.isLocked) {
+                cluster.isDisabled = false;
+                return;
+            }
+            // Check intersection
+            const hasConflict = cluster.representatives.some(r => lockedMetadataPaths.has(r.path));
+            cluster.isDisabled = hasConflict;
+        });
+
+        // Check Metadata Clusters against locked visual paths
+        this.currentMetadataClusters.forEach(cluster => {
+            if(cluster.isLocked) {
+                cluster.isDisabled = false;
+                return;
+            }
+             const hasConflict = cluster.representatives.some(r => lockedVisualPaths.has(r.path));
+            cluster.isDisabled = hasConflict;
+        });
+    }
+
+    applyMetadataLockedConstraints(clusters) {
+        // Just preserve the isLocked visual state for metadata clusters during a refresh
+        // Their contents don't "drift" because metadata is fixed, unless an exclusion happens.
+        clusters.forEach(cluster => {
+            const lockKey = `metadata_${cluster.id}`;
+            if (this.lockedClusters.has(lockKey)) {
+                cluster.isLocked = true;
+                const lockData = this.lockedClusters.get(lockKey);
+                // Force pinned reps if exclusions removed an item
+                cluster.representatives = lockData.representatives.filter(r => !this.excludedPaths.has(r.path));
+                 if(cluster.representatives.length < 16) {
+                      cluster.driftCount = 16 - cluster.representatives.length;
+                 } else {
+                     cluster.driftCount = 0;
+                 }
+            } else {
+                 cluster.isLocked = false;
+                 cluster.driftCount = 0;
+            }
+        });
+        return clusters;
     }
 
     compactLockedClusters(newK) {
@@ -882,6 +1085,33 @@ class App {
 
         if (shouldLog) {
             this.logImageSummary();
+        }
+    }
+
+    /**
+     * For each visible timeline cluster, asynchronously find its geographic name
+     * and update the UI label.
+     */
+    async enrichTimelineClusters() {
+        if (!this.currentMetadataClusters) return;
+
+        for (const cluster of this.currentMetadataClusters) {
+            // Priority: Use already resolved location if available
+            if (cluster.resolvedLocation) {
+                this.ui.updateClusterGeotag(cluster.id, cluster.resolvedLocation);
+                continue;
+            }
+
+            if (cluster.geoCentroid) {
+                // Non-blocking async fetch
+                this.clustering.reverseGeocode(cluster.geoCentroid.lat, cluster.geoCentroid.lon)
+                    .then(locationName => {
+                        if (locationName) {
+                            cluster.resolvedLocation = locationName; // Persist in cluster object
+                            this.ui.updateClusterGeotag(cluster.id, locationName);
+                        }
+                    });
+            }
         }
     }
 

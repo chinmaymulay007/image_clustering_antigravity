@@ -262,4 +262,139 @@ export class ClusteringEngine {
         if (magA === 0 || magB === 0) return 0; // Safety
         return dot / (Math.sqrt(magA) * Math.sqrt(magB));
     }
+
+    /**
+     * Timeline and Location Clustering
+     * 1. Groups by day
+     * 2. Subdivides by location (if spread > 50km)
+     * 3. Selects representatives randomly (or chronologically)
+     */
+    async updateMetadataClusters(allEmbeddings, maxClusters = 10, dedupThreshold = 0.15) {
+        if (!allEmbeddings || allEmbeddings.length === 0) return [];
+
+        console.log(`[Metadata Clustering] Starting classification of ${allEmbeddings.length} items...`);
+
+        // 1. Sort chronologically
+        const sorted = [...allEmbeddings].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+        // 2. Group by Day (Local Time)
+        const timeGroups = new Map();
+        for (const item of sorted) {
+            const date = new Date(item.timestamp);
+            const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            if (!timeGroups.has(dateKey)) timeGroups.set(dateKey, []);
+            timeGroups.get(dateKey).push(item);
+        }
+
+        let clusters = [];
+        let clusterIdCounter = 0;
+
+        // 3. Create clusters for each day
+        for (const [dateKey, items] of timeGroups.entries()) {
+            const dateObj = new Date(dateKey);
+            const shortDateStr = Object.prototype.toString.call(dateObj) === "[object Date]" && !isNaN(dateObj) ? dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : dateKey;
+
+            let visualCentroid = new Array(512).fill(0);
+            let sumLat = 0, sumLon = 0, gpsCount = 0;
+
+            items.forEach(m => {
+                for(let i=0; i<512; i++) visualCentroid[i] += m.embedding[i];
+                if (m.lat !== null && m.lon !== null && m.lat !== undefined && m.lon !== undefined && (m.lat !== 0 || m.lon !== 0)) {
+                    sumLat += m.lat;
+                    sumLon += m.lon;
+                    gpsCount++;
+                }
+            });
+            for(let i=0; i<512; i++) visualCentroid[i] /= items.length;
+
+            clusters.push({
+                id: `meta_${clusterIdCounter++}`,
+                label: shortDateStr,
+                members: items,
+                centroid: visualCentroid,
+                geoCentroid: gpsCount > 0 ? { lat: sumLat / gpsCount, lon: sumLon / gpsCount } : null,
+                representatives: this.selectClosestToCentroid(items, visualCentroid, 16, dedupThreshold)
+            });
+        }
+
+        // Sort by largest volume first
+        clusters.sort((a, b) => b.members.length - a.members.length);
+        
+        return clusters;
+    }
+
+    // Geocoding cache to prevent spamming OSM
+    geocodeCache = new Map();
+    geocodeQueue = [];
+    isProcessingGeocode = false;
+
+    async reverseGeocode(lat, lon) {
+        // Round to 2 decimal places (~1.1km precision) to maximize cache hits
+        const roundLat = Math.round(lat * 100) / 100;
+        const roundLon = Math.round(lon * 100) / 100;
+        const cacheKey = `${roundLat},${roundLon}`;
+
+        if (this.geocodeCache.has(cacheKey)) {
+            return this.geocodeCache.get(cacheKey);
+        }
+
+        return new Promise((resolve) => {
+            this.geocodeQueue.push({ lat: roundLat, lon: roundLon, cacheKey, resolve });
+            this.processGeocodeQueue();
+        });
+    }
+
+    async processGeocodeQueue() {
+        if (this.isProcessingGeocode || this.geocodeQueue.length === 0) return;
+        this.isProcessingGeocode = true;
+
+        const { lat, lon, cacheKey, resolve } = this.geocodeQueue.shift();
+
+        if (this.geocodeCache.has(cacheKey)) {
+            resolve(this.geocodeCache.get(cacheKey));
+            this.isProcessingGeocode = false;
+            this.processGeocodeQueue();
+            return;
+        }
+
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=12`);
+            
+            if (response.status === 429) {
+                this.geocodeQueue.unshift({ lat, lon, cacheKey, resolve });
+                setTimeout(() => {
+                    this.isProcessingGeocode = false;
+                    this.processGeocodeQueue();
+                }, 2000);
+                return;
+            }
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            const addr = data.address || {};
+            // Narrow resolution: only city/town level components
+            const local = addr.city || addr.town || addr.village || addr.suburb || addr.municipality || addr.county || "";
+            const state = addr.state || "";
+            
+            const locationName = local ? (state ? `${local}, ${state}` : local) : "";
+            
+            if (locationName) {
+                console.log(`[Geocoding] (${lat}, ${lon}) -> ${locationName}`);
+                this.geocodeCache.set(cacheKey, locationName);
+                resolve(locationName);
+            } else {
+                console.log(`[Geocoding] (${lat}, ${lon}) -> No specific town found at zoom 12`);
+                this.geocodeCache.set(cacheKey, ""); // Cache empty to avoid re-fetching
+                resolve(null);
+            }
+        } catch (error) {
+            console.warn(`[Geocoding] Failed for (${lat}, ${lon}):`, error);
+            resolve(null);
+        }
+
+        setTimeout(() => {
+            this.isProcessingGeocode = false;
+            this.processGeocodeQueue();
+        }, 1200);
+    }
 }

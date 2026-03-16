@@ -171,14 +171,11 @@ export class ProcessingManager {
                 const batchWithFiles = [];
                 for (const img of batchImages) {
                     try {
-                        if (!img.handle) throw new Error("Handle is missing from image metadata");
-
-                        const file = await img.handle.getFile();
-                        // console.log(`%c[ProcessingManager] Prepared file: ${img.path} (${(file.size / 1024).toFixed(1)}KB)`, "color: #3b82f6; font-size: 0.75rem;");
+                        if (!img.file) throw new Error("File object is missing from image metadata");
 
                         batchWithFiles.push({
-                            ...img,
-                            file // Pass the actual File object
+                            ...img
+                            // file is already attached
                         });
                     } catch (e) {
                         console.error(`%c[ProcessingManager] ❌ Error accessing file: ${img.path}`, "color: #ef4444; font-weight: bold;");
@@ -198,11 +195,37 @@ export class ProcessingManager {
                     continue;
                 }
 
+                // 3. Extract Metadata (EXIF or fallback) for timeline clustering
                 for (let i = 0; i < batchImages.length; i++) {
+                    let file = batchWithFiles[i].file;
+                    let metaTimestamp = file ? file.lastModified : Date.now();
+                    let metaLat = null;
+                    let metaLon = null;
+
+                    if (file && window.exifr) {
+                        try {
+                            const exifData = await window.exifr.parse(file);
+                            if (exifData) {
+                                if (exifData.DateTimeOriginal) {
+                                    metaTimestamp = new Date(exifData.DateTimeOriginal).getTime();
+                                }
+                                if (exifData.latitude !== undefined && exifData.longitude !== undefined) {
+                                    metaLat = exifData.latitude;
+                                    metaLon = exifData.longitude;
+                                }
+                            }
+                        } catch (e) {
+                            console.warn(`[ProcessingManager] EXIF extraction failed for ${batchImages[i].path}`, e);
+                        }
+                    }
+
                     pendingEmbeddings.push({
                         id: Date.now() + Math.random(),
                         path: batchImages[i].path,
-                        embedding: embeddings[i]
+                        embedding: embeddings[i],
+                        timestamp: metaTimestamp,
+                        lat: metaLat,
+                        lon: metaLon
                     });
                     this.processedPaths.add(batchImages[i].path);
                     sessionProcessedCount++;

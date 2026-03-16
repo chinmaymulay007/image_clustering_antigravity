@@ -2,6 +2,8 @@
 
 This document explains the mathematical and logical implementation of the image clustering engine in ClusterAI v2.
 
+> **Note**: All embedding vectors are persisted in the browser's IndexedDB (via `db_manager.js`), enabling instant resume across sessions. The "Freeze/Lock" feature allows users to pin up to 6 clusters for structured export without affecting the clustering of remaining images.
+
 ## Process Flow Diagram
 
 ```mermaid
@@ -92,5 +94,65 @@ $$\min_{r \in \text{selected\_representatives}} D_c(\text{candidate}, r) > \text
 ### 3. Parameters
 *   **K (Count)**: Controls the granularity of the Step A loop.
 *   **Uniqueness**: Directly sets the $\text{Threshold}$ in the Step B loop. Higher values force the UI to show a more diverse spread of images from the cluster.
+
+---
+
+## Step C - Timeline & Location Clustering (Metadata Mode)
+
+In addition to the visual (CLIP-based) clustering above, ClusterAI runs a **second, independent clustering pass** based on image metadata. This produces the "Timeline Clusters" section in the UI.
+
+> Unlike Steps A–B which use AI embeddings, Step C uses **EXIF metadata** extracted from each image file (date taken, GPS coordinates). This means two images can end up in the same Timeline cluster even if they look completely different visually — they just need to have been taken on the same day.
+
+```mermaid
+graph TD
+    subgraph StepC ["Step C: Timeline Clustering"]
+        direction TB
+        C1["Input: All Images with EXIF Data"] --> C_SORT["Sort Chronologically by Timestamp"]
+        C_SORT --> C_GROUP["Group by Calendar Day"]
+        C_GROUP --> C_DAY["For Each Day Group:"]
+        C_DAY --> C_CENTROID["Compute Visual Centroid (mean embedding)"]
+        C_DAY --> C_GPS{"Has GPS Data?"}
+        C_GPS -- Yes --> C_GEO["Compute Geographic Centroid (mean lat/lon)"]
+        C_GPS -- No --> C_NOGEO["No Location Label"]
+        C_GEO --> C_REVERSE["Reverse Geocode via Nominatim"]
+        C_REVERSE --> C_LABEL["Label: 'Date — Location'"]
+        C_NOGEO --> C_LABEL2["Label: 'Date'"]
+        C_CENTROID --> C_REPS["Select 16 Representatives (Step B Logic)"]
+    end
+```
+
+### 1. EXIF Metadata Extraction
+
+During the embedding phase (Step 1 of the pipeline), each image is also parsed for EXIF data using the [exifr](https://github.com/nicklaus-dev/exifr) library:
+
+*   **`DateTimeOriginal`**: The timestamp when the photo was taken. Used as primary grouping key.
+*   **`latitude` / `longitude`**: GPS coordinates, if available. Used for location labeling.
+*   **Fallback**: If no EXIF date is found, the file's `lastModified` timestamp is used instead.
+
+### 2. Date-Based Grouping
+
+All images are sorted chronologically and then grouped by **calendar day** (local time):
+
+$$\text{dateKey}(x) = \text{YYYY-MM-DD}(\text{timestamp}(x))$$
+
+Each unique `dateKey` becomes one Timeline cluster. The cluster label is formatted as a human-readable date string (e.g., "Mar 15, 2026").
+
+### 3. Geographic Centroid & Reverse Geocoding
+
+For each day-group, if any images contain GPS data:
+
+$$\bar{\text{lat}} = \frac{1}{n_{\text{gps}}} \sum_{i=1}^{n_{\text{gps}}} \text{lat}_i, \quad \bar{\text{lon}} = \frac{1}{n_{\text{gps}}} \sum_{i=1}^{n_{\text{gps}}} \text{lon}_i$$
+
+The geographic centroid $(\bar{\text{lat}}, \bar{\text{lon}})$ is sent to the **OpenStreetMap Nominatim API** for reverse geocoding at city/town resolution (zoom level 12). Results are cached (rounded to 2 decimal places, ~1.1km precision) to minimize API calls. Rate-limiting is enforced with a 1.2s delay between requests.
+
+The resolved location name (e.g., "Mumbai, Maharashtra") is appended to the cluster label.
+
+### 4. Representative Selection
+
+Each Timeline cluster reuses the **same deduplication logic from Step B**: a visual centroid is computed from the group's CLIP embeddings, and the 16 most representative (yet diverse) images are selected using the Uniqueness Threshold.
+
+### 5. Sorting
+
+Timeline clusters are sorted by **member count** (largest first), mirroring the Visual Clusters behavior.
 
 ---
