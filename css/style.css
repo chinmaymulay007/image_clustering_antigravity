@@ -899,7 +899,7 @@ body {
 .ai-paused-message {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0; /* Removed fixed gap to allow typographic spacing */
     font-size: 0.85rem;
     color: #9ca3af;
     background: rgba(30, 27, 75, 0.4);
@@ -928,7 +928,7 @@ body {
 .ai-complete-message {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0; /* Removed fixed gap */
     font-size: 0.85rem;
     color: #10b981; /* Success Green */
     background: rgba(16, 185, 129, 0.1);
@@ -995,7 +995,7 @@ body {
 
 .instruction-link {
     color: #60a5fa;
-    font-size: 0.9rem;
+    font-size: 1rem; /* Increased size */
     text-decoration: none;
     border-bottom: 1px dotted rgba(96, 165, 250, 0.4);
     padding-bottom: 2px;
@@ -1008,6 +1008,57 @@ body {
     border-bottom-color: #93c5fd;
     transform: translateY(-1px);
     text-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
+}
+
+/* Instructions Modal Styles */
+.instructions-modal-content {
+    max-width: 600px;
+    width: 90%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.instruction-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.instruction-point {
+    display: flex;
+    gap: 12px;
+}
+
+.point-number {
+    color: #60a5fa;
+    font-weight: bold;
+    min-width: 25px;
+}
+
+.instruction-note {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(59, 130, 246, 0.08);
+    border-radius: 8px;
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    font-size: 0.88rem;
+    color: #94a3b8;
+}
+
+@media (min-width: 769px) {
+    .instructions-modal-content {
+        max-width: 900px; /* Wide desktop dashboard */
+    }
+
+    .instruction-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 30px;
+    }
 }
 
 /* Suggestion Box - Breaking News Style */

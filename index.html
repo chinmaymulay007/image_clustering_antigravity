@@ -17,8 +17,10 @@
             <h1 class="landing-title">ClusterAI</h1>
             <p class="landing-subtitle">Privacy-first image clustering powered by local AI.</p>
 
-            <div id="link-show-instructions" class="instruction-link" style="margin-top: 1rem; cursor: pointer; text-align: center;">
-                Click here for instructions
+            <div style="text-align: center; margin-top: 1.2rem;">
+                <div id="link-show-instructions" class="instruction-link" style="cursor: pointer;">
+                    Click here for instructions
+                </div>
             </div>
 
             <div style="text-align: center; margin-top: 1.5rem; display: flex; flex-direction: column; gap: 12px;">
@@ -74,7 +76,7 @@
                         <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
                     </div>
                     <div id="ai-paused-message" class="ai-paused-message hidden">
-                        Currently paused. Click<span class="play-triangle"></span>to resume.
+                        Currently paused. Click <span class="play-triangle"></span> to resume.
                     </div>
                     <div id="ai-complete-message" class="ai-complete-message hidden">
                         Analysis is completed for all photos.
@@ -248,42 +250,55 @@
     
     <!-- Instructions Modal -->
     <div id="modal-instructions" class="modal hidden" style="z-index: 4000;">
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-content instructions-modal-content">
             <div class="modal-header">
                 <h3>App Instructions</h3>
                 <button id="btn-close-instructions" class="btn-close">×</button>
             </div>
             <div class="modal-body">
-                <div style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.8;">
-                    <p style="margin-bottom: 12px; display: flex; gap: 12px;">
-                        <span style="color: #60a5fa; font-weight: bold; min-width: 20px;">1.</span>
+                <div class="instruction-grid">
+                    <div class="instruction-point">
+                        <span class="point-number">1.</span>
                         Click "Select Folder" and pick a directory containing your photos.
-                    </p>
-                    <p style="margin-bottom: 12px; display: flex; gap: 12px;">
-                        <span style="color: #60a5fa; font-weight: bold; min-width: 20px;">2.</span>
-                        ClusterAI (using local AI) will group similar images automatically.
-                    </p>
-                    <p style="margin-bottom: 12px; display: flex; gap: 12px;">
-                        <span style="color: #60a5fa; font-weight: bold; min-width: 20px;">3.</span>
-                        Analysis takes time—clusters update in real-time as processing happens.
-                    </p>
-                    <p style="margin-bottom: 12px; display: flex; gap: 12px;">
-                        <span style="color: #60a5fa; font-weight: bold; min-width: 20px;">4.</span>
-                        Review the groups and <strong>exclude</strong> any photos you don't wish to use.
-                    </p>
-                    <p style="margin-bottom: 12px; display: flex; gap: 12px;">
-                        <span style="color: #60a5fa; font-weight: bold; min-width: 20px;">5.</span>
-                        You need exactly <strong>6 clusters with 16 photos each</strong> for Passfaces.
-                    </p>
-                    <p style="margin-bottom: 12px; display: flex; gap: 12px;">
-                        <span style="color: #60a5fa; font-weight: bold; min-width: 20px;">6.</span>
-                        Once satisfied, <strong>Lock</strong> your top 6 clusters and click PROCEED.
-                    </p>
-                    <div style="margin-top: 20px; padding: 15px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
-                        <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">
-                            <strong>Privacy Note:</strong> All AI analysis happens 100% locally on your device. Your photos never leave your computer.
-                        </p>
                     </div>
+                    <div class="instruction-point">
+                        <span class="point-number">2.</span>
+                        ClusterAI (using local AI) will group similar images into clusters automatically.
+                    </div>
+                    <div class="instruction-point">
+                        <span class="point-number">3.</span>
+                        This will take time, but clusters update in real-time as photos are analysed.
+                    </div>
+                    <div class="instruction-point">
+                        <span class="point-number">4.</span>
+                        Review the groups and <strong>exclude</strong> any photos you don't wish to use.
+                    </div>
+                    <div class="instruction-point">
+                        <span class="point-number">5.</span>
+                        Clusters improve dynamically as more images are processed.
+                    </div>
+                    <div class="instruction-point">
+                        <span class="point-number">6.</span>
+                        You need exactly <strong>6 clusters with 16 photos each</strong> for Passfaces.
+                    </div>
+                    <div class="instruction-point">
+                        <span class="point-number">7.</span>
+                        Lock the clusters you want, then proceed to upload to Passfaces or save locally.
+                    </div>
+                    <div class="instruction-point">
+                        <span class="point-number">8.</span>
+                        All AI processing happens 100% locally on your device. Your photos are not sent to any server.
+                    </div>
+                    <div class="instruction-point">
+                        <span class="point-number">9.</span>
+                        Only your final selections (6x16) are uploaded to the Passfaces app in compressed format.
+                    </div>
+                </div>
+                
+                <div class="instruction-note">
+                    <p>
+                        <strong>Privacy First:</strong> Your biometric data and photos never leave your computer. Everything stays private and local.
+                    </p>
                 </div>
             </div>
             <div class="modal-footer">
