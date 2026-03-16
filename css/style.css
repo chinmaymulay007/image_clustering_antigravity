@@ -844,6 +844,11 @@ body {
     overflow: hidden;
     height: 44px;
     box-shadow: 0 4px 15px rgba(30, 27, 75, 0.3);
+    /* Empty progress track background */
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4));
+    background-size: 100% 12px;
+    background-position: bottom left;
+    background-repeat: no-repeat;
 }
 
 .ai-pill-main {
@@ -1160,12 +1165,10 @@ body {
     height: 12px;
     width: 0%;
     background: #3b82f6;
-    border-radius: 0 6px 6px 0;
-    /* Soften the right moving edge */
+    border-radius: 0; /* Vertically straight edge */
     transition: width 0.3s ease, background-color 0.4s ease, box-shadow 0.4s ease;
     z-index: 10;
-    mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.5) 80%, rgba(0, 0, 0, 0) 100%);
-    -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.5) 80%, rgba(0, 0, 0, 0) 100%);
+    /* Removed mask-image for sharp edge */
 }
 
 .header-progress-bar.shining {
@@ -1802,6 +1805,15 @@ body {
         border-radius: 8px;
         display: flex;
         justify-content: center;
+        /* Mobile empty track */
+        background-image: linear-gradient(to right, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4));
+        background-size: 100% 8px; /* Tighter on mobile */
+        background-position: bottom left;
+        background-repeat: no-repeat;
+    }
+
+    .header-progress-bar {
+        height: 8px; /* Tighter on mobile */
     }
 
     .ai-pill-text {
