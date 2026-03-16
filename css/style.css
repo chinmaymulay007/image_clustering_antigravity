@@ -154,9 +154,9 @@ body {
 .cluster-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); 
-    gap: 25px; /* Sync with folder padding for equidistance */
+    gap: 20px; /* Uniform gap: matches internal and side gaps */
     margin: 0;
-    padding: 0; 
+    padding: 20px; /* Side padding matches gap */
 }
 
 .cluster-card {
@@ -836,13 +836,14 @@ body {
     background: rgba(30, 27, 75, 0.6);
     border: 1px solid rgba(79, 70, 229, 0.4);
     padding: 0 4px 0 20px;
-    border-radius: 30px;
+    border-radius: 40px; /* Fully rounded 'pill' shape */
     font-size: 0.9rem;
     backdrop-filter: blur(12px);
     white-space: nowrap;
     position: relative;
     overflow: hidden;
     height: 44px;
+    width: fit-content; /* Ensure it's only as wide as its contents */
     box-shadow: 0 4px 15px rgba(30, 27, 75, 0.3);
     /* Empty progress track background with larger top-edge fade */
     background-image: linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.4) 40%, rgba(0, 0, 0, 0) 100%);
@@ -1507,8 +1508,8 @@ body {
     background: rgba(17, 24, 39, 0.9);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(59, 130, 246, 0.4);
-    padding: 12px 30px;
-    border-radius: 12px;
+    padding: 10px 10px 10px 30px; /* Balanced for button on right */
+    border-radius: 40px; /* Fully rounded 'pill' shape for desktop footer */
     /* Match cluster cards */
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 15px rgba(59, 130, 246, 0.1);
     z-index: 1000;
@@ -1747,14 +1748,14 @@ body {
     /* --- Header Refinement (2-row dynamic layout) --- */
     .app-header {
         display: grid;
-        grid-template-columns: auto 1fr auto;
-        grid-template-areas: 
+        grid-template-columns: 1fr auto 1fr;
+        grid-template-areas:
             "brand ai-group actions"
             "metrics metrics metrics";
-        padding: 8px 12px;
-        gap: 8px 12px;
-        width: calc(100% - 16px);
-        top: 8px;
+        padding: 10px 12px 8px 12px; /* Reduced bottom padding */
+        gap: 8px; /* Tighter vertical gap between rows */
+        width: 95vw;
+        top: 10px;
         border-radius: 8px;
         align-items: center;
     }
@@ -1804,9 +1805,11 @@ body {
         padding: 0 8px; /* Reduced from 10px */
         font-size: 0.72rem;
         gap: 4px; /* Reduced from 6px */
-        border-radius: 8px;
+        border-radius: 40px; /* Fully rounded 'pill' shape on mobile */
         display: flex;
         justify-content: center;
+        width: fit-content; /* Only as wide as contents */
+        margin: 0 auto; /* Center within its grid area */
         /* Mobile empty track with larger top-edge fade */
         background-image: linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.4) 40%, rgba(0, 0, 0, 0) 100%);
         background-size: 100% 8px; /* Tighter on mobile */
@@ -1827,16 +1830,17 @@ body {
     }
 
     .btn-pause-pill {
-        width: 24px;
-        height: 24px;
-        font-size: 0.75rem;
-        flex-shrink: 0;
-        padding: 0;
+        width: 28px;
+        height: 28px;
+        border-radius: 40px; /* Matched curvature */
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #60a5fa;
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 0.8rem;
     }
-
     /* Fix icon alignment within the circle */
     .pause-resume-icon {
         width: 12px;
@@ -1911,7 +1915,8 @@ body {
     /* --- Card / Grid Refinements --- */
     .cluster-grid {
         grid-template-columns: 1fr;
-        gap: 12px;
+        padding: 12px; /* Uniform side gap */
+        gap: 12px; /* Uniform intermediate gap */
     }
 
     .cluster-card {
@@ -1967,22 +1972,25 @@ body {
         width: fit-content;
         min-width: 0;
         max-width: 95vw;
-        padding: 8px 15px; /* Reduced side padding slightly */
+        padding: 6px 6px 6px 20px; /* Balanced for button on right */
         gap: 15px;
         transform: translateX(-50%);
-        border-radius: 30px;
+        border-radius: 40px; /* Fully rounded 'pill' shape on mobile */
         display: flex;
+        align-items: center; /* Vertical alignment */
     }
 
     .selection-indicator-pill {
-        font-size: 0.8rem;
+        font-size: 0.9rem; /* Increased font size for better match */
         padding-right: 0;
         border-right: none;
+        color: #10b981; /* Ensure bright locked text */
     }
 
     .btn-primary-pill {
-        padding: 8px 16px;
-        font-size: 0.8rem;
+        padding: 10px 20px; /* Slightly taller for better balance */
+        font-size: 0.85rem;
+        border-radius: 40px; /* Matched curvature */
     }
 
     .status-bar-container {
