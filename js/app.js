@@ -277,7 +277,8 @@ class App {
 
                     // Compute Metadata Clusters locally (It's fast enough on main thread or we could workerize)
                     // We need to wait for geo-coding which is async so we do it here.
-                    const metadataClusters = await this.clustering.updateMetadataClusters(validEmbeddings, 15, this.threshold);
+                    const updatedValid = this.currentEmbeddings.filter(e => !this.excludedPaths.has(e.path));
+                    const metadataClusters = await this.clustering.updateMetadataClusters(updatedValid, 15, this.threshold);
                     this.allMetadataClusters = metadataClusters;
                     this.currentMetadataClusters = this.allMetadataClusters.slice(0, this.visibleMetadataClustersCount);
 
