@@ -1761,8 +1761,9 @@ body {
     }
 
     .brand h2 {
-        font-size: 1rem;
+        font-size: 1.1rem; /* Slightly larger for presence */
         margin: 0;
+        line-height: 32px; /* Sync with component height */
     }
 
     .ai-header-group {
@@ -1775,19 +1776,30 @@ body {
 
     .header-actions {
         grid-area: actions;
-        gap: 4px;
+        gap: 8px;
         display: flex;
+        align-items: center;
     }
 
-    /* AI Pill (Compact in Row 1) */
+    .btn-header-action {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* AI Pill (Consistent 32px height) */
     .ai-engine-pill {
         width: auto;
         min-width: 0;
-        height: 28px;
-        padding: 0 8px;
-        font-size: 0.68rem;
-        gap: 4px;
-        border-radius: 6px;
+        height: 32px;
+        padding: 0 10px;
+        font-size: 0.72rem;
+        gap: 6px;
+        border-radius: 8px;
         display: flex;
         justify-content: center;
     }
@@ -1801,9 +1813,37 @@ body {
     }
 
     .btn-pause-pill {
-        width: 20px;
-        height: 20px;
-        font-size: 0.7rem;
+        width: 24px;
+        height: 24px;
+        font-size: 0.75rem;
+        flex-shrink: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Fix icon alignment within the circle */
+    .pause-resume-icon {
+        width: 12px;
+        height: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Default state: PAUSE (Two bars) - Scaled for 24px button */
+    .pause-resume-icon::before,
+    .pause-resume-icon::after {
+        width: 3px;
+        height: 11px;
+    }
+
+    /* Paused state -> PLAY (Triangle-ish) - Centered in 24px button */
+    .btn-pause-pill.paused .pause-resume-icon::before {
+        height: 12px;
+        width: 12px;
+        left: 1px;
     }
 
     /* Row 2: Centered Metrics */
