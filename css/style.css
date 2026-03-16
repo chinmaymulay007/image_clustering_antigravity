@@ -492,7 +492,7 @@ body {
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
     .app-container {
-        padding: 10px;
+        padding: 0; /* Removed 10px padding to allow 95vw header/sections to align with screen edges */
     }
 
     header {
@@ -919,9 +919,9 @@ body {
     height: 0;
     border-top: 5px solid transparent;
     border-bottom: 5px solid transparent;
-    border-left: 8px solid #60a5fa;
+    border-left: 8px solid #fbbf24; /* Matched to Amber Play Button */
     display: inline-block;
-    margin: 0 4px;
+    margin: 0 2px; /* Tighter fit within sentence */
     vertical-align: middle;
 }
 
@@ -1816,9 +1816,9 @@ body {
         grid-template-areas: 
             "brand ai-group actions"
             "metrics metrics metrics";
-        padding: 10px; /* Absolute 1:1 symmetry */
+        padding: 10px 10px 0 10px; /* Symmetry on top/sides, bottom handled by Row 2 */
         column-gap: 10px;
-        row-gap: 0; /* Gap moved to metrics margin to prevent overflow in hidden state */
+        row-gap: 0; 
         width: 95vw;
         top: 10px;
         border-radius: 12px;
@@ -1946,40 +1946,45 @@ body {
     /* Row 2: Centered Metrics */
     .ai-pill-secondary {
         grid-area: metrics;
-        width: 100%;
+        width: calc(100% + 20px); /* Span edge-to-edge */
         font-size: 0.64rem;
-        padding: 0;
-        gap: 12px;
+        padding: 8px 0; /* Internal vertical rhythm */
         justify-content: center;
         border: none;
-        background: transparent;
-        margin: 10px 0 0 0; /* Row gap handled by margin-top for conditional symmetry */
+        border-top: 1px solid rgba(255, 255, 255, 0.08); /* Sophisticated separator */
+        background: rgba(0, 0, 0, 0.2); /* Subtle darker drawer background */
+        margin: 10px -10px 0 -10px; /* Pull into header edges */
+        border-radius: 0 0 12px 12px; /* Match header corners */
         display: flex !important;
         line-height: 1;
     }
 
     .ai-paused-message {
         grid-area: metrics;
-        width: 100%;
+        width: calc(100% + 20px);
         font-size: 0.64rem;
-        padding: 0;
+        padding: 8px 0;
         justify-content: center;
         border: none;
-        background: transparent;
-        margin: 10px 0 0 0; /* Match metrics margin for symmetry */
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(0, 0, 0, 0.2);
+        margin: 10px -10px 0 -10px;
+        border-radius: 0 0 12px 12px;
         display: flex !important;
         line-height: 1;
     }
 
     .ai-complete-message {
         grid-area: metrics;
-        width: 100%;
+        width: calc(100% + 20px);
         font-size: 0.64rem;
-        padding: 0;
+        padding: 8px 0;
         justify-content: center;
         border: none;
-        background: transparent;
-        margin: 10px 0 0 0; /* Match metrics margin for symmetry */
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(0, 0, 0, 0.2);
+        margin: 10px -10px 0 -10px;
+        border-radius: 0 0 12px 12px;
         display: flex !important;
         line-height: 1;
     }
@@ -1990,7 +1995,9 @@ body {
 
     /* --- Section Headers (Inline/Block instead of Tabs) --- */
     .sections-wrapper {
-        padding: 140px 2.5vw 120px 2.5vw; /* Tightened top to reduce Tips gap */
+        padding: 140px 0 120px 0; /* Side padding removed to use width-based alignment */
+        width: 95vw;
+        margin: 0 auto;
         gap: 15px;
     }
 
