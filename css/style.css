@@ -921,7 +921,7 @@ body {
     border-bottom: 5px solid transparent;
     border-left: 8px solid #fbbf24; /* Matched to Amber Play Button */
     display: inline-block;
-    margin: 0 2px; /* Tighter fit within sentence */
+    margin: 0 4px; /* Set to exactly match word spacing */
     vertical-align: middle;
 }
 
@@ -991,6 +991,23 @@ body {
     text-align: center;
     margin-bottom: 2rem;
     font-size: 1rem;
+}
+
+.instruction-link {
+    color: #60a5fa;
+    font-size: 0.9rem;
+    text-decoration: none;
+    border-bottom: 1px dotted rgba(96, 165, 250, 0.4);
+    padding-bottom: 2px;
+    transition: all 0.2s ease;
+    display: inline-block;
+}
+
+.instruction-link:hover {
+    color: #93c5fd;
+    border-bottom-color: #93c5fd;
+    transform: translateY(-1px);
+    text-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
 }
 
 /* Suggestion Box - Breaking News Style */

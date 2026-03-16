@@ -104,6 +104,12 @@ export class UIManager {
         this.btnDeleteAllStorage = document.getElementById('btn-delete-all-storage');
         this.excludedBadge = document.getElementById('excluded-badge');
 
+        // Instructions Modal
+        this.modalInstructions = document.getElementById('modal-instructions');
+        this.linkShowInstructions = document.getElementById('link-show-instructions');
+        this.btnCloseInstructions = document.getElementById('btn-close-instructions');
+        this.btnCloseInstructionsBottom = document.getElementById('btn-close-instructions-bottom');
+
         this.sectionVisual = document.getElementById('section-visual');
         this.sectionTimeline = document.getElementById('section-timeline');
         this.globalPlaceholder = document.getElementById('global-processing-placeholder');
@@ -236,6 +242,15 @@ export class UIManager {
         const closeStorage = () => this.modalStorage.classList.add('hidden');
         this.btnCloseStorage?.addEventListener('click', closeStorage);
         this.btnCloseStorageFooter?.addEventListener('click', closeStorage);
+
+        // Instructions Modal Listeners
+        this.linkShowInstructions?.addEventListener('click', () => {
+            this.modalInstructions.classList.remove('hidden');
+        });
+
+        const closeInstructions = () => this.modalInstructions.classList.add('hidden');
+        this.btnCloseInstructions?.addEventListener('click', closeInstructions);
+        this.btnCloseInstructionsBottom?.addEventListener('click', closeInstructions);
     }
 
     validateUploadRequirements() {
