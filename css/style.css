@@ -1753,7 +1753,7 @@ body {
         grid-template-areas: 
             "brand ai-group actions"
             "metrics metrics metrics";
-        padding: 10px; /* Symmetrical padding */
+        padding: 10px 10px 8px 10px; /* Visually balanced for Row 2 */
         gap: 10px; 
         width: 95vw;
         top: 10px;
@@ -1899,12 +1899,12 @@ body {
 
     /* --- Section Headers (Inline/Block instead of Tabs) --- */
     .sections-wrapper {
-        padding: 165px 2.5vw 120px 2.5vw; /* Matches header's side margin exactly */
+        padding: 140px 2.5vw 120px 2.5vw; /* Tightened top to reduce Tips gap */
         gap: 15px;
     }
 
     .sections-wrapper section {
-        padding: 12px;
+        padding: 0; /* Content symmetry handled by cluster-grid padding/gap */
         margin-top: 10px;
         border-radius: 8px;
         border-top: 1px solid rgba(75, 85, 99, 0.4);
@@ -1930,8 +1930,9 @@ body {
     /* --- Card / Grid Refinements --- */
     .cluster-grid {
         grid-template-columns: 1fr;
-        padding: 12px; /* Uniform outer gap matching internal gap */
-        gap: 12px; /* Internal gap between clusters */
+        padding: 12px; /* Uniform 12px buffer on all sides */
+        padding-top: 0; /* Gap from H2 handled by H2 margin-bottom: 12px */
+        gap: 12px; /* 1:1 ratio with padding */
     }
 
     .cluster-card {
@@ -2027,14 +2028,14 @@ body {
     }
 
     .suggestion-container {
-        top: 105px; /* Increased to clear the 2nd row properly */
+        top: 90px; /* Tightened closer to header */
         padding: 4px 12px;
         gap: 8px;
         max-width: 95vw;
         left: 50%;
         transform: translateX(-50%);
         margin-top: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.15); /* More visible on mobile */
+        border: 1px solid rgba(255, 255, 255, 0.15); 
     }
 
     /* --- Landing Card --- */
