@@ -146,9 +146,12 @@ class App {
             // Initialize background keep-alive on user gesture
             import('./background_keep_alive.js').then(m => m.backgroundKeepAlive.init());
 
+            // Rebuild handle map BEFORE resume logic triggers thumbnails
+            this.rebuildHandleMap();
+
             // Start Processing
             this.processing.start(this.refreshInterval).then(() => {
-                // Post-scan, build map for fast retrieval
+                // Ensure map is fully synced after scan
                 this.rebuildHandleMap();
 
                 // Sync loaded exclusions
@@ -174,10 +177,13 @@ class App {
 
     rebuildHandleMap() {
         this.handleMap.clear();
-        if (this.processing.allImages) {
-            this.processing.allImages.forEach(img => {
-                this.handleMap.set(img.path, img.file); // Store File object directly
+        const files = this.fs.allFiles;
+        if (files && files.length > 0) {
+            files.forEach(file => {
+                const path = file.webkitRelativePath || file.name;
+                this.handleMap.set(path, file);
             });
+            console.log(`%c[App] Handle map rebuilt with ${this.handleMap.size} files.`, "color: #fb8c00; font-weight: bold;");
         }
     }
 
