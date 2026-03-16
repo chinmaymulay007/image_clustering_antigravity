@@ -52,6 +52,7 @@ export class UIManager {
         this.appHeader = document.querySelector('.app-header');
         this.aiPausedMessage = document.getElementById('ai-paused-message');
         this.aiCompleteMessage = document.getElementById('ai-complete-message');
+        this.statusBarContainer = document.getElementById('status-bar-container');
         this.lastSignificantEvent = '';
 
         // Action Selection Modal
