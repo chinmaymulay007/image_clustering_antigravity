@@ -108,7 +108,6 @@ export class UIManager {
         this.modalInstructions = document.getElementById('modal-instructions');
         this.linkShowInstructions = document.getElementById('link-show-instructions');
         this.btnCloseInstructions = document.getElementById('btn-close-instructions');
-        this.btnCloseInstructionsBottom = document.getElementById('btn-close-instructions-bottom');
 
         this.sectionVisual = document.getElementById('section-visual');
         this.sectionTimeline = document.getElementById('section-timeline');
@@ -250,7 +249,6 @@ export class UIManager {
 
         const closeInstructions = () => this.modalInstructions.classList.add('hidden');
         this.btnCloseInstructions?.addEventListener('click', closeInstructions);
-        this.btnCloseInstructionsBottom?.addEventListener('click', closeInstructions);
     }
 
     validateUploadRequirements() {

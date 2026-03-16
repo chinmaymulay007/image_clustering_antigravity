@@ -899,7 +899,7 @@ body {
 .ai-paused-message {
     display: flex;
     align-items: center;
-    gap: 0; /* Removed fixed gap to allow typographic spacing */
+    gap: 4px; /* Calibrated middle ground */
     font-size: 0.85rem;
     color: #9ca3af;
     background: rgba(30, 27, 75, 0.4);
@@ -928,7 +928,7 @@ body {
 .ai-complete-message {
     display: flex;
     align-items: center;
-    gap: 0; /* Removed fixed gap */
+    gap: 4px; /* Calibrated middle ground */
     font-size: 0.85rem;
     color: #10b981; /* Success Green */
     background: rgba(16, 185, 129, 0.1);
@@ -1031,6 +1031,8 @@ body {
 .instruction-point {
     display: flex;
     gap: 12px;
+    margin-bottom: 12px; /* Added spacing for column flow */
+    break-inside: avoid; /* Prevent points from splitting across columns */
 }
 
 .point-number {
@@ -1047,6 +1049,7 @@ body {
     border: 1px solid rgba(59, 130, 246, 0.15);
     font-size: 0.88rem;
     color: #94a3b8;
+    break-inside: avoid;
 }
 
 @media (min-width: 769px) {
@@ -1055,9 +1058,9 @@ body {
     }
 
     .instruction-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        column-gap: 30px;
+        column-count: 2;
+        column-gap: 40px;
+        display: block; /* Overriding flex to allow column-count */
     }
 }
 
