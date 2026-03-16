@@ -1759,7 +1759,8 @@ body {
             "brand ai-group actions"
             "metrics metrics metrics";
         padding: 10px; /* Absolute 1:1 symmetry */
-        gap: 10px; 
+        column-gap: 10px;
+        row-gap: 0; /* Gap moved to metrics margin to prevent overflow in hidden state */
         width: 95vw;
         top: 10px;
         border-radius: 12px;
@@ -1894,7 +1895,7 @@ body {
         justify-content: center;
         border: none;
         background: transparent;
-        margin: 0; /* Removed visual offset for absolute symmetry */
+        margin: 10px 0 0 0; /* Row gap handled by margin-top for conditional symmetry */
         display: flex !important;
         line-height: 1;
     }
