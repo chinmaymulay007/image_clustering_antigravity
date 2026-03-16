@@ -1725,20 +1725,30 @@ body {
         overflow-x: hidden;
     }
 
-    /* --- Header Refinement (3-row compact layout) --- */
+    /* --- Header Refinement (2-row compact grid) --- */
     .app-header {
         display: grid;
         grid-template-columns: 1fr auto;
         grid-template-areas: 
             "brand actions"
-            "pill pill"
-            "metrics metrics";
-        padding: 8px 12px;
-        gap: 6px;
+            "ai-group ai-group";
+        padding: 6px 12px;
+        gap: 4px;
         width: calc(100% - 16px);
         top: 8px;
         border-radius: 8px;
         align-items: center;
+    }
+
+    /* Group Row 2: Pill + Metrics */
+    .ai-header-group {
+        grid-area: ai-group;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        margin-top: 2px;
     }
 
     /* Break the container to allow its children to be grid items of app-header */
@@ -1767,40 +1777,44 @@ body {
         font-size: 0.95rem;
     }
 
-    /* Row 2: Progress Pill (full width) */
+    /* AI Pill (Auto-width) */
     .ai-engine-pill {
-        grid-area: pill;
-        width: 100%;
-        height: 32px;
+        width: auto;
+        flex: 0 1 auto;
+        height: 30px;
         padding: 0 10px;
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         gap: 6px;
         border-radius: 6px;
-        display: flex; /* Ensure it stays a flex container for its own children */
+        display: flex;
+        justify-content: center;
     }
 
     .ai-pill-text {
-        font-size: 0.7rem;
+        font-size: 0.68rem;
     }
 
     .btn-pause-pill {
-        width: 24px;
-        height: 24px;
-        font-size: 0.8rem;
+        width: 22px;
+        height: 22px;
+        font-size: 0.75rem;
     }
 
-    /* Row 3: Speed & ETA */
+    /* Row 2 Metrics (Next to pill) */
     .ai-pill-secondary {
-        grid-area: metrics;
-        width: 100%;
-        font-size: 0.68rem;
-        padding: 4px 8px;
-        gap: 10px;
-        justify-content: center;
+        width: auto;
+        flex: 0 0 auto;
+        font-size: 0.65rem;
+        padding: 0;
+        gap: 6px;
         border: none;
         background: transparent;
-        margin-top: -2px;
-        display: flex; /* Ensure it stays a flex container */
+        margin: 0;
+        display: flex !important; /* Force visibility when group is shown */
+    }
+
+    .ai-pill-secondary .metric {
+        opacity: 0.8;
     }
 
     /* --- Section Headers (Inline/Block instead of Tabs) --- */
@@ -1909,7 +1923,7 @@ body {
     }
 
     .status-bar-container {
-        bottom: 75px; /* Stay above the floating centered footer */
+        bottom: 70px;
         left: 50%;
         transform: translateX(-50%);
         width: auto;
@@ -1918,14 +1932,15 @@ body {
     }
 
     .status-pill {
-        padding: 6px 16px;
-        font-size: 0.72rem;
+        padding: 4px 12px;
+        font-size: 0.7rem;
         white-space: nowrap;
         justify-content: center;
+        border-radius: 20px;
     }
 
     .suggestion-container {
-        top: 96px; /* Positioned tightly below the 3-row header */
+        top: 86px; /* Positioned tightly below Row 2 */
         padding: 4px 12px;
         gap: 8px;
         max-width: 95vw;

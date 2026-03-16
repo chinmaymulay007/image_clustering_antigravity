@@ -143,6 +143,9 @@ class App {
                 await this.refreshClusters();
             };
 
+            // Initialize background keep-alive on user gesture
+            import('./background_keep_alive.js').then(m => m.backgroundKeepAlive.init());
+
             // Start Processing
             this.processing.start(this.refreshInterval).then(() => {
                 // Post-scan, build map for fast retrieval
@@ -186,11 +189,13 @@ class App {
                 lastEvent: "Processing Paused"
             });
         } else {
-            this.processing.resume();
             this.updateUI({
                 currentAction: "▶️ Resuming...",
                 lastEvent: "Processing Resumed"
             });
+            // Ensure background keep-alive is initialized on user interaction
+            this.processing.resume();
+            import('./background_keep_alive.js').then(m => m.backgroundKeepAlive.init());
         }
         this.ui.setPauseState(shouldPause);
     }

@@ -1,4 +1,6 @@
 import { db } from './db_manager.js';
+import { wakeLockManager } from './wake_lock.js';
+import { backgroundKeepAlive } from './background_keep_alive.js';
 
 export class ProcessingManager {
     constructor(fileSystem) {
@@ -125,8 +127,12 @@ export class ProcessingManager {
 
         if (this.isPaused) {
             console.log(`%c[ProcessingManager] Analysis queue ready: ${unprocessed.length} items pending. Waiting for Resume...`, "color: #f59e0b;");
+            wakeLockManager.release();
+            backgroundKeepAlive.stop();
         } else {
             console.log(`[ProcessingManager] Analysis started for ${unprocessed.length} items.`);
+            wakeLockManager.request();
+            backgroundKeepAlive.start();
         }
 
         while (this.isRunning && !this.aborted) {
@@ -149,6 +155,8 @@ export class ProcessingManager {
 
             if (unprocessed.length === 0) {
                 this.isRunning = false;
+                wakeLockManager.release();
+                backgroundKeepAlive.stop();
                 if (this.onProgress) this.onProgress({ completed: true });
                 return;
             }
@@ -301,10 +309,14 @@ export class ProcessingManager {
     resume() {
         this.isPaused = false;
         console.log("[Processing] RESUMED (Manual)");
+        wakeLockManager.request();
+        backgroundKeepAlive.start();
     }
     stop() {
         this.isRunning = false;
         this.aborted = true;
+        wakeLockManager.release();
+        backgroundKeepAlive.stop();
         console.log("[Processing] STOPPED");
     }
 }

@@ -56,30 +56,32 @@
                 <div class="brand">
                     <h2>ClusterAI</h2>
                 </div>
-                <div id="ai-engine-pill" class="ai-engine-pill">
-                    <div class="ai-pill-main">
-                        <span id="ai-pill-text" class="ai-pill-text">0/0 images analyzed by AI</span>
+                <div class="ai-header-group">
+                    <div id="ai-engine-pill" class="ai-engine-pill">
+                        <div class="ai-pill-main">
+                            <span id="ai-pill-text" class="ai-pill-text">0/0 images analyzed by AI</span>
+                        </div>
+                        <button id="btn-pause-resume" class="btn-pause-pill">
+                            <div class="pause-resume-icon"></div>
+                        </button>
+                        <div id="header-progress-bar" class="header-progress-bar"></div>
+                        <!-- Hidden legacy elements for compatibility if needed -->
+                        <div class="hidden">
+                            <span id="stat-processed">0</span>
+                            <span id="stat-total">0</span>
+                            <span id="ai-status-indicator"></span>
+                            <div id="ai-machine-anim"></div>
+                            <span id="ai-pill-status-text"></span>
+                            <div id="ai-metrics"></div>
+                            <div id="ai-dynamic-metrics"></div>
+                        </div>
                     </div>
-                    <button id="btn-pause-resume" class="btn-pause-pill">
-                        <div class="pause-resume-icon"></div>
-                    </button>
-                    <div id="header-progress-bar" class="header-progress-bar"></div>
-                    <!-- Hidden legacy elements for compatibility if needed, though ui_manager will be updated -->
-                    <div class="hidden">
-                        <span id="stat-processed">0</span>
-                        <span id="stat-total">0</span>
-                        <span id="ai-status-indicator"></span>
-                        <div id="ai-machine-anim"></div>
-                        <span id="ai-pill-status-text"></span>
-                        <div id="ai-metrics"></div>
-                        <div id="ai-dynamic-metrics"></div>
+                    <!-- Relocated metrics adjacent to pill -->
+                    <div id="ai-pill-secondary" class="ai-pill-secondary hidden">
+                        <span class="metric">Speed: <strong id="stat-speed">-</strong></span>
+                        <span class="metric-sep">•</span>
+                        <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
                     </div>
-                </div>
-                <!-- Relocated metrics adjacent to pill -->
-                <div id="ai-pill-secondary" class="ai-pill-secondary hidden">
-                    <span class="metric">Speed: <strong id="stat-speed">-</strong></span>
-                    <span class="metric-sep">•</span>
-                    <span class="metric">ETA: <strong id="stat-eta">-</strong></span>
                 </div>
             </div>
             <div class="header-actions">
