@@ -163,7 +163,17 @@ class App {
                 this.processing.excludedPaths.forEach(p => this.excludedPaths.add(p));
                 console.log(`[App] Synced ${this.excludedPaths.size} exclusions from manifest.`);
 
-                if (this.processing.isPaused) {
+                const isComplete = this.processing.processedPaths.size >= this.processing.allImages.length && this.processing.allImages.length > 0;
+
+                if (isComplete) {
+                    this.updateUI({ 
+                        currentAction: "✅ All images processed.",
+                        processed: this.processing.allImages.length,
+                        total: this.processing.allImages.length,
+                        completed: true
+                    });
+                    this.ui.setPauseState(false);
+                } else if (this.processing.isPaused) {
                     this.updateUI({ currentAction: "⏸️ Database loaded. Ready to resume." });
                     this.ui.setPauseState(true); // Ensure button says "RESUME"
                 } else {

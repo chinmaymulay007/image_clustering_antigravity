@@ -346,7 +346,8 @@ export class UIManager {
         // Check if the message contains run-indicators (emojis that usually trigger running state)
         const isRunMessage = stats.currentAction && (stats.currentAction.includes('🧠') || stats.currentAction.includes('💾') || stats.currentAction.includes('🧩'));
 
-        if (isCurrentlyPaused && isRunMessage) {
+        // Logic Override: If COMPLETED, always proceed. Otherwise respect pause.
+        if (isCurrentlyPaused && isRunMessage && !stats.completed) {
             // Silently update internal tracking but keep visual "PAUSED" state
             // (Wait until the engine actually resumes to show work status)
             return;

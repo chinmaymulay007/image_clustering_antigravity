@@ -99,7 +99,9 @@ export class ProcessingManager {
 
         // NEW: If we have existing data, we default to PAUSED (Manual Resume)
         // If we have NO data (fresh run), we AUTO-START.
-        if (hasData) {
+        const unprocessedCount = this.allImages.filter(img => !this.processedPaths.has(img.path)).length;
+
+        if (hasData && unprocessedCount > 0) {
             this.isPaused = true;
             console.log("[Processing] Existing database found. PAUSED (Automatic) for user review.");
             if (this.onProgress) {
@@ -111,8 +113,8 @@ export class ProcessingManager {
             }
         } else {
             this.isPaused = false;
-            console.log("[Processing] Fresh run detected. RESUMED (Auto-Start)...");
-            // Load immediately for fresh runs
+            console.log(unprocessedCount === 0 ? "[Processing] All images already processed." : "[Processing] Fresh run detected. RESUMED (Auto-Start)...");
+            // Load immediately for fresh runs or completed runs
             if (!this.workerReady) await this.loadModel();
         }
 
