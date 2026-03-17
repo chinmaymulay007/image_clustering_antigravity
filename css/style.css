@@ -133,7 +133,7 @@ body {
 
 .brand h2 {
     margin: 0;
-    font-size: 1.8rem;
+    font-size: 2.2rem;
     background: linear-gradient(45deg, #3b82f6, #8b5cf6);
     background-clip: text;
     -webkit-background-clip: text;
@@ -418,26 +418,7 @@ body {
 }
 
 /* Mobile Responsiveness */
-@media (max-width: 600px) {
-    .cluster-grid {
-        grid-template-columns: 1fr;
-    }
-
-    header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .stats-bar {
-        font-size: 0.8rem;
-        flex-wrap: wrap;
-    }
-
-    .brand h2 {
-        font-size: 1.2rem;
-    }
-}
+/* Early media query removed - consolidated at end of file */
 
 /* Settings UI Refinements */
 .setting-header {
@@ -524,49 +505,7 @@ body {
 }
 
 /* Mobile Responsiveness */
-@media (max-width: 768px) {
-    .app-container {
-        padding: 0; /* Removed 10px padding to allow 95vw header/sections to align with screen edges */
-    }
-
-    header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-        padding-bottom: 15px;
-    }
-
-    .stats-bar {
-        flex-wrap: wrap;
-        gap: 10px;
-        font-size: 0.8rem;
-    }
-
-    .cluster-grid {
-        grid-template-columns: 1fr;
-        /* Single column on mobile */
-        gap: 15px;
-    }
-
-    .image-grid {
-        grid-template-columns: repeat(4, 1fr);
-        /* Keep it compact */
-    }
-
-    .modal-content {
-        width: 95%;
-        max-height: 90vh;
-    }
-
-    .btn-primary {
-        width: 100%;
-        padding: 15px;
-    }
-
-    .landing-content h1 {
-        font-size: 2rem !important;
-    }
-}
+/* Early media query removed - consolidated at end of file */
 
 /* Action Modal Styles */
 .action-section {
@@ -1117,7 +1056,7 @@ body {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     pointer-events: none;
     max-width: 90%;
-    white-space: nowrap;
+    /* white-space: nowrap removed for multi-row */
     overflow: hidden;
     transition: all 0.5s ease;
 }
@@ -1190,16 +1129,7 @@ body {
     padding-top: 20px;
 }
 
-@media (max-width: 768px) {
-    .suggestion-container {
-        top: 140px;
-        /* Lower on mobile due to stacked header */
-    }
-
-    .cluster-grid {
-        padding-top: 20px;
-    }
-}
+/* Middle media query removed - consolidated at end of file */
 
 .landing-grid {
     display: grid;
@@ -1914,16 +1844,16 @@ body {
         overflow-x: hidden;
     }
 
-    /* --- Header Refinement (2-row dynamic layout) --- */
+    /* --- Header Refinement (Grid Layout) --- */
     .app-header {
         display: grid;
-        grid-template-columns: 1fr auto 1fr;
+        grid-template-columns: 1fr auto;
         grid-template-areas: 
-            "brand ai-group actions"
-            "metrics metrics metrics";
-        padding: 10px 10px 0 10px; /* Symmetry on top/sides, bottom handled by Row 2 */
-        column-gap: 10px;
-        row-gap: 0; 
+            "brand actions"
+            "pill pill"
+            "metrics metrics";
+        padding: 10px 15px 5px 15px; /* Reduced bottom padding */
+        gap: 8px;
         width: 95vw;
         top: 10px;
         border-radius: 12px;
@@ -1940,29 +1870,35 @@ body {
     }
 
     .brand h2 {
-        font-size: 1.1rem;
-        height: 32px;
+        font-size: 1.6rem; 
+        height: 34px;
         display: flex;
         align-items: center;
         margin: 0;
-        line-height: 1; /* Reset line-height to let flex handle centering */
+        line-height: 1;
     }
 
     .ai-header-group {
-        display: contents; /* Break group so children can be grid items */
+        grid-area: pill;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        width: 100%;
+        padding-top: 10px; /* Increased from 2px for better row separation */
     }
 
     .header-actions {
         grid-area: actions;
-        gap: 10px; /* Synchronized with header padding for symmetry */
+        gap: 8px;
         display: flex;
         align-items: center;
         justify-content: flex-end;
     }
 
     .btn-header-action {
-        width: 32px;
-        height: 32px;
+        width: 34px;
+        height: 34px;
         font-size: 1rem;
         padding: 0;
         display: flex;
@@ -1970,132 +1906,55 @@ body {
         justify-content: center;
     }
 
-    /* AI Pill (Consistent 32px height) */
+    /* AI Pill (Restored Curvature & Increased Height) */
     .ai-engine-pill {
-        grid-area: ai-group; /* Explicitly assign to Row 1 center */
-        width: auto;
-        min-width: 0;
-        height: 32px;
-        padding: 0 2px 0 10px; /* 2px right gap matches 2px vertical gap for concentric curve */
-        font-size: 0.72rem;
-        gap: 4px; /* Reduced from 6px */
-        border-radius: 40px; /* Fully rounded pill shape */
+        width: 100%;
+        max-width: none;
+        height: 44px; /* Increased from 34px */
+        padding: 0 4px 0 15px; 
+        font-size: 0.8rem;
+        gap: 8px;
+        border-radius: 40px; 
         display: flex;
-        justify-content: center;
-        width: fit-content; /* Ensure curves wrap tightly */
-        margin: 0 auto; /* Center within its grid area */
-        /* Mobile empty track with larger top-edge fade */
-        background-image: linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.4) 40%, rgba(0, 0, 0, 0) 100%);
-        background-size: 100% 8px; /* Tighter on mobile */
-        background-position: bottom left;
-        background-repeat: no-repeat;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0;
+        background-size: 100% 12px;
     }
 
     .header-progress-bar {
-        height: 8px; /* Tighter on mobile */
+        height: 8px;
     }
 
     .ai-pill-text {
-        font-size: 0.65rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        /* max-width removed to use full available width */
+        font-size: 0.9rem; /* Increased from 0.7rem for better scaling */
+        font-weight: 500;
     }
 
     .btn-pause-pill {
-        width: 28px;
-        height: 28px;
-        border-radius: 40px; /* Matched curvature */
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #60a5fa;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.8rem;
+        width: 36px; /* Increased to fit the 44px pill curvature */
+        height: 36px;
+        margin-right: 0; /* Align tightly to right padding */
     }
 
-    .btn-header-action {
-        width: 32px;
-        height: 32px;
-        font-size: 1rem;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    /* Fix icon alignment within the circle */
-    .pause-resume-icon {
-        width: 12px;
-        height: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* Default state: PAUSE (Two bars) - Scaled for 24px button */
-    .pause-resume-icon::before,
-    .pause-resume-icon::after {
-        width: 3px;
-        height: 11px;
-    }
-
-    /* Paused state -> PLAY (Triangle-ish) - Centered in 24px button */
-    .btn-pause-pill.paused .pause-resume-icon::before {
-        height: 12px;
-        width: 12px;
-        left: 1px;
-    }
-
-    /* Row 2: Centered Metrics */
-    .ai-pill-secondary {
+    /* Row 3: Messages / Metrics (Removed Background Boxes) */
+    .ai-pill-secondary, .ai-paused-message, .ai-complete-message {
         grid-area: metrics;
-        width: calc(100% + 20px); /* Span edge-to-edge */
-        font-size: 0.64rem;
-        padding: 8px 0; /* Internal vertical rhythm */
+        width: 100%;
+        font-size: 0.7rem;
+        padding: 2px 0; /* Tightened padding */
         justify-content: center;
-        border: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.08); /* Sophisticated separator */
-        background: rgba(0, 0, 0, 0.2); /* Subtle darker drawer background */
-        margin: 10px -10px 0 -10px; /* Pull into header edges */
-        border-radius: 0 0 12px 12px; /* Match header corners */
+        border: none; /* Removed border */
+        background: transparent; /* Removed background box */
+        margin: 0;
+        border-radius: 0;
         display: flex !important;
-        line-height: 1;
+        line-height: 1.4;
+        color: #9ca3af;
     }
-
-    .ai-paused-message {
-        grid-area: metrics;
-        width: calc(100% + 20px);
-        font-size: 0.64rem;
-        padding: 8px 0;
-        justify-content: center;
-        border: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(0, 0, 0, 0.2);
-        margin: 10px -10px 0 -10px;
-        border-radius: 0 0 12px 12px;
-        display: flex !important;
-        line-height: 1;
-    }
-
+    
     .ai-complete-message {
-        grid-area: metrics;
-        width: calc(100% + 20px);
-        font-size: 0.64rem;
-        padding: 8px 0;
-        justify-content: center;
-        border: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(0, 0, 0, 0.2);
-        margin: 10px -10px 0 -10px;
-        border-radius: 0 0 12px 12px;
-        display: flex !important;
-        line-height: 1;
-    }
-
-    .ai-pill-secondary .metric {
-        opacity: 0.8;
+        color: #10b981;
     }
 
     /* --- Section Headers (Inline/Block instead of Tabs) --- */
@@ -2103,12 +1962,15 @@ body {
         padding: 140px 0 120px 0; /* Side padding removed to use width-based alignment */
         width: 95vw;
         margin: 0 auto;
-        gap: 15px;
+        gap: 30px; /* Increased from 15px */
+        display: flex;
+        flex-direction: column;
     }
 
     .sections-wrapper section {
-        padding: 0; /* Content symmetry handled by cluster-grid padding/gap */
+        padding: 0 0 20px 0; /* Restored bottom padding for better edge distance */
         margin-top: 10px;
+        margin-bottom: 20px; /* Added margin for better separation */
         border-radius: 8px;
         border-top: 1px solid rgba(75, 85, 99, 0.4);
     }
@@ -2234,14 +2096,25 @@ body {
     }
 
     .suggestion-container {
-        top: 90px; /* Tightened closer to header */
-        padding: 4px 12px;
-        gap: 8px;
-        max-width: 95vw;
+        top: 185px; /* Shifted 10px down to follow header expansion */
+        padding: 10px 15px;
+        gap: 12px;
+        width: 95vw; /* Matches header width */
+        max-width: none; /* Full width */
         left: 50%;
         transform: translateX(-50%);
-        margin-top: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.15); 
+        background: rgba(31, 41, 55, 0.4); 
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        pointer-events: none;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .sections-wrapper {
+        padding-top: 300px; /* Increased slightly more for breathable top room */
     }
 
     /* --- Landing Card --- */
