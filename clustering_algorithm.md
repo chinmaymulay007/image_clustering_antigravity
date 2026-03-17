@@ -29,7 +29,7 @@ graph TD
         A_ASSIGN --> A_MEAN["Recalculate Means"]
         A_MEAN --> A_CONV{"Converged?"}
         A_CONV -- No --> A_LOOP
-        A_CONV -- "Yes (Max 40 iters)" --> A_FINAL["Final Centroids"]
+        A_CONV -- "Yes (Fixed 20 iters)" --> A_FINAL["Final Centroids"]
     end
 
     %% Step B
@@ -64,12 +64,15 @@ For two embedding vectors $u$ and $v$, the distance $D_c$ is calculated as:
 $$D_c(u, v) = 1 - \frac{u \cdot v}{\|u\| \|v\|}$$
 *Note: Since standard CLIP embeddings are often normalized, $\|u\|=1$, reducing this to $1 - (u \cdot v)$.*
 
-### 2. Initialization (Warm Start vs K-Means++)
-*   **Warm Start**: If `previousCentroids` exist and $k$ hasn't changed, we seed the engine with the old positions. This ensures that "Cluster 1" remains "Cluster 1" even as new images are added.
-*   **K-Means++**: If no history exists, we pick the first centroid randomly, and subsequent centroids are picked with probability proportional to their squared distance from existing centers. This prevents poor initial clusters.
+### 2. Initialization (Partial Warm Start vs. K-Means++)
+*   **Partial Warm Start**: If $K$ changes, we don't start from scratch. We reuse existing centroids as initialization seeds. This ensures "Box 1" remains "Box 1" even as the grid expands or contracts.
+*   **Centroid Anchors (Locked)**: If a cluster is locked, its centroid becomes **mathematically frozen**. It ignores the "Recalculate Means" step, acting as a fixed beacon in vector space.
+*   **K-Means++ Expansion**: When $K$ increases, we keep the original centers and use K-Means++ only to discover the "loneliest" images for the new slots.
 
-### 3. Iterative Optimization (Lloyd's Algorithm)
-We run up to **40 iterations** to reach convergence:
+### 3. Iterative Optimization (Discovery Loop)
+We run exactly **20 iterations** per refresh. This provides the balance between stability and discovery:
+*   **The Crawl**: Even if a center starts at a "Warm" location, it will "dash" toward new themes (like beach photos) over the 20 iterations until it is perfectly centered on new data.
+*   **The Identity**: Because the starting point was "Cluster 1," the final result remains "Cluster 1," preserving the UI's identity mapping.
 *   **Assignment**: Each image $x$ is assigned to cluster $S_i$ if:
     $$x \in S_i \iff D_c(x, C_i) \leq D_c(x, C_j) \text{ for all } j$$
 *   **Update**: Centroid $C_i$ is moved to the mean of all its assigned members:

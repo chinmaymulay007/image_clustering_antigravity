@@ -14,15 +14,16 @@ A high-performance, browser-based application for semantic image clustering usin
 - **Two Clustering Modes**: The app provides two complementary views of your images:
   - **🎨 Visual Clusters** — Groups images by semantic/visual similarity using K-Means on CLIP embeddings.
   - **📅 Timeline Clusters** — Groups images by date (and optionally location). Labels include the date and reverse-geocoded place name. *Note: Cluster thumbnails may shift as new batches are processed due to "Centroid Drift" (the AI's "average" for that day evolving).*
-- **Dynamic Clustering**: Real-time K-Means clustering that evolves as images are processed.
-- **Clustering Stability (Warm Start)**: Centroids remember their positions during updates (Visual Clusters only), preventing the UI from jumping around.
+- **Clustering Stability (Centroid Anchors)**: Clusters are mathematically anchored to their centers. Even as new images arrive or $K$ changes, "Box 1" stays "Box 1," preventing the UI from jumping.
+- **Warm Start Identity**: Uses a "Partial Warm Start" algorithm to preserve cluster identities when adding or removing clusters.
+- **Deterministic Numbering**: Cluster numbers are tied to their UI slots. If a locked cluster must move due to $K$-reduction, it shows a relocation badge (e.g., `7 ➔ 1`).
 - **Smart Deduplication**: Adjust the "Uniqueness Threshold" to ensure cluster previews show diverse images rather than near-duplicates.
 
 ### Cluster Management
 - **Freeze / Lock Clusters**: Lock up to 6 clusters for structured export or Passfaces setup. Only clusters with 16+ images can be locked.
 - **Drag-and-Drop Reordering**: Reorder locked clusters via an intuitive drag-and-drop modal before uploading or downloading.
 - **Excluded Images (Trash)**: Easily remove images from clusters. View and restore them at any time via the Trash icon.
-- **Size-based Sorting**: Clusters are automatically ordered by the number of images they contain (largest first).
+- **Stable Identity Ordering**: Size-based auto-sorting is disabled to ensure your clusters don't swap positions while you are looking at them.
 
 ### Export & Integration
 - **📦 Download as ZIP**: Save selected clusters as a structured ZIP archive using [JSZip](https://stuk.github.io/jszip/) — works across all browsers.
@@ -33,10 +34,10 @@ A high-performance, browser-based application for semantic image clustering usin
 - **IndexedDB Persistence**: All embeddings and project metadata are stored in the browser's IndexedDB — no server-side database required.
 
 ### UI & Experience
-- **AI Engine Status Pill**: A compact status indicator in the header showing real-time processing progress (images processed, speed, ETA) with a pause/resume button.
+- **AI Engine Status Pill**: A premium header indicator showing real-time progress. Includes a persistent completion state, animated pause/resume icon, and smoother fading progress bars.
 - **Contextual Tips**: A rotating suggestions box offers helpful tips during processing.
 - **Storage Management**: View, inspect, and delete per-project AI metadata directly from the app — accessible from the landing page or settings.
-- **Responsive Design**: Optimized layout for both desktop and mobile devices (includes Eruda console for mobile debugging).
+- **Premium UX Layout**: Dynamic padding adjustment for a centered look across all screen sizes, with breathable space for dense image grids.
 
 ---
 
