@@ -83,9 +83,14 @@ export class UIManager {
         this.suggestionContainer = document.getElementById('suggestion-container');
         this.suggestionText = document.getElementById('suggestion-text');
         this.suggestions = [
-            "Lock 6 clusters for Passfaces setup",
+            "AI is analysing your images",
+            "Clusters are updated dynamically as images are analyzed",
+            "Visual clusters show images grouped by visual similarity",
+            "Timeline clusters show images grouped by dates",
+            "Clustering results improve over time",
+            "Lock any 6 clusters for Passfaces setup",
             "Exclude images that you don't want",
-            "Change number of clusters from settings"
+            "Change number of visual clusters from settings"
         ];
         this.currSuggestionIndex = 0;
         this.suggestionInterval = null;
@@ -134,7 +139,7 @@ export class UIManager {
             });
         }
 
-        if(this.btnShowMoreMetadata) {
+        if (this.btnShowMoreMetadata) {
             this.btnShowMoreMetadata.addEventListener('click', () => {
                 this.callbacks.onShowMoreMetadata?.();
             });
@@ -430,7 +435,7 @@ export class UIManager {
         if (this.aiMetricsContainer) {
             const isPaused = this.btnPauseResume.classList.contains('paused');
             const isComplete = stats.completed;
-            
+
             // Show metrics only when running and not complete
             const showMetrics = !isPaused && !isComplete;
             // Show paused message when manually paused (not complete)
@@ -460,7 +465,7 @@ export class UIManager {
             const showMetrics = !isPaused && !isComplete;
             const showPausedMsg = isPaused && !isComplete;
             const showCompleteMsg = isComplete;
-            
+
             this.aiMetricsContainer.classList.toggle('hidden', !showMetrics);
             if (this.aiPausedMessage) {
                 this.aiPausedMessage.classList.toggle('hidden', !showPausedMsg);
@@ -834,7 +839,7 @@ export class UIManager {
         checkboxes.forEach((cb) => {
             if (cb.checked) {
                 const card = cb.closest('.cluster-card');
-                if(card) {
+                if (card) {
                     ids.push({
                         id: card.dataset.clusterId,
                         domain: card.dataset.domain
