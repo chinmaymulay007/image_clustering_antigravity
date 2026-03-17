@@ -1,6 +1,6 @@
 # Clustering Algorithm Deep-Dive
 
-This document explains the mathematical and logical implementation of the image clustering engine in ClusterAI v2.
+This document explains the mathematical and logical implementation of the image clustering engine in ClusterAI.
 
 > **Note**: All embedding vectors are persisted in the browser's IndexedDB (via `db_manager.js`), enabling instant resume across sessions. The "Freeze/Lock" feature allows users to pin up to 6 clusters for structured export without affecting the clustering of remaining images.
 
@@ -18,15 +18,18 @@ graph TD
     %% Step A
     subgraph StepA ["Step A: Centroid Identification"]
         direction TB
-        A1["Input: CLIP Embeddings"] --> A_INIT{"Warm Start?"}
+        A1["Input: CLIP Embeddings"] --> A_RECAL{"Recalibrate?"}
+        A_RECAL -- Yes --> A_KPLUS["K-Means++ Init (Cold Start)"]
+        A_RECAL -- No --> A_INIT{"Warm Start?"}
         A_INIT -- Yes --> A_LOAD["Load Previous Centroids"]
-        A_INIT -- No --> A_KPLUS["K-Means++ Init"]
+        A_INIT -- No --> A_KPLUS
         
-        A_LOAD --> A_LOOP["Lloyd's Optimization Loop"]
+        A_LOAD --> A_ANCHOR["Overwrite with Locked Anchors"]
+        A_ANCHOR --> A_LOOP["Lloyd's Optimization Loop"]
         A_KPLUS --> A_LOOP
         
         A_LOOP --> A_ASSIGN["Assign to Closest"]
-        A_ASSIGN --> A_MEAN["Recalculate Means"]
+        A_ASSIGN --> A_MEAN["Recalculate Means (skip locked)"]
         A_MEAN --> A_CONV{"Converged?"}
         A_CONV -- No --> A_LOOP
         A_CONV -- "Yes (Fixed 20 iters)" --> A_FINAL["Final Centroids"]
@@ -64,10 +67,30 @@ For two embedding vectors $u$ and $v$, the distance $D_c$ is calculated as:
 $$D_c(u, v) = 1 - \frac{u \cdot v}{\|u\| \|v\|}$$
 *Note: Since standard CLIP embeddings are often normalized, $\|u\|=1$, reducing this to $1 - (u \cdot v)$.*
 
-### 2. Initialization (Partial Warm Start vs. K-Means++)
-*   **Partial Warm Start**: If $K$ changes, we don't start from scratch. We reuse existing centroids as initialization seeds. This ensures "Box 1" remains "Box 1" even as the grid expands or contracts.
-*   **Centroid Anchors (Locked)**: If a cluster is locked, its centroid becomes **mathematically frozen**. It ignores the "Recalculate Means" step, acting as a fixed beacon in vector space.
-*   **K-Means++ Expansion**: When $K$ increases, we keep the original centers and use K-Means++ only to discover the "loneliest" images for the new slots.
+### 2. Initialization: Warm Start, Recalibrate & K-Means++
+
+There are three initialization paths:
+
+*   **Partial Warm Start** (default): If $K$ doesn't change and no recalibration is requested, previous centroids are reused as seeds. This ensures "Box 1" remains "Box 1" even as new images arrive.
+*   **Recalibrate (Cold Start)**: The user can press the ↺ button next to the Visual Clusters heading to force a full cold start. This clears `lastCentroids` entirely and re-seeds from scratch using K-Means++, allowing the algorithm to discover fundamentally different groupings.
+*   **K-Means++ Expansion**: When $K$ increases beyond the number of existing centroids, current centroids are kept and K-Means++ seeds only the new slots by seeking the "loneliest" images in vector space.
+
+#### Centroid Anchoring for Locked Clusters
+After warm-start centroids are loaded, any locked cluster has its centroid **mathematically overwritten** with the stored anchor before the optimization loop begins. This identity overwrite is performed in `app.js` before the message is posted to the clustering Web Worker:
+
+```js
+// Identity Overwrite: Force warm start centroids to match locked anchors.
+if (previousCentroids) {
+    this.lockedClusters.forEach((data, key) => {
+        if (key.startsWith('visual_')) {
+            const idx = parseInt(key.replace('visual_', ''));
+            if (idx < previousCentroids.length) {
+                previousCentroids[idx] = [...data.centroid];
+            }
+        }
+    });
+}
+```
 
 ### 3. Iterative Optimization (Discovery Loop)
 We run exactly **20 iterations** per refresh. This provides the balance between stability and discovery:
@@ -75,8 +98,12 @@ We run exactly **20 iterations** per refresh. This provides the balance between 
 *   **The Identity**: Because the starting point was "Cluster 1," the final result remains "Cluster 1," preserving the UI's identity mapping.
 *   **Assignment**: Each image $x$ is assigned to cluster $S_i$ if:
     $$x \in S_i \iff D_c(x, C_i) \leq D_c(x, C_j) \text{ for all } j$$
-*   **Update**: Centroid $C_i$ is moved to the mean of all its assigned members:
+*   **Update (Frozen vs. Fluid)**: For unlocked clusters, the centroid moves to the mean of its members:
     $$C_{i}^{\text{new}} = \frac{1}{|S_i|} \sum_{x \in S_i} x$$
+    For **locked** clusters, this step is **skipped** — the centroid remains frozen at its anchor, acting as a fixed beacon in vector space. Images continue to be assigned to it based on proximity, but it never drifts.
+
+### 4. Off-Thread Execution (Clustering Worker)
+The K-Means pass runs entirely inside a **Web Worker** (`clustering_worker.js` → `clustering_engine.js`) to keep the main UI thread responsive. The main thread (`app.js`) serializes the embeddings, previous centroids, and locked indices, posts a message to the worker, and awaits the result before updating the UI.
 
 ---
 
