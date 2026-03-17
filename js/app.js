@@ -71,8 +71,8 @@ class App {
             if (key.startsWith('visual_')) visualLockedCount++;
         }
 
-        if (settings.k < currentLockedCount) {
-            alert(`⚠️ Action Required: Cannot reduce total clusters to ${settings.k}.\n\nYou currently have ${currentLockedCount} clusters locked. Please unlock some clusters before decreasing the total count.`);
+        if (settings.k < visualLockedCount) {
+            alert(`⚠️ Action Required: Cannot reduce total clusters to ${settings.k}.\n\nYou currently have ${visualLockedCount} clusters locked. Please unlock some clusters before decreasing the total count.`);
             return;
         }
 
