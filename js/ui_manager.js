@@ -88,8 +88,8 @@ export class UIManager {
             "Visual clusters show images grouped by visual similarity",
             "Timeline clusters show images grouped by dates",
             "Clustering results improve over time",
-            "Lock any 6 clusters for Passfaces setup",
-            "Exclude images that you don't want",
+            "Lock any 6 clusters for Passfaces setup, use lock button",
+            "Exclude images that you don't want by clicking X on image",
             "Change number of visual clusters from settings"
         ];
         this.currSuggestionIndex = 0;
