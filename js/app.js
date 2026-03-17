@@ -22,6 +22,7 @@ class App {
         this.refreshInterval = 20;
         this.k = 6;
         this.threshold = 0.15;
+        this.modelId = 'Xenova/mobileclip_s0'; // Current Model Configuration
         this.handleMap = new Map(); // Path -> FileHandle
         this.thumbnailCache = new Map(); // Path -> { url, blob }
         this.isClustering = false;
@@ -60,7 +61,8 @@ class App {
             onDeleteProjectData: (projectId) => this.handleDeleteProjectData(projectId),
             onDeleteAllData: () => this.handleDeleteAllData(),
             onBatchSizeChange: (size) => this.handleBatchSizeChange(size),
-            onShowMoreMetadata: () => this.handleShowMoreMetadata()
+            onShowMoreMetadata: () => this.handleShowMoreMetadata(),
+            onRecalibrate: () => this.handleRecalibrate()
         });
     }
 
@@ -104,6 +106,16 @@ class App {
         this.refreshClusters();
     }
 
+    handleRecalibrate() {
+        console.log("%c[App] RECALIBRATE: Forcing cold start (reseting centroids)", "color: #ff9800; font-weight: bold;");
+        this.lastCentroids = null; // Discard warm start memories
+        this.updateUI({ 
+            lastEvent: "AI Recalibrating...",
+            currentAction: "🔄 Recalibrating: Finding fresh clusters..." 
+        });
+        this.refreshClusters();
+    }
+
     updateUI(stats) {
         if (!stats) return;
         const enrichedStats = {
@@ -134,6 +146,12 @@ class App {
 
             // Initialize Database for this project
             await db.init(projectName);
+
+            // Check for Model Migration (Global Upgrade)
+            const manifest = await db.getManifest();
+            if (manifest && manifest.modelId !== this.modelId) {
+                await db.globalUpgradeCleanup(this.modelId);
+            }
 
             this.ui.hideInitialOverlay();
             this.ui.renderClusters([]); // Show placeholder immediately during scan

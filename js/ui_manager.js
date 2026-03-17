@@ -118,6 +118,7 @@ export class UIManager {
         this.sectionVisual = document.getElementById('section-visual');
         this.sectionTimeline = document.getElementById('section-timeline');
         this.globalPlaceholder = document.getElementById('global-processing-placeholder');
+        this.btnRecalibrate = document.getElementById('btn-recalibrate');
     }
 
     setCallbacks(callbacks) {
@@ -255,6 +256,12 @@ export class UIManager {
 
         const closeInstructions = () => this.modalInstructions.classList.add('hidden');
         this.btnCloseInstructions?.addEventListener('click', closeInstructions);
+
+        this.btnRecalibrate?.addEventListener('click', () => {
+            if (confirm("🔄 Recalibrate Clusters?\n\nThis will find a fresh way to group your images.\n\nLocked clusters will stay where they are!")) {
+                this.callbacks.onRecalibrate?.();
+            }
+        });
     }
 
     validateUploadRequirements() {

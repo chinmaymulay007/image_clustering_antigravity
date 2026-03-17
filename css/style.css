@@ -210,6 +210,40 @@ body {
     transform: scale(1.05);
 }
 
+.btn-recalibrate-tab {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: inherit;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    margin-left: 2px;
+}
+
+.btn-recalibrate-tab:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.btn-recalibrate-tab svg {
+    display: block;
+    opacity: 0.7;
+}
+
+.btn-recalibrate-tab:hover svg {
+    opacity: 1;
+}
+
+#section-visual h2 {
+    padding-right: 15px; /* Reduced to balance the added width of the button */
+}
+
 .skeleton {
     background: #1f2937;
     /* Simple dark background, no shimmer */

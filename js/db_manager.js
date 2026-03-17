@@ -121,6 +121,7 @@ class DatabaseManager {
             const store = transaction.objectStore('projects');
             store.put({
                 id: this.currentProject,
+                modelId: 'Xenova/mobileclip_s0', // Tag manifest with current model
                 ...data,
                 lastUpdated: Date.now()
             });
@@ -187,6 +188,46 @@ class DatabaseManager {
                 resolve();
             };
             transaction.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    /**
+     * Performs a global wipe of all embeddings and resets all project manifests
+     * when a model upgrade is detected.
+     */
+    async globalUpgradeCleanup(newModelId) {
+        if (!this.db) await this.initStub();
+
+        return new Promise((resolve, reject) => {
+            console.log(`%c[AI Upgrade] Detect model mismatch. Performing global database cleanup to ensure compatibility with ${newModelId}...`, "color: #fb8c00; font-weight: bold; font-size: 1.1em;");
+            
+            const transaction = this.db.transaction(['embeddings', 'projects'], 'readwrite');
+            const embeddingStore = transaction.objectStore('embeddings');
+            const projectStore = transaction.objectStore('projects');
+
+            // 1. Wipe ALL embeddings (they are incompatible)
+            embeddingStore.clear();
+
+            // 2. Reset manifests for all projects
+            const request = projectStore.getAll();
+            request.onsuccess = () => {
+                const projects = request.result;
+                projects.forEach(p => {
+                    p.processedCount = 0;
+                    p.modelId = newModelId;
+                    p.lastUpdated = Date.now();
+                    projectStore.put(p);
+                });
+            };
+
+            transaction.oncomplete = () => {
+                console.log(`%c[AI Upgrade] Database successfully purged and prepared for ${newModelId}.`, "color: #4caf50; font-weight: bold;");
+                resolve();
+            };
+            transaction.onerror = (e) => {
+                console.error("[AI Upgrade] Cleanup failed:", e.target.error);
+                reject(e.target.error);
+            };
         });
     }
 

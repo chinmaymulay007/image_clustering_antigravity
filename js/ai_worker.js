@@ -3,7 +3,7 @@ import { env, AutoProcessor, CLIPVisionModelWithProjection, RawImage } from './v
 
 let processor = null;
 let model = null;
-const modelId = 'Xenova/clip-vit-base-patch16';
+const modelId = 'Xenova/mobileclip_s0';
 
 // Initialize Transformers.js in the worker
 async function init(config) {
@@ -23,7 +23,7 @@ async function init(config) {
 
     processor = await AutoProcessor.from_pretrained(modelId);
     model = await CLIPVisionModelWithProjection.from_pretrained(modelId, {
-        quantized: true,
+        quantized: false,
         device: 'webgpu'
     });
 
@@ -94,25 +94,30 @@ async function processBatch(batch) {
         const end = performance.now();
         const duration = end - start;
 
-        // 3. Extract results (FIXED: Restored missing logic)
+        // 3. Extract results (FIXED: Uses actual processed count and normalization)
         const result = [];
-        const numImages = batch.length;
+        const numImages = validRawImages.length; // Use successfully processed count
         const totalElements = image_embeds.data.length;
         const dim = totalElements / numImages;
+
+        // Normalize before extracting data if possible, or handle manually
+        // Transformers.js tensors have a .tolist() or .data getter. 
+        // Let's use the explicit slice but on normalized data if available.
+        const embeds = image_embeds.normalize(); 
 
         for (let i = 0; i < numImages; i++) {
             const rowStart = i * dim;
             const rowEnd = rowStart + dim;
-            result.push(Array.from(image_embeds.data.slice(rowStart, rowEnd)));
+            result.push(Array.from(embeds.data.slice(rowStart, rowEnd)));
         }
 
-        console.log(`[AI Worker] Processed batch of ${batch.length} in ${duration.toFixed(1)}ms (${(duration / batch.length).toFixed(1)}ms/img)`);
+        console.log(`[AI Worker] Processed batch of ${numImages} in ${duration.toFixed(1)}ms (${(duration / numImages).toFixed(1)}ms/img)`);
 
         self.postMessage({
             status: 'success',
             embeddings: result,
             time: duration,
-            batchSize: batch.length
+            batchSize: numImages
         });
     } catch (err) {
         self.postMessage({ status: 'error', error: err.message });

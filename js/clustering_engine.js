@@ -133,13 +133,14 @@ export class ClusteringEngine {
 
             // C. Update Centroids Step
             if (changed) {
-                const sums = Array(k).fill(0).map(() => new Array(512).fill(0));
+                const dim = embeddings[0].embedding.length;
+                const sums = Array(k).fill(0).map(() => new Array(dim).fill(0));
                 const counts = Array(k).fill(0);
 
                 for (let i = 0; i < embeddings.length; i++) {
                     const c = assignments[i];
                     const vec = embeddings[i].embedding;
-                    for (let j = 0; j < 512; j++) {
+                    for (let j = 0; j < dim; j++) {
                         sums[c][j] += vec[j];
                     }
                     counts[c]++;
@@ -150,7 +151,7 @@ export class ClusteringEngine {
                     if (lockedIndices.includes(c)) continue;
 
                     if (counts[c] > 0) {
-                        for (let j = 0; j < 512; j++) {
+                        for (let j = 0; j < dim; j++) {
                             centroids[c][j] = sums[c][j] / counts[c];
                         }
                     } else {
@@ -303,18 +304,19 @@ export class ClusteringEngine {
             const dateObj = new Date(dateKey);
             const shortDateStr = Object.prototype.toString.call(dateObj) === "[object Date]" && !isNaN(dateObj) ? dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : dateKey;
 
-            let visualCentroid = new Array(512).fill(0);
+            const dim = items[0].embedding.length;
+            let visualCentroid = new Array(dim).fill(0);
             let sumLat = 0, sumLon = 0, gpsCount = 0;
 
             items.forEach(m => {
-                for(let i=0; i<512; i++) visualCentroid[i] += m.embedding[i];
+                for(let i=0; i<dim; i++) visualCentroid[i] += m.embedding[i];
                 if (m.lat !== null && m.lon !== null && m.lat !== undefined && m.lon !== undefined && (m.lat !== 0 || m.lon !== 0)) {
                     sumLat += m.lat;
                     sumLon += m.lon;
                     gpsCount++;
                 }
             });
-            for(let i=0; i<512; i++) visualCentroid[i] /= items.length;
+            for(let i=0; i<dim; i++) visualCentroid[i] /= items.length;
 
             clusters.push({
                 id: `meta_${dateKey}`,
