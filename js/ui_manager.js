@@ -98,6 +98,7 @@ export class UIManager {
         // State
         this.callbacks = {};
         this.cards = new Map(); // Index/ID -> Card DOM node
+        this.isAnalysisComplete = false;
 
         // Storage Management Elements
         this.btnManageStorage = document.getElementById('btn-manage-storage');
@@ -384,6 +385,10 @@ export class UIManager {
 
         // Current Activity (Global Status Bar & AI Engine Indicator)
         if (stats.completed) {
+            this.isAnalysisComplete = true;
+        }
+
+        if (this.isAnalysisComplete) {
             this.btnPauseResume.innerHTML = '<span class="tick-mark-icon"></span>';
             this.btnPauseResume.disabled = true;
             this.showStatus("✅ Analysis Complete");
@@ -435,7 +440,7 @@ export class UIManager {
         // Handle Metrics/Paused/Complete Message Visibility (Next to AI Pill)
         if (this.aiMetricsContainer) {
             const isPaused = this.btnPauseResume.classList.contains('paused');
-            const isComplete = stats.completed;
+            const isComplete = this.isAnalysisComplete;
 
             // Show metrics only when running and not complete
             const showMetrics = !isPaused && !isComplete;
