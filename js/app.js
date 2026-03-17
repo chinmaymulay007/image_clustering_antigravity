@@ -368,14 +368,15 @@ class App {
 
         const previousCentroids = this.lastCentroids ? this.lastCentroids.map(c => [...c]) : null;
 
-        // If K changed or centroids don't exist, we can't easily warm start with locked ones 
-        // unless we force the worker to respect the specific indices.
-        // Actually, previousCentroids helps Lloyd's init.
-        if (previousCentroids && previousCentroids.length === this.k) {
-            // ... (Optional: we already have lockedCentroids handling the anchors, but keeping consistency)
-            this.lockedClusters.forEach((data, index) => {
-                if (index < previousCentroids.length) {
-                    previousCentroids[index] = [...data.centroid];
+        // Identity Overwrite: Force warm start centroids to match locked anchors where available.
+        // This ensures the mathematical center stays anchored even if K changed.
+        if (previousCentroids) {
+            this.lockedClusters.forEach((data, key) => {
+                if (key.startsWith('visual_')) {
+                    const idx = parseInt(key.replace('visual_', ''));
+                    if (idx < previousCentroids.length) {
+                        previousCentroids[idx] = [...data.centroid];
+                    }
                 }
             });
         }
@@ -1055,6 +1056,35 @@ class App {
             if (!key.startsWith('visual_')) {
                 newMap.set(key, data);
             }
+        }
+
+        // MATHEMATICAL STABILITY: Update lastCentroids to match new positions
+        if (this.lastCentroids) {
+            const newCentroids = [];
+            // Fill with truncated lastCentroids first (up to newK)
+            for (let i = 0; i < newK; i++) {
+                newCentroids.push(this.lastCentroids[i] ? [...this.lastCentroids[i]] : new Array(512).fill(0));
+            }
+            
+            // Overwrite positions with relocated locked centroids
+            for (const item of visualLocked) {
+                if (item.index >= newK) {
+                    // Find where it moved to in newMap
+                    // We know the loop above in Pass 2 used nextAvailable
+                    // Actually we can just re-extract from our just-built newMap
+                }
+            }
+
+            // Simpler: Just sync newCentroids to match everything in newMap.keys() (visuals)
+            for (const [key, data] of newMap.entries()) {
+                if (key.startsWith('visual_')) {
+                    const idx = parseInt(key.replace('visual_', ''));
+                    if (idx < newK) {
+                        newCentroids[idx] = [...data.centroid];
+                    }
+                }
+            }
+            this.lastCentroids = newCentroids;
         }
 
         if (movedCount === 1) {

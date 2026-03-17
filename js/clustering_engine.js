@@ -40,16 +40,10 @@ export class ClusteringEngine {
             cluster.representatives = this.selectClosestToCentroid(cluster.members, cluster.centroid, 16, dedupThreshold);
         });
 
-        // 4. Sort by Size (Largest first) - DISABLING for stability if any are locked
-        // If there are locked ones, we SHOULD NOT Sort, as indices are hard-coded to locked state.
-        if (lockedIndices.length === 0) {
-            clusters.sort((a, b) => b.members.length - a.members.length);
-            // Re-label for consistency only if sorted
-            clusters.forEach((c, i) => {
-                c.label = `Cluster ${i + 1}`;
-            });
-        }
-
+        // 4. SORTING: Disabled for Centroid-Based Stability.
+        // Clusters now maintain their identity based on their position in the array.
+        // Cluster 1 is ALWAYS the first centroid found/reused.
+        
         // Return clusters AND the raw centroids (for next warm start)
         return { clusters, centroids };
     }
@@ -60,19 +54,31 @@ export class ClusteringEngine {
      * Modified to support Fixed Anchors and Radius Locks.
      */
     kMeans(embeddings, k, previousCentroids, lockedIndices = [], lockedRadii = {}, lockedCentroids = {}) {
-        // A. Init Centroids
-        let centroids;
+        // Partial Warm Start Logic:
+        // If K changed, we still reuse whatever centroids we have for the matching slots.
+        if (previousCentroids && previousCentroids.length > 0) {
+            centroids = [];
+            // Preserve existing centroids for the first N slots
+            const preservedCount = Math.min(previousCentroids.length, k);
+            for (let i = 0; i < preservedCount; i++) {
+                centroids.push([...previousCentroids[i]]);
+            }
 
-        // Warm Start Logic
-        if (previousCentroids && previousCentroids.length === k) {
-            centroids = previousCentroids.map(c => [...c]);
+            // If expanding (K increased), initialize ONLY the new slots
+            if (k > previousCentroids.length) {
+                console.log(`[KMeans] Expanding centroids from ${previousCentroids.length} to ${k}`);
+                const extraCentroids = this.initKMeansPlusPlus(embeddings, k, centroids);
+                // extras are already appended in initKMeansPlusPlus if we pass partial list
+                // OR we just take the difference.
+                // initKMeansPlusPlus usually returns a full set.
+                centroids = extraCentroids;
+            }
         } else {
             // Cold Start
             centroids = this.initKMeansPlusPlus(embeddings, k);
         }
 
-        // ANCHOR INJECTION: If K changed, our initial centroids might be random.
-        // We MUST force-overwrite the locked indices with their original anchors.
+        // ANCHOR INJECTION: Force-overwrite locked indices with their specific anchors.
         for (const idxString in lockedCentroids) {
             const idx = parseInt(idxString);
             if (idx < k) {
@@ -159,13 +165,16 @@ export class ClusteringEngine {
         return { centroids, assignments };
     }
 
-    initKMeansPlusPlus(embeddings, k) {
-        const centroids = [];
-        // 1. Random first
-        const firstIdx = Math.floor(Math.random() * embeddings.length);
-        centroids.push([...embeddings[firstIdx].embedding]);
+    initKMeansPlusPlus(embeddings, k, partialCentroids = []) {
+        const centroids = partialCentroids.length > 0 ? [...partialCentroids] : [];
 
-        // 2. Select remaining k-1
+        // 1. Random first (only if empty)
+        if (centroids.length === 0) {
+            const firstIdx = Math.floor(Math.random() * embeddings.length);
+            centroids.push([...embeddings[firstIdx].embedding]);
+        }
+
+        // 2. Select remaining k-N
         while (centroids.length < k) {
             const dists = embeddings.map(e => {
                 let minD = Infinity;

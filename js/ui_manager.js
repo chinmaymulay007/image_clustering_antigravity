@@ -570,7 +570,7 @@ export class UIManager {
                         : '';
 
                     const moveHtml = relocated
-                        ? `<span class="move-count">${cluster.movedFrom + 1}➔${cluster.label || (idKey + 1)}</span>`
+                        ? `<span class="move-count">${cluster.movedFrom + 1}➔${parseInt(idKey) + 1}</span>`
                         : '';
 
                     const moveTooltip = relocated
