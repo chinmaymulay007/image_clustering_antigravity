@@ -77,8 +77,13 @@ class App {
         }
 
         // Check if any locked clusters need to be "slid" down into the new range
-        const lockedIndices = Array.from(this.lockedClusters.keys());
-        const maxLockedIndex = lockedIndices.length > 0 ? Math.max(...lockedIndices) : -1;
+        let maxLockedIndex = -1;
+        for (const key of this.lockedClusters.keys()) {
+            if (key.startsWith('visual_')) {
+                const idx = parseInt(key.replace('visual_', ''));
+                if (idx > maxLockedIndex) maxLockedIndex = idx;
+            }
+        }
 
         if (settings.k <= maxLockedIndex) {
             console.log(`[App] Defragmenting locked clusters to fit into new K=${settings.k}`);
@@ -1000,17 +1005,24 @@ class App {
 
     compactLockedClusters(newK) {
         // Sort existing by index to preserve relative order where possible
-        const sortedLocked = Array.from(this.lockedClusters.entries())
-            .sort((a, b) => a[0] - b[0]);
+        // keys are like 'visual_0', 'metadata_meta_2026-03-17'
+        const visualLocked = Array.from(this.lockedClusters.entries())
+            .filter(([key]) => key.startsWith('visual_'))
+            .map(([key, data]) => ({
+                key,
+                index: parseInt(key.replace('visual_', '')),
+                data
+            }))
+            .sort((a, b) => a.index - b.index);
 
         const newMap = new Map();
         const takenIndices = new Set();
 
         // Pass 1: Keep clusters that already fit in the new range
-        for (const [index, data] of sortedLocked) {
-            if (index < newK) {
-                newMap.set(index, data);
-                takenIndices.add(index);
+        for (const item of visualLocked) {
+            if (item.index < newK) {
+                newMap.set(item.key, item.data);
+                takenIndices.add(item.index);
             }
         }
 
@@ -1019,20 +1031,29 @@ class App {
         let movedCount = 0;
         let lastFrom = -1, lastTo = -1;
 
-        for (const [index, data] of sortedLocked) {
-            if (index >= newK) {
+        for (const item of visualLocked) {
+            if (item.index >= newK) {
                 while (takenIndices.has(nextAvailable)) {
                     nextAvailable++;
                 }
                 if (nextAvailable < newK) {
-                    data.relocatedFrom = index; // Store movement for UI
-                    newMap.set(nextAvailable, data);
+                    const newKey = `visual_${nextAvailable}`;
+                    item.data.relocatedFrom = item.index; // Store movement for UI
+                    item.data.pinnedIndex = nextAvailable;
+                    newMap.set(newKey, item.data);
                     takenIndices.add(nextAvailable);
 
                     movedCount++;
-                    lastFrom = index; lastTo = nextAvailable;
-                    console.log(`%c[App] Relocating locked cluster from slot ${index + 1} to ${nextAvailable + 1}`, "color: #f59e0b; font-weight: bold;");
+                    lastFrom = item.index; lastTo = nextAvailable;
+                    console.log(`%c[App] Relocating locked cluster from slot ${item.index + 1} to ${nextAvailable + 1}`, "color: #f59e0b; font-weight: bold;");
                 }
+            }
+        }
+
+        // Preserve metadata locks (they aren't affected by visual K)
+        for (const [key, data] of this.lockedClusters) {
+            if (!key.startsWith('visual_')) {
+                newMap.set(key, data);
             }
         }
 
