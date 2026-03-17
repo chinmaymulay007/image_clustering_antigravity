@@ -633,10 +633,11 @@ export class UIManager {
                 const grid = document.createElement('div');
                 grid.className = 'image-grid';
                 card._gridNode = grid; // Link
-                card.appendChild(grid);
-
                 targetGrid.appendChild(card);
             }
+
+            // Always ensure DOM order matches array order
+            targetGrid.appendChild(card);
 
             // ALWAYS Update dynamic UI states (locked, title, styling)
             const checkbox = card.querySelector('.cluster-checkbox');

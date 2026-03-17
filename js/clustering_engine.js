@@ -308,7 +308,7 @@ export class ClusteringEngine {
             for(let i=0; i<512; i++) visualCentroid[i] /= items.length;
 
             clusters.push({
-                id: `meta_${clusterIdCounter++}`,
+                id: `meta_${dateKey}`,
                 label: shortDateStr,
                 members: items,
                 centroid: visualCentroid,

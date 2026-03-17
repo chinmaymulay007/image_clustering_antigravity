@@ -801,12 +801,15 @@ class App {
 
     handleLockCluster(clusterId, domain) {
         let cluster;
+        let index;
         let lockKey = `${domain}_${clusterId}`;
 
         if (domain === 'visual') {
-            cluster = this.currentClusters.find(c => c.id.toString() === clusterId.toString());
+            index = this.currentClusters.findIndex(c => c.id.toString() === clusterId.toString());
+            cluster = this.currentClusters[index];
         } else {
-            cluster = this.currentMetadataClusters.find(c => c.id.toString() === clusterId.toString());
+            index = this.currentMetadataClusters.findIndex(c => c.id.toString() === clusterId.toString());
+            cluster = this.currentMetadataClusters[index];
         }
 
         if (!cluster) return;
@@ -842,14 +845,14 @@ class App {
                 initialCoverage: inRadiusCount,
                 initialTotalSize: cluster.members.length,
                 initialMembership: new Set(cluster.members.map(m => m.path)),
-                initialIndex: cluster.id
+                pinnedIndex: index
             });
         } else {
             // Metadata cluster lock (Just pinning the cluster contents)
             this.lockedClusters.set(lockKey, {
                 domain: domain,
                 representatives: JSON.parse(JSON.stringify(cluster.representatives)),
-                initialIndex: cluster.id
+                pinnedIndex: index
             });
         }
 
@@ -960,17 +963,39 @@ class App {
                 const lockData = this.lockedClusters.get(lockKey);
                 // Force pinned reps if exclusions removed an item
                 cluster.representatives = lockData.representatives.filter(r => !this.excludedPaths.has(r.path));
-                 if(cluster.representatives.length < 16) {
-                      cluster.driftCount = 16 - cluster.representatives.length;
-                 } else {
-                     cluster.driftCount = 0;
-                 }
+                if (cluster.representatives.length < 16) {
+                    cluster.driftCount = 16 - cluster.representatives.length;
+                } else {
+                    cluster.driftCount = 0;
+                }
             } else {
-                 cluster.isLocked = false;
-                 cluster.driftCount = 0;
+                cluster.isLocked = false;
+                cluster.driftCount = 0;
             }
         });
-        return clusters;
+
+        // RE-ORDERING: Ensure locked clusters stay at their pinned positions
+        const result = [...clusters];
+        const lockedMetadata = Array.from(this.lockedClusters.values())
+            .filter(data => data.domain === 'metadata' && data.pinnedIndex !== undefined)
+            .sort((a, b) => a.pinnedIndex - b.pinnedIndex);
+
+        lockedMetadata.forEach(data => {
+            // Find where it is currently
+            const currentIdx = result.findIndex(c => {
+                const lockKey = `metadata_${c.id}`;
+                return this.lockedClusters.has(lockKey) && this.lockedClusters.get(lockKey).pinnedIndex === data.pinnedIndex;
+            });
+
+            if (currentIdx !== -1 && currentIdx !== data.pinnedIndex && data.pinnedIndex < result.length) {
+                // Swap it back to its pinned index
+                const temp = result[data.pinnedIndex];
+                result[data.pinnedIndex] = result[currentIdx];
+                result[currentIdx] = temp;
+            }
+        });
+
+        return result;
     }
 
     compactLockedClusters(newK) {
@@ -1025,7 +1050,9 @@ class App {
 
         console.log(`%c[Lock] --- Applying Fixed-Centroid Absorption Constraints ---`, "color: #3b82f6; font-weight: bold;");
 
-        this.lockedClusters.forEach((lockedData, index) => {
+        this.lockedClusters.forEach((lockedData, key) => {
+            if (!key.startsWith('visual_')) return;
+            const index = lockedData.pinnedIndex;
             const cluster = clusters[index];
             if (!cluster) return;
 
