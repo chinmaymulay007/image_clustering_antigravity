@@ -54,8 +54,8 @@ export class ClusteringEngine {
      * Modified to support Fixed Anchors and Radius Locks.
      */
     kMeans(embeddings, k, previousCentroids, lockedIndices = [], lockedRadii = {}, lockedCentroids = {}) {
+        let centroids;
         // Partial Warm Start Logic:
-        // If K changed, we still reuse whatever centroids we have for the matching slots.
         if (previousCentroids && previousCentroids.length > 0) {
             centroids = [];
             // Preserve existing centroids for the first N slots
