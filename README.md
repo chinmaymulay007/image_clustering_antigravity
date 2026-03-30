@@ -151,7 +151,7 @@ vercel.json                 → Deployment headers (COOP/COEP for SharedArrayBuf
 - ✅ Added **contextual suggestions/tips box** during processing
 - ✅ Added **Storage Management UI** for viewing/deleting per-project AI data
 - ✅ Implemented **deferred AI worker loading** for faster initial page loads
-- ✅ Optimized for **mobile browsers** with responsive layout and Eruda console
+- ✅ Optimized for **mobile browsers** with responsive layout
 - ✅ Deployed on **Vercel** with proper COOP/COEP headers
 
 ---
