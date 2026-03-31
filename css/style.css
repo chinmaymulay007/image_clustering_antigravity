@@ -32,17 +32,17 @@ body {
     justify-content: center;
     width: 100%;
     transition: all 0.3s ease;
-    margin-bottom: 8px; /* Extra breathing space above grid */
+    margin-bottom: -10px; /* Counteracts the 15px parent gap to bring it much closer */
 }
 
 .btn-recalibrate-text {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 18px; /* Reduced button size */
-    font-size: 0.75rem; /* Smaller font */
-    font-weight: 600;
-    letter-spacing: 0.05em;
+    gap: 6px;
+    padding: 6px 14px; /* Micro-pill styling */
+    font-size: 0.65rem; /* Ultra-compact font */
+    font-weight: 700;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     background: rgba(31, 41, 55, 0.6);
     backdrop-filter: blur(10px);
