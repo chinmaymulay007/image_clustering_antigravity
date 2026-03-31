@@ -95,6 +95,8 @@ export class UIManager {
         ];
         this.currSuggestionIndex = 0;
         this.suggestionInterval = null;
+        this.btnPrevSuggestion = document.getElementById('btn-prev-suggestion');
+        this.btnNextSuggestion = document.getElementById('btn-next-suggestion');
 
         // State
         this.callbacks = {};
@@ -263,6 +265,10 @@ export class UIManager {
                 this.callbacks.onRecalibrate?.();
             }
         });
+
+        // Suggestion Nav
+        this.btnPrevSuggestion?.addEventListener('click', () => this.prevSuggestion());
+        this.btnNextSuggestion?.addEventListener('click', () => this.nextSuggestion());
     }
 
     validateUploadRequirements() {
@@ -320,24 +326,43 @@ export class UIManager {
     startSuggestionRotation() {
         if (this.suggestionInterval) return;
 
-        const rotate = () => {
-            if (!this.suggestionText) return;
+        // Initial text
+        if (this.suggestionText) {
+            this.suggestionText.textContent = this.suggestions[0];
+            this.suggestionContainer.classList.remove('hidden');
+        }
 
-            // Fade out
-            this.suggestionText.classList.add('fade-out');
+        this.suggestionInterval = setInterval(() => this.nextSuggestion(), 5000);
+    }
 
-            setTimeout(() => {
-                this.currSuggestionIndex = (this.currSuggestionIndex + 1) % this.suggestions.length;
+    showSuggestion(index) {
+        if (!this.suggestionText || !this.suggestions.length) return;
+
+        // Handle wrapping
+        this.currSuggestionIndex = (index + this.suggestions.length) % this.suggestions.length;
+
+        // Reset interval to prevent immediate jump after manual click
+        if (this.suggestionInterval) {
+            clearInterval(this.suggestionInterval);
+            this.suggestionInterval = setInterval(() => this.nextSuggestion(), 5000);
+        }
+
+        // Fade effect
+        this.suggestionText.classList.add('fade-out');
+        setTimeout(() => {
+            if (this.suggestionText) {
                 this.suggestionText.textContent = this.suggestions[this.currSuggestionIndex];
                 this.suggestionText.classList.remove('fade-out');
-            }, 300);
-        };
+            }
+        }, 300);
+    }
 
-        // Initial text
-        this.suggestionText.textContent = this.suggestions[0];
-        this.suggestionContainer.classList.remove('hidden');
+    nextSuggestion() {
+        this.showSuggestion(this.currSuggestionIndex + 1);
+    }
 
-        this.suggestionInterval = setInterval(rotate, 5000);
+    prevSuggestion() {
+        this.showSuggestion(this.currSuggestionIndex - 1);
     }
 
     updateStats(stats) {
