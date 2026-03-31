@@ -344,6 +344,8 @@ body {
     width: 400px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-header {
@@ -375,6 +377,8 @@ body {
 
 .modal-body {
     padding: 20px;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .setting-group {
