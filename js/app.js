@@ -154,7 +154,7 @@ class App {
             }
 
             this.ui.hideInitialOverlay();
-            this.ui.renderClusters([], 'visual'); // Show placeholder immediately during scan
+            this.ui.renderClusters([], this.ui.visualGrid); // Show placeholder immediately during scan
 
             // Setup callbacks from Processing
             this.processing.onProgress = (stats) => {
@@ -333,9 +333,9 @@ class App {
                     // Calculate cross-domain interlocking (disabling locks)
                     this.evaluateLockingConstraints();
 
-                    // Update UI
-                    this.ui.renderClusters(this.currentClusters, 'visual');
-                    this.ui.renderClusters(this.currentMetadataClusters, 'metadata');
+                    // Update UI (Multi-grid isolation restored)
+                    this.ui.renderClusters(this.currentClusters, this.ui.visualGrid);
+                    this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataGrid);
                     this.ui.updateMetadataPagination(this.currentMetadataClusters.length, this.allMetadataClusters.length);
                     this.enrichTimelineClusters();
 
@@ -488,7 +488,7 @@ class App {
             }
             this.evaluateLockingConstraints();
             
-            this.ui.renderClusters(this.currentMetadataClusters, 'metadata');
+            this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataGrid);
             this.ui.updateMetadataPagination(this.currentMetadataClusters.length, this.allMetadataClusters.length);
             
             // Trigger Enrichment for the newly visible clusters
@@ -850,10 +850,10 @@ class App {
 
         if (cluster.representatives.length < 16) {
             alert("⚠️ Cluster Too Small: Only clusters with 16 or more images can be locked for Passfaces.");
-            // Re-render grids to revert checkbox visually
+            // Re-render grid to revert checkbox visually (Syncing grids independently)
             this.evaluateLockingConstraints();
-            this.ui.renderClusters(this.currentClusters, 'visual');
-            this.ui.renderClusters(this.currentMetadataClusters, 'metadata');
+            this.ui.renderClusters(this.currentClusters, this.ui.visualGrid);
+            this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataGrid);
             return;
         }
 
@@ -898,8 +898,9 @@ class App {
         // Compute cross-domain constraints
         this.evaluateLockingConstraints();
 
-        this.ui.renderClusters(this.currentClusters, 'visual');
-        this.ui.renderClusters(this.currentMetadataClusters, 'metadata');
+        // Update grids independently
+        this.ui.renderClusters(this.currentClusters, this.ui.visualGrid);
+        this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataGrid);
         
         this.updateUI({ lastEvent: `Locked ${domain} Cluster ${cluster.label}` });
     }
@@ -941,8 +942,9 @@ class App {
             // Compute cross-domain constraints
             this.evaluateLockingConstraints();
 
-            this.ui.renderClusters(this.currentClusters, 'visual');
-             this.ui.renderClusters(this.currentMetadataClusters, 'metadata');
+            // Update grids independently
+            this.ui.renderClusters(this.currentClusters, this.ui.visualGrid);
+            this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataGrid);
              
             this.updateUI({ lastEvent: `Unlocked ${domain} Cluster` });
             console.log(`[App] Unlocked ${domain} cluster ${clusterId}`);

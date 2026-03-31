@@ -31,7 +31,8 @@ export class UIManager {
         this.settingThreshold = document.getElementById('setting-threshold');
         this.valThreshold = document.getElementById('val-threshold');
 
-        this.unifiedGrid = document.getElementById('unified-cluster-grid');
+        this.visualGrid = document.getElementById('visual-grid');
+        this.metadataGrid = document.getElementById('metadata-grid');
         this.btnShowMoreMetadata = document.getElementById('btn-show-more-metadata');
         this.btnProceed = document.getElementById('btn-proceed');
         this.statusBarText = document.getElementById('status-current-text');
@@ -511,41 +512,16 @@ export class UIManager {
         }
     }
 
-    renderClusters(clusters, domain = 'visual') {
-        const targetGrid = this.unifiedGrid;
+    renderClusters(clusters, targetGrid) {
+        if (!targetGrid) return;
+        
+        // Use a simpler approach specialized to each grid
+        const domain = targetGrid === this.visualGrid ? 'visual' : 'metadata';
+        
+        // Identify currently active IDs for this grid only
+        const activeIds = new Set(clusters.map(c => `${domain}_${c.id}`));
 
-        // Differentiate lastClusters storage
-        if (domain === 'visual') {
-            this.lastClusters = clusters;
-        } else {
-            this.lastMetadataClusters = clusters;
-        }
-
-        const isVisualEmpty = !this.lastClusters?.length;
-        const isTimelineEmpty = !this.lastMetadataClusters?.length;
-
-        if (isVisualEmpty && isTimelineEmpty) {
-            targetGrid.innerHTML = '';
-            this.globalPlaceholder?.classList.remove('hidden');
-            this.floatingControls.classList.add('hidden');
-            this.clusterControlsHeader?.classList.add('hidden');
-            return;
-        }
-
-        this.globalPlaceholder?.classList.add('hidden');
-        this.floatingControls.classList.remove('hidden');
-        this.clusterControlsHeader?.classList.remove('hidden');
-
-        // Logic check: We want to show Visual clusters THEN Timeline clusters.
-        // To do this simply, we'll clear and re-render both whenever either changes,
-        // or manage their presence in the DOM carefully.
-        // Since we have a 'cards' Map and use appendChild, we can manage order by re-appending.
-
-        // 1. Remove clusters that are no longer present in EITHER list
-        const activeVisualIds = new Set((this.lastClusters || []).map(c => `visual_${c.id}`));
-        const activeMetadataIds = new Set((this.lastMetadataClusters || []).map(c => `metadata_${c.id}`));
-        const activeIds = new Set([...activeVisualIds, ...activeMetadataIds]);
-
+        // Cleanup cards that no longer exist IN THIS GRID
         const existingCards = Array.from(targetGrid.querySelectorAll('.cluster-card'));
         existingCards.forEach(card => {
             if (!activeIds.has(card.dataset.idKey)) {
@@ -554,15 +530,36 @@ export class UIManager {
             }
         });
 
-        // 2. Render Visual Clusters
-        (this.lastClusters || []).forEach(c => this.renderSingleCluster(c, 'visual'));
+        // Simple Sync: Add or update each cluster in the incoming list
+        clusters.forEach((cluster, index) => {
+            const card = this.renderSingleCluster(cluster, domain, targetGrid);
+            
+            // Order maintenance within this grid only
+            if (targetGrid.children[index] !== card) {
+                if (index >= targetGrid.children.length) {
+                    targetGrid.appendChild(card);
+                } else {
+                    targetGrid.insertBefore(card, targetGrid.children[index]);
+                }
+            }
+        });
 
-        // 3. Render Metadata Clusters
-        (this.lastMetadataClusters || []).forEach(c => this.renderSingleCluster(c, 'metadata'));
+        // Global State Logic: Toggle placeholder if both grids are empty
+        const isVisualEmpty = !this.visualGrid.children.length;
+        const isMetadataEmpty = !this.metadataGrid.children.length;
+
+        if (isVisualEmpty && isMetadataEmpty) {
+            this.globalPlaceholder?.classList.remove('hidden');
+            this.floatingControls.classList.add('hidden');
+            this.clusterControlsHeader?.classList.add('hidden');
+        } else {
+            this.globalPlaceholder?.classList.add('hidden');
+            this.floatingControls.classList.remove('hidden');
+            this.clusterControlsHeader?.classList.remove('hidden');
+        }
     }
 
-    renderSingleCluster(cluster, domain) {
-        const targetGrid = this.unifiedGrid;
+    renderSingleCluster(cluster, domain, targetGrid) {
         const idKey = `${domain}_${cluster.id}`;
         let card = this.cards.get(idKey);
         const memberCount = cluster.memberCount !== undefined ? cluster.memberCount : cluster.members.length;
@@ -632,8 +629,6 @@ export class UIManager {
             card.appendChild(grid);
         }
 
-        // Always re-append to ensure order: Visual then Metadata
-        targetGrid.appendChild(card);
 
         // Update dynamic states
         const checkbox = card.querySelector('.cluster-checkbox');
@@ -764,6 +759,7 @@ export class UIManager {
         }
 
         this.updateSelectionIndicator();
+        return card;
     }
 
     getSelectedClusterIndices() {
