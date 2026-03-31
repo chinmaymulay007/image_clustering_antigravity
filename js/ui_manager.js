@@ -725,41 +725,43 @@ export class UIManager {
                                     cell.classList.remove('skeleton');
                                     cell._driftIcon.style.display = (cluster.isLocked && imgData.isReplacement) ? 'block' : 'none';
                                 }
-                        });
-                    } else {
-                        // Even if image didn't change, we must update the mouseenter handler
-                        // because cluster.isLocked might have changed
-                        const btnRemove = cell._btn;
-                        cell.onmouseenter = () => {
-                            if (cluster.isLocked) {
-                                btnRemove.style.display = 'none';
-                            } else {
-                                btnRemove.style.display = 'flex';
-                            }
-                        };
-
-                        // Ensure replacement badge matches current state (Only if locked)
-                        if (cluster.isLocked && imgData.isReplacement) {
-                            cell._driftIcon.style.display = 'block';
-                        } else {
-                            cell._driftIcon.style.display = 'none';
+                            };
+                            if (image.complete) onImageReady(); else image.onload = onImageReady;
                         }
-                    }
+                    });
                 } else {
-                    // Empty slot
-                    if (cell.dataset.path || cell.innerHTML !== '') {
-                        cell.dataset.path = '';
-                        if (cell._img) cell._img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-                        cell.classList.remove('skeleton'); // Ensure no shimmer on empty
-                        cell.style.cssText = 'background: #1f2937; opacity: 0.3;';
-                        if (cell._btn) cell._btn.style.display = 'none';
-                        if (cell._driftIcon) cell._driftIcon.style.display = 'none';
-                        cell.onmouseenter = null;
-                        cell.onmouseleave = null;
+                    // Even if image didn't change, we must update the mouseenter handler
+                    // because cluster.isLocked might have changed
+                    const btnRemove = cell._btn;
+                    cell.onmouseenter = () => {
+                        if (cluster.isLocked) {
+                            btnRemove.style.display = 'none';
+                        } else {
+                            btnRemove.style.display = 'flex';
+                        }
+                    };
+
+                    // Ensure replacement badge matches current state (Only if locked)
+                    if (cluster.isLocked && imgData.isReplacement) {
+                        cell._driftIcon.style.display = 'block';
+                    } else {
+                        cell._driftIcon.style.display = 'none';
                     }
                 }
+            } else {
+                // Empty slot
+                if (cell.dataset.path || cell.innerHTML !== '') {
+                    cell.dataset.path = '';
+                    if (cell._img) cell._img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                    cell.classList.remove('skeleton'); // Ensure no shimmer on empty
+                    cell.style.cssText = 'background: #1f2937; opacity: 0.3;';
+                    if (cell._btn) cell._btn.style.display = 'none';
+                    if (cell._driftIcon) cell._driftIcon.style.display = 'none';
+                    cell.onmouseenter = null;
+                    cell.onmouseleave = null;
+                }
             }
-        });
+        }
 
         this.updateSelectionIndicator();
     }
