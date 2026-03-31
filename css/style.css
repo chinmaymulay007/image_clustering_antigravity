@@ -16,10 +16,10 @@ body {
 }
 
 .unified-sections-wrapper {
-    padding: 180px 32px 100px 32px; /* Increased top padding to avoid header/tips overlap */
+    padding: 170px 15px 100px 15px; /* Symmetric 15px side padding matching header-to-edge gap */
     display: flex;
     flex-direction: column;
-    gap: 32px; /* Matches grid gap for perfect symmetry */
+    gap: 15px; /* Symmetric internal gap */
     max-width: 2400px;
     margin: 0 auto;
     width: 100%;
@@ -38,9 +38,9 @@ body {
 .btn-recalibrate-text {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 28px;
-    font-size: 0.85rem;
+    gap: 8px;
+    padding: 8px 18px; /* Reduced button size */
+    font-size: 0.75rem; /* Smaller font */
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -144,7 +144,7 @@ body {
 .cluster-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); 
-    gap: 32px; 
+    gap: 15px; /* Symmetric 15px gap matching margins */
     margin: 0;
     padding: 0; /* Padding is handled by unified-sections-wrapper symmetric padding */
 }
@@ -1981,10 +1981,10 @@ body {
 
     /* --- Section Headers (Inline/Block instead of Tabs) --- */
     .unified-sections-wrapper {
-        padding: 160px 0 120px 0; 
+        padding: 140px 15px 120px 15px; /* Symmetric 15px padding for mobile too */
         width: 100%;
         margin: 0;
-        gap: 20px; 
+        gap: 15px; 
         display: flex;
         flex-direction: column;
     }
@@ -2017,8 +2017,8 @@ body {
     /* --- Card / Grid Refinements --- */
     .cluster-grid {
         grid-template-columns: 1fr;
-        padding: 0 20px; 
-        gap: 20px; 
+        padding: 0; 
+        gap: 15px; 
     }
 
     .show-more-wrapper {
