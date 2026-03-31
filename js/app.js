@@ -852,8 +852,8 @@ class App {
             alert("⚠️ Cluster Too Small: Only clusters with 16 or more images can be locked for Passfaces.");
             // Re-render grids to revert checkbox visually
             this.evaluateLockingConstraints();
-            this.ui.renderClusters(this.currentClusters, this.ui.clusterGrid);
-            this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataClusterGrid);
+            this.ui.renderClusters(this.currentClusters, 'visual');
+            this.ui.renderClusters(this.currentMetadataClusters, 'metadata');
             return;
         }
 
@@ -898,8 +898,8 @@ class App {
         // Compute cross-domain constraints
         this.evaluateLockingConstraints();
 
-        this.ui.renderClusters(this.currentClusters, this.ui.clusterGrid);
-        this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataClusterGrid);
+        this.ui.renderClusters(this.currentClusters, 'visual');
+        this.ui.renderClusters(this.currentMetadataClusters, 'metadata');
         
         this.updateUI({ lastEvent: `Locked ${domain} Cluster ${cluster.label}` });
     }
@@ -941,8 +941,8 @@ class App {
             // Compute cross-domain constraints
             this.evaluateLockingConstraints();
 
-            this.ui.renderClusters(this.currentClusters, this.ui.clusterGrid);
-             this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataClusterGrid);
+            this.ui.renderClusters(this.currentClusters, 'visual');
+             this.ui.renderClusters(this.currentMetadataClusters, 'metadata');
              
             this.updateUI({ lastEvent: `Unlocked ${domain} Cluster` });
             console.log(`[App] Unlocked ${domain} cluster ${clusterId}`);
