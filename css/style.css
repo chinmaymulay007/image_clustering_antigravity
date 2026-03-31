@@ -1064,7 +1064,8 @@ body {
 .suggestion-container {
     position: fixed;
     top: 74px; /* Immediately below flush header */
-    left: 15px; /* Left-aligned with header's left edge */
+    left: 50%;
+    transform: translateX(-50%);
     width: calc(100% - 100px); /* Marginally smaller than header bar */
     z-index: 900;
     display: flex;
