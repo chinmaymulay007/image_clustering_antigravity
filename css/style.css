@@ -16,59 +16,50 @@ body {
 }
 
 .unified-sections-wrapper {
-    padding: 160px 15px 150px 15px; /* Increased top padding for the fixed controls */
+    padding: 120px 32px 100px 32px; /* Breathing room for fixed header, symmetric sides */
     display: flex;
     flex-direction: column;
-    gap: 30px;
-    max-width: 2000px;
+    gap: 32px; /* Matches grid gap for perfect symmetry */
+    max-width: 2400px;
     margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
 }
 
-/* Cluster Controls Header - Centered below app header */
+/* Cluster Controls Header - Scrollable within wrapper */
 .cluster-controls-header {
-    position: fixed;
-    top: 105px; /* Below the app-header */
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 950;
     display: flex;
     justify-content: center;
     width: 100%;
-    pointer-events: none; /* Let clicks pass through except to the button */
-    padding: 10px 0;
     transition: all 0.3s ease;
-}
-
-.cluster-controls-header button {
-    pointer-events: auto;
+    margin-bottom: 8px; /* Extra breathing space above grid */
 }
 
 .btn-recalibrate-text {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 24px;
-    font-size: 0.95rem;
+    padding: 12px 28px;
+    font-size: 0.85rem;
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    background: rgba(31, 41, 55, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #9ca3af;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     border-radius: 50px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
 }
 
 .btn-recalibrate-text:hover {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: white;
     transform: translateY(-2px);
-    box-shadow: 0 15px 35px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
-    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-}
-
-.btn-recalibrate-text:active {
-    transform: translateY(0);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
 }
 
 .btn-recalibrate-text svg {
@@ -153,9 +144,9 @@ body {
 .cluster-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); 
-    gap: 20px; 
+    gap: 32px; 
     margin: 0;
-    padding: 0 20px 20px 20px; /* Matched 20px bottom padding to gap */
+    padding: 0; /* Padding is handled by unified-sections-wrapper symmetric padding */
 }
 
 .show-more-wrapper {
@@ -1989,24 +1980,24 @@ body {
     }
 
     /* --- Section Headers (Inline/Block instead of Tabs) --- */
-    .sections-wrapper {
-        padding: 140px 0 120px 0; /* Side padding removed to use width-based alignment */
-        width: 95vw;
-        margin: 0 auto;
-        gap: 30px; /* Increased from 15px */
+    .unified-sections-wrapper {
+        padding: 160px 0 120px 0; 
+        width: 100%;
+        margin: 0;
+        gap: 20px; 
         display: flex;
         flex-direction: column;
     }
 
-    .sections-wrapper section {
-        padding: 0 0 20px 0; /* Restored bottom padding for better edge distance */
+    .unified-sections-wrapper section {
+        padding: 0 0 20px 0; 
         margin-top: 10px;
-        margin-bottom: 20px; /* Added margin for better separation */
+        margin-bottom: 20px; 
         border-radius: 8px;
         border-top: 1px solid rgba(75, 85, 99, 0.4);
     }
 
-    .sections-wrapper section h2 {
+    .unified-sections-wrapper section h2 {
         position: static;
         width: 100%;
         font-size: 0.75rem;
@@ -2026,8 +2017,8 @@ body {
     /* --- Card / Grid Refinements --- */
     .cluster-grid {
         grid-template-columns: 1fr;
-        padding: 0 12px; /* Side gaps only; vertical handled by wrapper/title */
-        gap: 12px; /* 1:1 ratio with padding */
+        padding: 0 20px; 
+        gap: 20px; 
     }
 
     .show-more-wrapper {
@@ -2144,8 +2135,8 @@ body {
         align-items: center;
     }
 
-    .sections-wrapper {
-        padding-top: 300px; /* Increased slightly more for breathable top room */
+    .unified-sections-wrapper {
+        padding-top: 280px; 
     }
 
     /* --- Landing Card --- */
