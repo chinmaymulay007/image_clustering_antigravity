@@ -154,7 +154,7 @@ class App {
             }
 
             this.ui.hideInitialOverlay();
-            this.ui.renderClusters([]); // Show placeholder immediately during scan
+            this.ui.renderClusters([], 'visual'); // Show placeholder immediately during scan
 
             // Setup callbacks from Processing
             this.processing.onProgress = (stats) => {
@@ -333,9 +333,9 @@ class App {
                     // Calculate cross-domain interlocking (disabling locks)
                     this.evaluateLockingConstraints();
 
-                    // Update UI (Pass grid targets from ui class)
-                    this.ui.renderClusters(this.currentClusters, this.ui.clusterGrid);
-                    this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataClusterGrid);
+                    // Update UI
+                    this.ui.renderClusters(this.currentClusters, 'visual');
+                    this.ui.renderClusters(this.currentMetadataClusters, 'metadata');
                     this.ui.updateMetadataPagination(this.currentMetadataClusters.length, this.allMetadataClusters.length);
                     this.enrichTimelineClusters();
 
@@ -488,7 +488,7 @@ class App {
             }
             this.evaluateLockingConstraints();
             
-            this.ui.renderClusters(this.currentMetadataClusters, this.ui.metadataClusterGrid);
+            this.ui.renderClusters(this.currentMetadataClusters, 'metadata');
             this.ui.updateMetadataPagination(this.currentMetadataClusters.length, this.allMetadataClusters.length);
             
             // Trigger Enrichment for the newly visible clusters

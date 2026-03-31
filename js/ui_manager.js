@@ -31,8 +31,7 @@ export class UIManager {
         this.settingThreshold = document.getElementById('setting-threshold');
         this.valThreshold = document.getElementById('val-threshold');
 
-        this.clusterGrid = document.getElementById('cluster-grid-container');
-        this.metadataClusterGrid = document.getElementById('metadata-cluster-grid-container');
+        this.unifiedGrid = document.getElementById('unified-cluster-grid');
         this.btnShowMoreMetadata = document.getElementById('btn-show-more-metadata');
         this.btnProceed = document.getElementById('btn-proceed');
         this.statusBarText = document.getElementById('status-current-text');
@@ -116,10 +115,10 @@ export class UIManager {
         this.linkShowInstructions = document.getElementById('link-show-instructions');
         this.btnCloseInstructions = document.getElementById('btn-close-instructions');
 
-        this.sectionVisual = document.getElementById('section-visual');
-        this.sectionTimeline = document.getElementById('section-timeline');
+        this.unifiedGrid = document.getElementById('unified-cluster-grid');
         this.globalPlaceholder = document.getElementById('global-processing-placeholder');
         this.btnRecalibrate = document.getElementById('btn-recalibrate');
+        this.clusterControlsHeader = document.getElementById('cluster-controls-header');
     }
 
     setCallbacks(callbacks) {
@@ -312,6 +311,7 @@ export class UIManager {
         this.floatingControls?.classList.remove('hidden');
         this.appHeader?.classList.remove('hidden');
         this.statusBarContainer?.classList.remove('hidden');
+        this.clusterControlsHeader?.classList.remove('hidden');
 
         this.startSuggestionRotation();
     }
@@ -503,7 +503,6 @@ export class UIManager {
 
     updateMetadataPagination(visibleCount, totalCount) {
         if (!this.btnShowMoreMetadata) return;
-
         if (visibleCount < totalCount) {
             this.btnShowMoreMetadata.classList.remove('hidden');
             this.btnShowMoreMetadata.textContent = `Show More (${totalCount - visibleCount} remaining)`;
@@ -512,304 +511,220 @@ export class UIManager {
         }
     }
 
-    renderClusters(clusters, targetGrid = null) {
-        if (!targetGrid) targetGrid = this.clusterGrid;
+    renderClusters(clusters, domain = 'visual') {
+        const targetGrid = this.unifiedGrid;
 
         // Differentiate lastClusters storage
-        if (targetGrid === this.clusterGrid) {
+        if (domain === 'visual') {
             this.lastClusters = clusters;
         } else {
             this.lastMetadataClusters = clusters;
         }
 
-        if (!clusters || clusters.length === 0) {
-            targetGrid.innerHTML = ''; // Keep it clean
+        const isVisualEmpty = !this.lastClusters?.length;
+        const isTimelineEmpty = !this.lastMetadataClusters?.length;
 
-            // Toggle section visibility
-            if (targetGrid === this.clusterGrid) {
-                this.sectionVisual?.classList.add('hidden');
-            } else {
-                this.sectionTimeline?.classList.add('hidden');
-            }
-
-            // If BOTH grids are empty, show global placeholder
-            const isVisualEmpty = !this.lastClusters?.length;
-            const isTimelineEmpty = !this.lastMetadataClusters?.length;
-
-            if (isVisualEmpty && isTimelineEmpty) {
-                this.globalPlaceholder?.classList.remove('hidden');
-                this.floatingControls.classList.add('hidden');
-            }
+        if (isVisualEmpty && isTimelineEmpty) {
+            targetGrid.innerHTML = '';
+            this.globalPlaceholder?.classList.remove('hidden');
+            this.floatingControls.classList.add('hidden');
+            this.clusterControlsHeader?.classList.add('hidden');
             return;
         }
 
-        // If we have clusters, show the corresponding section and hide global placeholder
-        if (targetGrid === this.clusterGrid) {
-            this.sectionVisual?.classList.remove('hidden');
-        } else {
-            this.sectionTimeline?.classList.remove('hidden');
-        }
-
         this.globalPlaceholder?.classList.add('hidden');
-        this.floatingControls.classList.remove('hidden'); // Show when we have data
+        this.floatingControls.classList.remove('hidden');
+        this.clusterControlsHeader?.classList.remove('hidden');
 
-        // 1. Remove clusters that are no longer present IN THIS GRID
+        // Logic check: We want to show Visual clusters THEN Timeline clusters.
+        // To do this simply, we'll clear and re-render both whenever either changes,
+        // or manage their presence in the DOM carefully.
+        // Since we have a 'cards' Map and use appendChild, we can manage order by re-appending.
+
+        // 1. Remove clusters that are no longer present in EITHER list
+        const activeVisualIds = new Set((this.lastClusters || []).map(c => `visual_${c.id}`));
+        const activeMetadataIds = new Set((this.lastMetadataClusters || []).map(c => `metadata_${c.id}`));
+        const activeIds = new Set([...activeVisualIds, ...activeMetadataIds]);
+
         const existingCards = Array.from(targetGrid.querySelectorAll('.cluster-card'));
-        const activeIds = new Set(clusters.map(c => c.id.toString()));
-
         existingCards.forEach(card => {
-            if (!activeIds.has(card.dataset.clusterId)) {
-                this.cards.delete(card.dataset.clusterId);
+            if (!activeIds.has(card.dataset.idKey)) {
+                this.cards.delete(card.dataset.idKey);
                 card.remove();
             }
         });
 
-        // 2. Update or Create clusters
-        clusters.forEach((cluster) => {
-            // Using ID instead of array index to support separate grids robustly
-            const idKey = cluster.id.toString();
-            let card = this.cards.get(idKey);
-            const memberCount = cluster.memberCount !== undefined ? cluster.memberCount : cluster.members.length;
+        // 2. Render Visual Clusters
+        (this.lastClusters || []).forEach(c => this.renderSingleCluster(c, 'visual'));
 
-            // Drift Indicator (e.g. "1➔ 🔄 2")
-            let statusBadge = '';
-            if (cluster.isLocked) {
-                const driftCount = cluster.driftCount || 0;
-                const relocated = cluster.movedFrom !== undefined;
+        // 3. Render Metadata Clusters
+        (this.lastMetadataClusters || []).forEach(c => this.renderSingleCluster(c, 'metadata'));
+    }
 
-                if (driftCount > 0 || relocated) {
-                    const driftIcon = driftCount > 0 ? '<span class="drift-icon">🔄</span>' : '';
-                    const driftHtml = driftCount > 0
-                        ? `<span class="drift-number">${driftCount}</span>`
-                        : '';
+    renderSingleCluster(cluster, domain) {
+        const targetGrid = this.unifiedGrid;
+        const idKey = `${domain}_${cluster.id}`;
+        let card = this.cards.get(idKey);
+        const memberCount = cluster.memberCount !== undefined ? cluster.memberCount : cluster.members.length;
 
-                    const moveHtml = relocated
-                        ? `<span class="move-count">${cluster.movedFrom + 1}➔${parseInt(idKey) + 1}</span>`
-                        : '';
-
-                    const moveTooltip = relocated
-                        ? `Was Cluster ${cluster.movedFrom + 1} previously.`
-                        : '';
-                    const driftTooltip = driftCount > 0
-                        ? ` ${driftCount} images replaced.`
-                        : '';
-                    const tooltip = `${moveTooltip}${driftTooltip}`.trim();
-
-                    statusBadge = `<span class="lock-badge" title="${tooltip}">${moveHtml}${driftIcon}${driftHtml}</span>`;
-                }
+        // Drift Indicator
+        let statusBadge = '';
+        if (cluster.isLocked) {
+            const driftCount = cluster.driftCount || 0;
+            const relocated = cluster.movedFrom !== undefined;
+            if (driftCount > 0 || relocated) {
+                const driftIcon = driftCount > 0 ? '<span class="drift-icon">🔄</span>' : '';
+                const driftHtml = driftCount > 0 ? `<span class="drift-number">${driftCount}</span>` : '';
+                const moveHtml = relocated ? `<span class="move-count">${cluster.movedFrom + 1}➔${parseInt(cluster.id) + 1}</span>` : '';
+                const moveTooltip = relocated ? `Was Cluster ${cluster.movedFrom + 1} previously.` : '';
+                const driftTooltip = driftCount > 0 ? ` ${driftCount} images replaced.` : '';
+                const tooltip = `${moveTooltip}${driftTooltip}`.trim();
+                statusBadge = `<span class="lock-badge" title="${tooltip}">${moveHtml}${driftIcon}${driftHtml}</span>`;
             }
+        }
 
-            const geotagHtml = cluster.resolvedLocation ? ` <span class="geotag-label" style="font-size: 0.85em; opacity: 0.8; margin-left: 5px;">(${cluster.resolvedLocation})</span>` : '';
-            const labelHtml = `<span class="cluster-name">${cluster.label || `Cluster ${idKey + 1}`}${geotagHtml}</span>`;
-            const countHtml = `<span class="cluster-count">${memberCount} items</span>`;
+        const geotagHtml = cluster.resolvedLocation ? ` <span class="geotag-label" style="font-size: 0.85em; opacity: 0.8; margin-left: 5px;">(${cluster.resolvedLocation})</span>` : '';
+        const labelHtml = `<span class="cluster-name">${cluster.label || `Cluster ${cluster.id + 1}`}${geotagHtml}</span>`;
+        const countHtml = `<span class="cluster-count">${memberCount} items</span>`;
+        const titleHtml = `<div class="header-info">${labelHtml} ${statusBadge} <span class="spacer">•</span> ${countHtml}</div>`;
 
-            // Flex layout handles the spacing
-            const titleHtml = `<div class="header-info">${labelHtml} ${statusBadge} <span class="spacer">•</span> ${countHtml}</div>`;
+        if (!card) {
+            // Create New
+            card = document.createElement('div');
+            card.className = 'cluster-card';
+            card.dataset.idKey = idKey;
+            card.dataset.domain = domain;
+            card.dataset.clusterId = cluster.id;
+            this.cards.set(idKey, card);
 
-            if (!card) {
-                // Create New
-                card = document.createElement('div');
-                card.className = 'cluster-card';
-                card.dataset.clusterId = idKey;
-                // Add domain marker for UI constraint logic
-                card.dataset.domain = targetGrid === this.clusterGrid ? 'visual' : 'metadata';
-                this.cards.set(idKey, card);
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.style.cssText = 'display:flex; align-items:center; gap:10px; padding: 5px;';
 
-                const header = document.createElement('div');
-                header.className = 'card-header';
-                header.style.cssText = 'display:flex; align-items:center; gap:10px; padding: 5px;';
+            const lockToggle = document.createElement('label');
+            lockToggle.className = 'lock-toggle';
 
-                const lockToggle = document.createElement('label');
-                lockToggle.className = 'lock-toggle';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'cluster-checkbox';
 
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'cluster-checkbox';
+            const lockIcon = document.createElement('span');
+            lockIcon.className = 'lock-icon';
+            lockIcon.innerHTML = '🔓';
+            card._lockIconNode = lockIcon;
 
-                const lockIcon = document.createElement('span');
-                lockIcon.className = 'lock-icon';
-                lockIcon.innerHTML = '🔓';
-                card._lockIconNode = lockIcon; // Link
+            lockToggle.appendChild(checkbox);
+            lockToggle.appendChild(lockIcon);
+            card._lockToggleNode = lockToggle;
 
-                lockToggle.appendChild(checkbox);
-                lockToggle.appendChild(lockIcon);
-                card._lockToggleNode = lockToggle; // Link
+            const title = document.createElement('span');
+            title.className = 'cluster-title';
+            title.innerHTML = titleHtml;
+            card._titleNode = title;
 
-                const title = document.createElement('span');
-                title.className = 'cluster-title';
-                title.innerHTML = titleHtml;
-                card._titleNode = title; // Link
+            header.appendChild(title);
+            header.appendChild(lockToggle);
+            card.appendChild(header);
 
-                header.appendChild(title);
-                header.appendChild(lockToggle);
-                card.appendChild(header);
+            const grid = document.createElement('div');
+            grid.className = 'image-grid';
+            card._gridNode = grid;
+            card.appendChild(grid);
+        }
 
-                const grid = document.createElement('div');
-                grid.className = 'image-grid';
-                card._gridNode = grid; // Link
-                card.appendChild(grid);
-                targetGrid.appendChild(card);
-            }
+        // Always re-append to ensure order: Visual then Metadata
+        targetGrid.appendChild(card);
 
-            // Always ensure DOM order matches array order
-            targetGrid.appendChild(card);
+        // Update dynamic states
+        const checkbox = card.querySelector('.cluster-checkbox');
+        const title = card._titleNode;
+        if (title.innerHTML !== titleHtml) title.innerHTML = titleHtml;
 
-            // ALWAYS Update dynamic UI states (locked, title, styling)
-            const checkbox = card.querySelector('.cluster-checkbox');
-            const title = card._titleNode;
+        if (cluster.isLocked) {
+            card.classList.add('locked');
+            checkbox.checked = true;
+            title.classList.add('locked-title');
+            card._lockToggleNode.classList.add('active');
+            card._lockIconNode.innerHTML = '🔒';
+        } else {
+            card.classList.remove('locked');
+            title.classList.remove('locked-title');
+            card._lockToggleNode.classList.remove('active');
+            card._lockIconNode.innerHTML = '🔓';
+            checkbox.checked = false;
+        }
 
-            // Safety Link (in case card was reused from a previous version without links)
-            if (!card._lockToggleNode) {
-                card._lockToggleNode = card.querySelector('.lock-toggle');
-                card._lockIconNode = card.querySelector('.lock-icon');
-            }
+        if (cluster.isDisabled) {
+            card.classList.add('conflicting');
+            card.title = "Some of these images are already locked in another cluster";
+            card._lockToggleNode.style.pointerEvents = 'none';
+            card._lockToggleNode.style.opacity = '0.3';
+            checkbox.disabled = true;
+        } else {
+            card.classList.remove('conflicting');
+            card.title = "";
+            card._lockToggleNode.style.pointerEvents = 'auto';
+            card._lockToggleNode.style.opacity = '1';
+            checkbox.disabled = false;
+        }
 
-            // Update title content if changed
-            if (title.innerHTML !== titleHtml) {
-                title.innerHTML = titleHtml;
-            }
-
-            if (cluster.isLocked) {
-                card.classList.add('locked');
-                checkbox.checked = true;
-                title.classList.add('locked-title');
-                card._lockToggleNode.classList.add('active');
-                card._lockIconNode.innerHTML = '🔒';
+        checkbox.onchange = () => {
+            if (checkbox.checked) {
+                this.callbacks.onLockCluster?.(cluster.id, domain);
             } else {
-                card.classList.remove('locked');
-                title.classList.remove('locked-title');
-                card._lockToggleNode.classList.remove('active');
-                card._lockIconNode.innerHTML = '🔓';
-                // Force uncheck if not locked to maintain sync with engine state (esp. on auto-unlock)
-                checkbox.checked = false;
+                this.callbacks.onUnlockCluster?.(cluster.id, domain);
+            }
+            this.updateSelectionIndicator();
+        };
+
+        const grid = card._gridNode;
+        if (!grid._cells) grid._cells = [];
+
+        for (let i = 0; i < 16; i++) {
+            let cell = grid._cells[i];
+            if (!cell) {
+                cell = document.createElement('div');
+                cell.className = 'img-cell';
+                grid.appendChild(cell);
+                grid._cells[i] = cell;
+                cell._img = document.createElement('img');
+                cell._img.style.opacity = '1';
+                cell._driftIcon = document.createElement('span');
+                cell._driftIcon.className = 'cell-drift-icon';
+                cell._driftIcon.innerHTML = '🔄';
+                cell._driftIcon.style.cssText = 'position:absolute; bottom:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border-radius:3px; padding: 1px 3px; font-size: 10px; display:none; z-index:11; pointer-events:none;';
+                cell._btn = document.createElement('button');
+                cell._btn.innerHTML = '×';
+                cell._btn.style.cssText = 'position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; display:none; justify-content:center; align-items:center; line-height:1; z-index:10;';
+                cell.appendChild(cell._img);
+                cell.appendChild(cell._driftIcon);
+                cell.appendChild(cell._btn);
             }
 
-            // Check Conflicting constraint state
-            if (cluster.isDisabled) {
-                card.classList.add('conflicting');
-                card.title = "Some of these images are already locked in another cluster";
-                card._lockToggleNode.style.pointerEvents = 'none';
-                card._lockToggleNode.style.opacity = '0.3';
-                checkbox.disabled = true;
-            } else {
-                card.classList.remove('conflicting');
-                card.title = "";
-                card._lockToggleNode.style.pointerEvents = 'auto';
-                card._lockToggleNode.style.opacity = '1';
-                checkbox.disabled = false;
-            }
-
-            // Wire/Update checkbox behavior
-            checkbox.onchange = () => {
-                const domain = card.dataset.domain;
-                if (checkbox.checked) {
-                    this.callbacks.onLockCluster?.(cluster.id, domain);
-                } else {
-                    this.callbacks.onUnlockCluster?.(cluster.id, domain);
-                }
-                this.updateSelectionIndicator();
-            };
-
-            // 3. Update Image Grid (Representatives)
-            const grid = card._gridNode;
-            if (!grid._cells) grid._cells = []; // Link
-
-            for (let i = 0; i < 16; i++) {
-                let cell = grid._cells[i];
-                if (!cell) {
-                    cell = document.createElement('div');
-                    cell.className = 'img-cell';
-                    grid.appendChild(cell);
-                    grid._cells[i] = cell; // Link
-
-                    // Direct Link: Cache children immediately
-                    cell._img = document.createElement('img');
-                    cell._img.style.opacity = '1'; // Force visible inline
-
-                    cell._driftIcon = document.createElement('span');
-                    cell._driftIcon.className = 'cell-drift-icon';
-                    cell._driftIcon.innerHTML = '🔄';
-                    cell._driftIcon.title = 'Automatic substitution';
-                    cell._driftIcon.style.cssText = 'position:absolute; bottom:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border-radius:3px; padding: 1px 3px; font-size: 10px; display:none; z-index:11; pointer-events:none;';
-
-                    cell._btn = document.createElement('button');
-                    cell._btn.innerHTML = '×';
-                    cell._btn.style.cssText = 'position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; display:none; justify-content:center; align-items:center; line-height:1; z-index:10;';
-
-                    cell.appendChild(cell._img);
-                    cell.appendChild(cell._driftIcon);
-                    cell.appendChild(cell._btn);
-                }
-
-                if (i < cluster.representatives.length) {
-                    const imgData = cluster.representatives[i];
-
-                    // Only update if the image changed
-                    if (cell.dataset.path !== imgData.path) {
-                        cell.dataset.path = imgData.path;
-
-                        // FIX: Reset any styles from "empty" state (like opacity: 0.3)
-                        cell.style.cssText = '';
-                        cell.style.background = '#111827'; // Default background
-
-                        const image = cell._img;
-                        const btnRemove = cell._btn;
-
-                        // Clean Slate Reset (Instant)
-                        image.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-                        image.className = '';
-                        cell.classList.add('skeleton');
-
-                        // CONDITIONAL UI: Prevent showing remove button if cluster is locked
-                        // (Only blocking exclusion of representatives in locked clusters)
-                        cell.onmouseenter = () => {
-                            if (cluster.isLocked) {
-                                btnRemove.style.display = 'none';
-                            } else {
-                                btnRemove.style.display = 'flex';
-                            }
-                        };
-                        cell.onmouseleave = () => btnRemove.style.display = 'none';
-
-                        btnRemove.onclick = (e) => {
-                            e.stopPropagation();
-                            this.callbacks.onExcludeImage?.(imgData.path);
-                        };
-
-                        this.callbacks.onLoadThumbnail?.(imgData.path).then(url => {
-                            if (!url) {
-                                cell.classList.remove('skeleton');
-                                return;
-                            }
-
-                            // Race condition check: Ensure the cell hasn't been recycled for a new path
-                            if (cell.dataset.path === imgData.path) {
-                                image.src = url;
-
-                                // FIX: Always remove skeleton immediately for visible updates
-                                const onImageReady = () => {
-                                    if (cell.dataset.path === imgData.path) {
-                                        image.classList.add('loaded');
-                                        cell.classList.remove('skeleton');
-
-                                        // Show/Hide replacement badge (Only if locked)
-                                        if (cluster.isLocked && imgData.isReplacement) {
-                                            cell._driftIcon.style.display = 'block';
-                                        } else {
-                                            cell._driftIcon.style.display = 'none';
-                                        }
-                                    }
-                                };
-
-                                if (image.complete) {
-                                    onImageReady();
-                                } else {
-                                    image.onload = onImageReady;
-                                    image.onerror = () => cell.classList.remove('skeleton'); // Ensure cleanup on error
+            if (i < cluster.representatives.length) {
+                const imgData = cluster.representatives[i];
+                if (cell.dataset.path !== imgData.path) {
+                    cell.dataset.path = imgData.path;
+                    cell.style.cssText = '';
+                    cell.style.background = '#111827';
+                    const image = cell._img;
+                    const btnRemove = cell._btn;
+                    image.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                    image.className = '';
+                    cell.classList.add('skeleton');
+                    cell.onmouseenter = () => btnRemove.style.display = cluster.isLocked ? 'none' : 'flex';
+                    cell.onmouseleave = () => btnRemove.style.display = 'none';
+                    btnRemove.onclick = (e) => { e.stopPropagation(); this.callbacks.onExcludeImage?.(imgData.path); };
+                    this.callbacks.onLoadThumbnail?.(imgData.path).then(url => {
+                        if (cell.dataset.path === imgData.path) {
+                            if (!url) { cell.classList.remove('skeleton'); return; }
+                            image.src = url;
+                            const onImageReady = () => {
+                                if (cell.dataset.path === imgData.path) {
+                                    image.classList.add('loaded');
+                                    cell.classList.remove('skeleton');
+                                    cell._driftIcon.style.display = (cluster.isLocked && imgData.isReplacement) ? 'block' : 'none';
                                 }
-                            }
-                        }).catch(() => {
-                            cell.classList.remove('skeleton');
                         });
                     } else {
                         // Even if image didn't change, we must update the mouseenter handler
